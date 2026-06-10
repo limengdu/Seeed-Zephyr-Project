@@ -6,7 +6,7 @@ category: sensor
 interface: gpio
 default_address: null
 default_baud: null
-power_rail: 5v
+power_rail: 3v3
 zephyr_support: custom
 zephyr_compatible: null
 zephyr_driver: null
