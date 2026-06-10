@@ -1,0 +1,18 @@
+# Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
+id: grove_gps_air530
+sku: "109020022"
+display_name: Grove - GPS (Air530)
+category: gnss
+interface: uart
+default_address: null
+default_baud: 9600
+power_rail: 3v3
+zephyr_support: gnss_driver
+zephyr_compatible: gnss-nmea-generic
+zephyr_driver: gnss_nmea_generic
+required_configs:
+  - CONFIG_GNSS=y
+  - CONFIG_GNSS_NMEA_GENERIC=y
+  - CONFIG_SERIAL=y
+  - CONFIG_UART_INTERRUPT_DRIVEN=y
+supported_templates: []

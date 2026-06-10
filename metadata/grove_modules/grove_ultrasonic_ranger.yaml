@@ -1,0 +1,15 @@
+# Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
+id: grove_ultrasonic_ranger
+sku: "101020010"
+display_name: Grove - Ultrasonic Ranger
+category: sensor
+interface: gpio
+default_address: null
+default_baud: null
+power_rail: 5v
+zephyr_support: custom
+zephyr_compatible: null
+zephyr_driver: null
+required_configs:
+  - CONFIG_GPIO=y
+supported_templates: []

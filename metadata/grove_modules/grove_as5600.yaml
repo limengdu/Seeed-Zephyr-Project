@@ -1,0 +1,18 @@
+# Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
+id: grove_as5600
+sku: "101020692"
+display_name: Grove - 12-bit Magnetic Rotary Position Sensor (AS5600)
+category: sensor
+interface: i2c
+default_address: "0x36"
+default_baud: null
+power_rail: 3v3
+zephyr_support: sensor_driver
+zephyr_compatible: ams,as5600
+zephyr_driver: as5600
+required_configs:
+  - CONFIG_SENSOR=y
+  - CONFIG_I2C=y
+  - CONFIG_AS5600=y
+supported_templates:
+  - sensor_to_serial
