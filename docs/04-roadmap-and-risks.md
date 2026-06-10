@@ -118,10 +118,8 @@ Recommended MVP duration:
 - render wiring diagrams
 - implement settings panel
 - call CLI to generate projects
-- run west build and flash
-- add serial monitor workflow
-- add environment doctor
-- add error explanation rules
+- integrate one-click handoff to the official Zephyr extension for build and flash
+- add XIAO and Grove specific error hints
 
 ### Deliverables
 
@@ -131,8 +129,8 @@ Recommended MVP duration:
 - expansion-board selection UI
 - wiring diagram view
 - project generation flow
-- build, flash, monitor actions
-- environment diagnostics
+- one-click handoff to the official Zephyr extension's build and flash
+- XIAO and Grove error hints
 - early user testing report
 
 ### Gate To Public Beta
@@ -140,9 +138,10 @@ Recommended MVP duration:
 Move to public beta only if:
 
 - the plugin works on at least macOS and Windows, or a clearly defined first OS
-- generated projects build locally
+- generated projects build locally through the official Zephyr extension
 - wiring diagrams are verified
-- common setup failures are handled
+- the handoff to the official extension works on a clean setup
+- XIAO and Grove specific mistakes produce clear hints
 - early testers can finish a project without engineer hand-holding
 
 One-sentence summary: Phase 3 succeeds when the product workflow works for real users, not only internal engineers.
@@ -242,15 +241,17 @@ One-sentence summary: the project must reduce repeated work, not create a new ma
 
 ### Risk: It Duplicates Existing Tools Poorly
 
-Users already have Zephyr, PlatformIO, and vendor tools.
+Users already have Zephyr, the official Zephyr VS Code extension, vendor extensions such as nRF Connect, PlatformIO, and other vendor tools. These already provide build, flash, monitor, debug, and environment setup, and they are mature.
+
+The decision for this project is therefore explicit: do not reimplement the toolchain. Phase 3 owns only the unique pre-build value, hardware selection, compatibility, wiring, configuration, and generation, and hands off to the official extension for build and flash.
 
 Mitigation:
 
 - focus on XIAO + Grove product experience
-- do not attempt to replace general-purpose embedded tools
-- integrate with existing tools instead of fighting them
+- do not attempt to replace general-purpose embedded tools or the official Zephyr toolchain extensions
+- integrate with existing tools instead of fighting them, and depend on the official Zephyr extension for build and flash
 
-One-sentence summary: the project's unique value is Seeed hardware composition, not generic embedded development.
+One-sentence summary: the project's unique value is Seeed hardware composition, so it builds on the official toolchain instead of rebuilding it.
 
 ## 7. Suggested Metrics
 
@@ -274,9 +275,9 @@ One-sentence summary: the project's unique value is Seeed hardware composition, 
 ### Plugin Metrics
 
 - first project completion time
-- build success rate after generation
-- number of environment issues diagnosed automatically
-- number of users who complete build, flash, and monitor
+- build success rate after generation, measured in the official Zephyr extension
+- handoff success rate from generation to a started build
+- number of users who complete build, flash, and monitor through the official extension
 - number of support issues reduced
 
 One-sentence summary: measure whether the system improves real workflows, not just whether more files exist.

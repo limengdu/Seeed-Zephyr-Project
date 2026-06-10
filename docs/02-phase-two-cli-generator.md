@@ -228,7 +228,7 @@ Every generated project should include a snapshot file, for example:
   "grove": ["grove_sht40"],
   "template": "sensor_to_serial",
   "toolchain": "west",
-  "zephyr_version": "v4.1.0",
+  "zephyr_version": "v3.7.0",
   "generated_at": "2026-06-10T00:00:00Z"
 }
 ```

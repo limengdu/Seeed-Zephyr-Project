@@ -66,6 +66,22 @@ Plain explanation: if a user plugs a Grove sensor into a board, the overlay tell
 
 One-sentence summary: an overlay is a small extra wiring note for a specific project.
 
+## Shield
+
+A shield is Zephyr's built-in way to describe an add-on board, such as an expansion board, that plugs onto a main board.
+
+Plain explanation: a shield is a reusable folder that ships an overlay file and default settings, so Zephyr knows how the add-on board routes its pins to the main board. In this project, each Seeed expansion board is implemented as a shield, and the pin routing lives there instead of being copied into metadata.
+
+One-sentence summary: a shield is Zephyr's reusable description of an expansion board, and it owns the pin routing.
+
+## LTS
+
+LTS means long-term support release.
+
+Plain explanation: it is the Zephyr release that the project maintains with stability and security fixes for years, and recommends to people building real products. The current LTS is Zephyr 3.7, and the next one is planned as Zephyr 4.6.
+
+One-sentence summary: LTS is the long-maintained Zephyr release meant for products.
+
 ## Kconfig
 
 Kconfig is Zephyr's configuration system.

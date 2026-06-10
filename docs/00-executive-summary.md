@@ -107,9 +107,9 @@ The CLI becomes the shared engine for future web tools, VS Code plugins, AI assi
 
 Build a developer-facing VS Code plugin.
 
-The plugin should provide a CubeMX-like hardware configuration experience, a lightweight Wokwi-like wiring preview, and Zephyr build, flash, monitor, and debug workflows.
+The plugin should provide a CubeMX-like hardware configuration experience and a lightweight Wokwi-like wiring preview, then generate a project and hand it off to the official Zephyr VS Code extension for build, flash, monitor, and debug. It does not reimplement that toolchain.
 
-One-sentence summary: build the foundation first, then the generator, then the developer-facing product.
+One-sentence summary: build the foundation first, then the generator, then a developer-facing product that owns selection and generation while delegating the toolchain.
 
 ## 6. Business Value
 
@@ -141,11 +141,11 @@ The final product experience should feel like this:
 6. The user adjusts settings such as GPIO, I2C address, baud rate, or sampling interval.
 7. The user clicks Generate.
 8. The plugin creates a complete Zephyr project.
-9. The user clicks Build, Flash, and Monitor.
+9. The user clicks Build, Flash, and Monitor in the official Zephyr extension, reached through a one-click handoff.
 
 The user should not need to understand all Zephyr internals before seeing the first successful result.
 
-One-sentence summary: the experience should start from hardware selection and end with running firmware on a real XIAO board.
+One-sentence summary: the experience should start from hardware selection and end with running firmware on a real XIAO board, using the official extension for the build steps.
 
 ## 8. Decision Standard
 

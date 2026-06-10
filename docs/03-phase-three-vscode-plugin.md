@@ -4,17 +4,19 @@
 
 Phase 3 turns the CLI and metadata foundation into a developer-facing product inside VS Code.
 
-The plugin should provide a XIAO-first hardware configuration, wiring preview, project generation, build, flash, monitor, and debug workflow.
+The plugin should focus on the part that is uniquely Seeed's: choosing a XIAO board, expansion board, and Grove modules, checking compatibility, previewing wiring, configuring options, and generating a correct project. The build, flash, monitor, and debug steps are deliberately not reimplemented here.
 
-The ideal experience combines three proven ideas:
+The official Zephyr VS Code extension, and vendor extensions such as nRF Connect for VS Code, already provide environment setup, build, flash, monitor, and debug for Zephyr projects, and they do it well. Rebuilding that layer would duplicate mature tooling and add maintenance with no unique value. The plugin instead generates a standard Zephyr project and hands off to those extensions for the toolchain steps.
+
+The ideal experience combines three proven ideas, all on the pre-build side where the unique value lives:
 
 - CubeMX-style hardware configuration
 - ESPHome-style component selection and low-friction setup
 - Wokwi-style wiring preview and project visualization
 
-The plugin should not try to become a complete electronic design tool or a full hardware simulator in its first version.
+The plugin should not try to become a complete electronic design tool, a full hardware simulator, or a replacement for the official Zephyr toolchain extensions in its first version.
 
-One-sentence summary: Phase 3 makes the Zephyr base usable inside the editor where users actually build firmware.
+One-sentence summary: Phase 3 owns hardware selection, compatibility, wiring, and generation, and hands the build-and-flash toolchain to the official Zephyr extensions.
 
 ## 2. Product Position
 
@@ -27,7 +29,7 @@ Seeed XIAO Project Assistant
 The plugin should be positioned as:
 
 ```text
-A VS Code assistant for creating, configuring, building, flashing, and debugging XIAO + Grove projects.
+A VS Code assistant for choosing, configuring, and generating XIAO + Grove Zephyr projects, ready to build with the official Zephyr extension.
 ```
 
 It should not be positioned as:
@@ -35,11 +37,12 @@ It should not be positioned as:
 ```text
 A replacement for Zephyr
 A replacement for VS Code
+A replacement for the official Zephyr or vendor toolchain extensions
 A complete simulator
 A universal embedded IDE
 ```
 
-One-sentence summary: the plugin is a focused assistant, not a new full IDE.
+One-sentence summary: the plugin is a focused project-creation assistant that stops at the door of the official build toolchain.
 
 ## 3. User Journey
 
@@ -187,35 +190,21 @@ The generated project includes:
 
 One-sentence summary: project generation should remain deterministic and powered by the CLI.
 
-### Step 8: Build, Flash, Monitor, Debug
+### Step 8: Hand Off To The Official Toolchain
 
-After generation, the plugin provides actions:
+After generation, the plugin does not run the build itself. It opens the generated project in a way the official Zephyr VS Code extension recognizes, and points the user at that extension's existing Build, Flash, Monitor, and Debug actions.
 
-- Build
-- Flash
-- Monitor
-- Debug
-- Clean
+The plugin provides only the actions that belong to its own scope:
+
+- Open the generated project
 - Open README
 - Open wiring diagram
+- Detect whether the official Zephyr extension is installed, and offer to install it if missing
+- Start the recommended build with a single click that triggers the official extension's build action
 
-For west projects, it should call:
+This keeps a clean boundary: the plugin owns selection, compatibility, wiring, and generation; the official extension owns build, flash, monitor, and debug.
 
-```bash
-west build
-west flash
-west debug
-```
-
-For PlatformIO projects, it should call:
-
-```bash
-pio run
-pio run -t upload
-pio device monitor
-```
-
-One-sentence summary: the plugin should guide users past generation and into running firmware.
+One-sentence summary: after generating a correct project, the plugin hands the user to the official Zephyr extension for build and flash instead of duplicating it.
 
 ## 4. Plugin Architecture
 
@@ -227,10 +216,11 @@ Compatibility Engine
 Wiring Renderer
 Config Panel
 Project Generator Adapter
-Toolchain Runner
-Environment Doctor
-Error Explainer
+Toolchain Handoff
+Grove Error Hints
 ```
+
+The modules above are the plugin's own scope. Build, flash, monitor, debug, and full environment setup are intentionally not modules here; they are delegated to the official Zephyr extension through Toolchain Handoff.
 
 ### Hardware Catalog
 
@@ -272,34 +262,21 @@ Calls the CLI and reports progress.
 
 One-sentence summary: the adapter connects the graphical plugin to the deterministic generator.
 
-### Toolchain Runner
+### Toolchain Handoff
 
-Runs west or PlatformIO commands through VS Code tasks or terminal integration.
+Connects the generated project to the official Zephyr VS Code extension. It detects whether that extension is installed, offers to install it when missing, opens the project so the extension picks it up, and triggers the extension's own build action.
 
-One-sentence summary: the runner executes local build, flash, monitor, and debug commands.
+It does not run west, flash, monitor, or debug directly, and it does not re-check the toolchain environment; the official extension already owns environment setup and these commands.
 
-### Environment Doctor
+One-sentence summary: the handoff module is a thin bridge to the official extension, not a second toolchain.
 
-Checks:
+### Grove Error Hints
 
-- west availability
-- PlatformIO availability
-- Python availability
-- Zephyr SDK availability
-- CMake availability
-- Ninja availability
-- serial devices
-- recommended Zephyr version
+Maps a small set of Seeed-specific failure patterns to human-readable suggestions: a wrong I2C address for a known Grove module, a missing Kconfig for a selected driver, a module plugged into a port the shield does not expose.
 
-One-sentence summary: the environment doctor diagnoses setup problems before they become confusing build errors.
+General Zephyr, west, CMake, and Devicetree errors are left to the official extension and the wider Zephyr community, which already document them. This module stays narrow, covering only what is unique to XIAO and Grove. It starts as a rules-based lookup; AI can be added later but is not required.
 
-### Error Explainer
-
-Maps common Zephyr, west, CMake, Devicetree, and flashing errors to human-readable suggestions.
-
-This can start as a rules-based database. AI can be added later, but should not be required in the first version.
-
-One-sentence summary: the error explainer turns scary logs into next steps.
+One-sentence summary: error hints stay focused on XIAO and Grove mistakes, not on general Zephyr toolchain errors.
 
 ## 5. Technology Choices
 
@@ -309,10 +286,10 @@ Recommended implementation:
 - Webview UI for the project configurator
 - SVG for wiring diagrams
 - CLI integration for generation
-- VS Code tasks for build and flash
-- VS Code serial extension integration or built-in terminal command for monitor
+- official Zephyr VS Code extension as a dependency for build, flash, monitor, and debug
+- VS Code extension API to detect, install, and trigger that extension
 
-One-sentence summary: use normal VS Code extension technology and avoid unnecessary custom infrastructure.
+One-sentence summary: use normal VS Code extension technology, lean on the official Zephyr extension for the toolchain, and avoid unnecessary custom infrastructure.
 
 ## 6. MVP Scope
 
@@ -346,28 +323,36 @@ Recommended first plugin version:
 
 ### Toolchain
 
-- west first
-- PlatformIO in a later minor release
+- generate standard west projects
+- delegate build, flash, monitor, and debug to the official Zephyr extension
+- PlatformIO output considered only in a later release, if there is real demand
 
-### Core Features
+### Core Features (plugin's own scope)
 
 - hardware selection
 - compatibility display
 - parameter panel
 - wiring diagram
 - project generation
+- one-click handoff to the official Zephyr extension's build action
+- XIAO and Grove specific error hints
+
+### Delegated To The Official Zephyr Extension
+
 - build
 - flash
 - monitor
-- environment check
-- common error explanations
+- debug
+- toolchain environment setup and checks
 
-One-sentence summary: the MVP should be small enough to finish and complete enough to prove the workflow.
+One-sentence summary: the MVP owns selection-to-generation, hands off the toolchain, and stays small enough to finish while proving the unique workflow.
 
 ## 7. Features To Avoid In The First Version
 
 Do not start with:
 
+- a reimplementation of build, flash, monitor, or debug that the official Zephyr extension already provides
+- a custom toolchain environment doctor that duplicates the official extension
 - complete Wokwi-style simulation
 - arbitrary drag-and-drop circuit editing
 - all XIAO boards
@@ -375,10 +360,9 @@ Do not start with:
 - cloud accounts
 - online build service
 - AI-generated drivers
-- full debugger UI
 - full package manager
 
-One-sentence summary: first prove the core workflow, then add intelligence and scale.
+One-sentence summary: do not rebuild the official toolchain; first prove the unique selection-to-generation workflow, then add intelligence and scale.
 
 ## 8. Success Criteria
 
@@ -387,12 +371,13 @@ Phase 3 should be considered successful when:
 - a user can create a project without manually writing Zephyr boilerplate
 - selected combinations show clear compatibility status
 - wiring diagrams match real hardware
-- generated projects build through VS Code
-- at least several combinations flash and run on real boards
-- common environment errors are detected
+- generated projects build through the official Zephyr extension without manual fixups
+- the handoff to that extension is one click and works on a clean setup
+- at least several combinations flash and run on real boards via the official toolchain
+- XIAO and Grove specific mistakes produce clear hints
 - early users complete their first project faster than with manual Zephyr setup
 
-One-sentence summary: the plugin succeeds when users can go from hardware choice to running firmware without learning every Zephyr detail first.
+One-sentence summary: the plugin succeeds when users go from hardware choice to a generated project that builds cleanly in the official extension, without learning every Zephyr detail first.
 
 ## 9. Future Extensions
 

@@ -60,7 +60,7 @@ Turn the CLI and metadata into a developer-facing product:
 - render wiring diagrams
 - configure GPIO, I2C address, UART baud rate, sampling interval, and scenario settings
 - generate projects
-- build, flash, monitor, and debug from VS Code
+- hand off build, flash, monitor, and debug to the official Zephyr VS Code extension
 
 See [Phase 3: VS Code Plugin](docs/03-phase-three-vscode-plugin.md).
 
