@@ -1,0 +1,14 @@
+# Authored expansion-board metadata (product layer). Derived status lives in metadata/status/.
+id: grove_shield_xiao
+sku: "103020312"
+display_name: Grove Shield for Seeeduino XIAO
+compatible_form_factor: xiao
+zephyr_shield: null
+ports:
+  - id: grove_i2c_0
+    type: i2c
+    label: Grove I2C
+  - id: grove_i2c_1
+    type: i2c
+    label: Grove I2C
+onboard: []

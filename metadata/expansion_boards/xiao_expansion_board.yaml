@@ -1,0 +1,16 @@
+# Authored expansion-board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_expansion_board
+sku: "103030356"
+display_name: Seeed Studio XIAO Expansion Board
+compatible_form_factor: xiao
+zephyr_shield: seeed_xiao_expansion_board
+ports:
+  - id: grove_i2c
+    type: i2c
+    label: Grove I2C
+onboard:
+  - SSD1306 OLED 128x64 (I2C 0x3C)
+  - MicroSD card slot (SPI)
+  - PCF8563 RTC
+  - User button
+  - Buzzer

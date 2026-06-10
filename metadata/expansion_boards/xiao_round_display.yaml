@@ -1,0 +1,13 @@
+# Authored expansion-board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_round_display
+sku: "104030087"
+display_name: Seeed Studio Round Display for XIAO
+compatible_form_factor: xiao
+zephyr_shield: seeed_xiao_round_display
+ports: []
+onboard:
+  - GC9A01 round LCD 240x240 (SPI)
+  - CHSC6X capacitive touch (I2C 0x2E)
+  - PCF8563 RTC
+  - Battery charger and monitor
+  - TF card slot

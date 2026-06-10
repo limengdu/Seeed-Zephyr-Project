@@ -39,6 +39,16 @@ GROVE_REQUIRED_KEYS = {
     "supported_templates",
 }
 
+EXPANSION_BOARD_REQUIRED_KEYS = {
+    "id",
+    "sku",
+    "display_name",
+    "compatible_form_factor",
+    "zephyr_shield",
+    "ports",
+    "onboard",
+}
+
 DERIVED_KEYS = {
     "status",
     "validation",
@@ -56,6 +66,7 @@ VALID_POWER_RAILS = {"3v3"}
 VALID_ZEPHYR_SUPPORT = {"sensor_driver", "gnss_driver", "adc", "custom"}
 DRIVER_BACKED_SUPPORT = {"sensor_driver", "gnss_driver"}
 DRIVERLESS_SUPPORT = {"adc", "custom"}
+EXPANSION_BOARD_PORT_KEYS = {"id", "type", "label"}
 
 
 class ValidationResult:
@@ -97,6 +108,9 @@ def main() -> int:
 def collect_results(repo_root: Path) -> list[ValidationResult]:
     board_paths = sorted((repo_root / "metadata" / "boards").glob("*.yaml"))
     grove_paths = sorted((repo_root / "metadata" / "grove_modules").glob("*.yaml"))
+    expansion_board_paths = sorted(
+        (repo_root / "metadata" / "expansion_boards").glob("*.yaml")
+    )
 
     results: list[ValidationResult] = []
     for path in board_paths:
@@ -104,6 +118,9 @@ def collect_results(repo_root: Path) -> list[ValidationResult]:
         results.append(result)
     for path in grove_paths:
         result = validate_file(path, validate_grove_metadata)
+        results.append(result)
+    for path in expansion_board_paths:
+        result = validate_file(path, validate_expansion_board_metadata)
         results.append(result)
     return results
 
@@ -184,6 +201,41 @@ def validate_grove_metadata(result: ValidationResult, document: dict[str, Any]) 
     validate_string_list(result, document, "required_configs")
     validate_string_list(result, document, "supported_templates")
     validate_zephyr_support_consistency(result, document)
+
+
+def validate_expansion_board_metadata(
+    result: ValidationResult, document: dict[str, Any]
+) -> None:
+    validate_exact_keys(result, document, EXPANSION_BOARD_REQUIRED_KEYS)
+
+    sku = document.get("sku")
+    if not isinstance(sku, str) or not sku.isdigit():
+        result.fail("sku must be a string of digits")
+
+    validate_non_empty_string(result, document, "display_name")
+    validate_allowed_value(result, document, "compatible_form_factor", VALID_FORM_FACTORS)
+    validate_string_or_null(result, document, "zephyr_shield")
+    validate_expansion_board_ports(result, document)
+    validate_string_list(result, document, "onboard")
+
+
+def validate_expansion_board_ports(
+    result: ValidationResult, document: dict[str, Any]
+) -> None:
+    ports = document.get("ports")
+    if not isinstance(ports, list):
+        result.fail("ports must be a list")
+        return
+
+    for index, port in enumerate(ports):
+        if not isinstance(port, dict):
+            result.fail(f"ports[{index}] must be a mapping")
+            continue
+
+        validate_exact_keys(result, port, EXPANSION_BOARD_PORT_KEYS)
+        validate_non_empty_string(result, port, "id")
+        validate_allowed_value(result, port, "type", VALID_INTERFACES)
+        validate_non_empty_string(result, port, "label")
 
 
 def validate_exact_keys(
