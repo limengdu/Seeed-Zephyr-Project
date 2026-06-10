@@ -1,0 +1,9 @@
+# Authored board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_rp2040
+display_name: Seeed Studio XIAO RP2040
+zephyr_target: xiao_rp2040
+vendor: raspberrypi
+soc: rp2040
+form_factor: xiao
+also_known_as: []
+version_policy: lts_first

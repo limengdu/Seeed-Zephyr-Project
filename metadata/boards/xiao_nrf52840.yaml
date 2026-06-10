@@ -1,0 +1,10 @@
+# Authored board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_nrf52840
+display_name: Seeed Studio XIAO nRF52840
+zephyr_target: xiao_ble
+vendor: nordic
+soc: nrf52840
+form_factor: xiao
+also_known_as:
+  - Seeed Studio XIAO nRF52840 Sense
+version_policy: lts_first

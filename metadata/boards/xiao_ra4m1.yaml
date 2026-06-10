@@ -1,0 +1,9 @@
+# Authored board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_ra4m1
+display_name: Seeed Studio XIAO RA4M1
+zephyr_target: xiao_ra4m1
+vendor: renesas
+soc: ra4m1
+form_factor: xiao
+also_known_as: []
+version_policy: lts_first
