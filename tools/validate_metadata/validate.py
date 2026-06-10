@@ -60,7 +60,7 @@ DERIVED_KEYS = {
 }
 
 VALID_FORM_FACTORS = {"xiao"}
-VALID_VERSION_POLICIES = {"lts_first"}
+VALID_VERSION_POLICIES = {"latest_stable"}
 VALID_INTERFACES = {"i2c", "uart", "gpio", "analog", "spi"}
 VALID_POWER_RAILS = {"3v3"}
 VALID_ZEPHYR_SUPPORT = {"sensor_driver", "gnss_driver", "adc", "custom"}

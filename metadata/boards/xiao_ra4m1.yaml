@@ -6,4 +6,4 @@ vendor: renesas
 soc: ra4m1
 form_factor: xiao
 also_known_as: []
-version_policy: lts_first
+version_policy: latest_stable

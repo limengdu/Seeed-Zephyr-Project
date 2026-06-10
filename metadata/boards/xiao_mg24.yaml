@@ -7,4 +7,4 @@ soc: efr32mg24
 form_factor: xiao
 also_known_as:
   - Seeed Studio XIAO MG24 Sense
-version_policy: lts_first
+version_policy: latest_stable

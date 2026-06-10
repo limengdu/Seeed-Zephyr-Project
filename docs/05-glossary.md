@@ -78,7 +78,7 @@ One-sentence summary: a shield is Zephyr's reusable description of an expansion 
 
 LTS means long-term support release.
 
-Plain explanation: it is the Zephyr release that the project maintains with stability and security fixes for years, and recommends to people building real products. The current LTS is Zephyr 3.7, and the next one is planned as Zephyr 4.6.
+Plain explanation: it is the Zephyr release that the project maintains with stability and security fixes for years, and recommends to people building real products. The current LTS is Zephyr 3.7, and the next one is planned as Zephyr 4.6. This project tracks the latest stable release rather than the LTS.
 
 One-sentence summary: LTS is the long-maintained Zephyr release meant for products.
 

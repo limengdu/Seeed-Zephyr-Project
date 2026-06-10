@@ -39,19 +39,17 @@ One-sentence summary: create an isolated Python environment and install `west`, 
 
 ## 3. Get The Zephyr Source
 
-The default fetch uses the latest development branch, `main`. That is the right choice for testing this project's newest boards now, including ESP32C5, MG24, nRF54L15, RA4M1, and RP2350.
-
-The product baseline is the 3.7 LTS release, but 3.7 is too old to include those newest boards. Use `main` for current validation work.
-
-For a reproducible pinned version, use `west init ~/zephyrproject --mr v4.4.0`, which selects the latest stable release.
+This project's baseline is the latest stable Zephyr release, version 4.4. Pin it explicitly so builds are reproducible.
 
 ```sh
-west init ~/zephyrproject
+west init ~/zephyrproject --mr v4.4.0
 cd ~/zephyrproject
 west update
 ```
 
-One-sentence summary: fetch Zephyr `main` for newest XIAO board validation, or pin `v4.4.0` when a reproducible stable checkout is required.
+Most of this project's boards are available in the latest stable release. A few of the newest boards may exist only on the development branch, `main`. If `west boards | grep -i xiao` on the stable checkout does not list a board you need, that board is pending the next stable release. For temporary validation of such a board only, run `west init ~/zephyrproject` with no `--mr` to fetch `main` instead.
+
+One-sentence summary: pin the latest stable release `v4.4.0` for reproducible builds, and fall back to `main` only for boards not yet in a stable release.
 
 ## 4. Export CMake, Install Python Dependencies, And Install The SDK
 
