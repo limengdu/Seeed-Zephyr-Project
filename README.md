@@ -93,5 +93,6 @@ The system should let users start from hardware and intent:
 - [Phase 1: Zephyr Base](docs/01-phase-one-zephyr-base.md)
 - [Phase 2: CLI Generator](docs/02-phase-two-cli-generator.md)
 - [Phase 3: VS Code Plugin](docs/03-phase-three-vscode-plugin.md)
+- [Getting Started](docs/getting-started.md)
 - [Roadmap and Risks](docs/04-roadmap-and-risks.md)
 - [Glossary](docs/05-glossary.md)
