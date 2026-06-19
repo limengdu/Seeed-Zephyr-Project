@@ -38,8 +38,8 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 3 | Fetch source | `west init ~/zephyrproject --mr v4.4.0 && west update` | done (2026-06-19, v4.4.0, ~5.4 GB) |
 | 4 | CMake export + SDK | `west zephyr-export && west packages pip --install && west sdk install` | done (2026-06-19, SDK 1.0.1) |
 | 5 | ESP32 blobs | `west blobs fetch hal_espressif` | done (2026-06-19, ~31 MB) |
-| 6 | Build sample | `west build -p always -b xiao_esp32c6 samples/basic/blinky` | pending |
-| 7 | Record evidence | populate the board evidence table below | pending |
+| 6 | Build sample | `west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky` | done (2026-06-19) |
+| 7 | Record evidence | populate the board evidence table below | done (2026-06-19) |
 
 Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
 ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
@@ -56,6 +56,11 @@ succeeded on Python 3.14.6 (pyelftools, pykwalify, anytree, intelhex, etc.);
 `west zephyr-export` registered the Zephyr and ZephyrUnittest CMake packages.
 Step 5 verified 2026-06-19: `west blobs fetch hal_espressif` fetched all
 Espressif blobs (~31 MB total); esp32c6 has its 8 `.a` blobs present.
+Step 6 verified 2026-06-19: `samples/basic/blinky` built for
+`xiao_esp32c6/esp32c6/hpcore` with Zephyr SDK 1.0.1 (riscv64-zephyr-elf 14.3.0).
+The bare target `xiao_esp32c6` fails: ESP32-C6 is multi-core and needs the
+`/esp32c6/hpcore` qualifier. Output: zephyr.elf 1.8 MB, zephyr.bin 141 KB;
+FLASH 133020 B (3.17%), SRAM 50688 B (9.95%).
 
 ## Board Build Evidence
 
@@ -68,7 +73,7 @@ target: `xiao_esp32c6`.
 | xiao_nrf52840 | `xiao_ble/nrf52840` | no | pending | | also `/sense` variant |
 | xiao_esp32c3 | `xiao_esp32c3` | yes | pending | | |
 | xiao_esp32c5 | `xiao_esp32c5` | yes | pending | | |
-| xiao_esp32c6 | `xiao_esp32c6` | yes | pending | | first target |
+| xiao_esp32c6 | `xiao_esp32c6/esp32c6/hpcore` | yes | passed | v4.4.0 | bare name fails (multi-core); FLASH 3.17%, SRAM 9.95% |
 | xiao_esp32s3 | `xiao_esp32s3` | yes | pending | | |
 | xiao_mg24 | `xiao_mg24` | no | pending | | |
 | xiao_nrf54l15 | `xiao_nrf54l15` | no | pending | | |
@@ -115,3 +120,10 @@ RESOLVED 2026-06-19: step 4 `west packages pip --install` succeeded on Python
   `~/zephyrproject`. The one-command setup script must auto-activate the venv
   and confirm the workspace is initialized before calling `west update`; this
   is a high-frequency external-user trap.
+- Board target reconciliation: authored `zephyr_target` in `metadata/boards/`
+  (and the build examples in `docs/getting-started.md` section 6) use bare names
+  like `xiao_esp32c6`, but the build requires the fully-qualified
+  `xiao_esp32c6/esp32c6/hpcore`. Each of the 11 boards' real build target must be
+  confirmed by an actual build and reconciled into metadata and the docs.
+  `// TODO(metadata): correct zephyr_target after the full board sweep`
+  `// TODO(docs): fix the bare-name build examples in getting-started.md`
