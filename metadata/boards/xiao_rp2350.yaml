@@ -1,7 +1,7 @@
 # Authored board metadata (product layer). Derived status lives in metadata/status/.
 id: xiao_rp2350
 display_name: Seeed Studio XIAO RP2350
-zephyr_target: xiao_rp2350
+zephyr_target: xiao_rp2350/rp2350a/hazard3
 vendor: raspberrypi
 soc: rp2350
 form_factor: xiao

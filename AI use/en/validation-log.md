@@ -2,10 +2,10 @@
 
 This log records build and hardware validation evidence for the XIAO boards,
 Grove modules, and expansion boards described under `metadata/`. It follows the
-evidence format defined in `docs/getting-started.md` section 9.
+evidence format defined in `docs/en/getting-started.md` section 9.
 
 Derived metadata fields under `metadata/status/` must be populated only from
-evidence recorded here, never hand-authored. See `docs/01-phase-one-zephyr-base.md`,
+evidence recorded here, never hand-authored. See `AI use/en/01-phase-one-zephyr-base.md`,
 section "Keeping Metadata Honest: Status Is Derived, Not Declared".
 
 ## Host Environment
@@ -28,6 +28,7 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | Date | Result | Notes |
 | --- | --- | --- |
 | 2026-06-19 | 18 passed, 0 failed, 18 total | 11 boards, 4 Grove modules, 3 expansion boards |
+| 2026-06-20 | 18 passed, 0 failed, 18 total | Re-run through `~/zephyrproject/.venv/bin/python`; host `python3` lacks `pyyaml` |
 
 ## Toolchain Setup
 
@@ -39,7 +40,9 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 4 | CMake export + SDK | `west zephyr-export && west packages pip --install && west sdk install` | done (2026-06-19, SDK 1.0.1) |
 | 5 | ESP32 blobs | `west blobs fetch hal_espressif` | done (2026-06-19, ~31 MB) |
 | 6 | Build sample | `west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky` | done (2026-06-19) |
-| 7 | Record evidence | populate the board evidence table below | done (2026-06-19) |
+| 7 | Record first board evidence | populate the board evidence table below | done (2026-06-19) |
+| 8 | Flash sample on hardware | `west flash` | done (2026-06-19, xiao_esp32c6 LED blink verified) |
+| 9 | Batch board build matrix | `bash tools/build_matrix/run.sh` | done (2026-06-19, 9 passed, 2 failed) |
 
 Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
 ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
@@ -64,25 +67,30 @@ FLASH 133020 B (3.17%), SRAM 50688 B (9.95%).
 Step 8 verified 2026-06-19: `west flash` programmed the physical
 xiao_esp32c6/esp32c6/hpcore board; on-board LED blink confirmed by direct
 observation. First hardware-in-loop evidence for this project.
+Step 9 verified 2026-06-19: `tools/build_matrix/run.sh` built
+`samples/basic/blinky` for all 11 board metadata entries. The corrected run
+finished with 9 passed and 2 failed. The two failures are `xiao_esp32c3`
+(`led0` GPIO device resolution failure in the blinky sample) and `xiao_esp32c5`
+(target not present in Zephyr v4.4.0).
 
 ## Board Build Evidence
 
-Baseline sample for the first pass: `samples/basic/blinky`. First validation
-target: `xiao_esp32c6`.
+Baseline sample for the first pass: `samples/basic/blinky`. First full matrix:
+2026-06-19, Zephyr v4.4.0, macOS Apple Silicon.
 
 | Board metadata id | Zephyr target | ESP32 blob | Build result | Validated version | Notes |
 | --- | --- | --- | --- | --- | --- |
-| xiao_samd21 | `seeeduino_xiao` | no | pending | | |
-| xiao_nrf52840 | `xiao_ble/nrf52840` | no | pending | | also `/sense` variant |
-| xiao_esp32c3 | `xiao_esp32c3` | yes | pending | | |
-| xiao_esp32c5 | `xiao_esp32c5` | yes | pending | | |
+| xiao_samd21 | `seeeduino_xiao` | no | passed | v4.4.0 | build succeeded |
+| xiao_nrf52840 | `xiao_ble` | no | passed | v4.4.0 | build succeeded |
+| xiao_esp32c3 | `xiao_esp32c3` | yes | failed | v4.4.0 | target exists, but `samples/basic/blinky` cannot resolve a usable `led0` GPIO device from the board Devicetree in this environment |
+| xiao_esp32c5 | `xiao_esp32c5` | yes | failed | v4.4.0 | Zephyr v4.4.0 reports no board named `xiao_esp32c5`; check Zephyr `main` or the next stable release |
 | xiao_esp32c6 | `xiao_esp32c6/esp32c6/hpcore` | yes | passed | v4.4.0 | bare name fails (multi-core); FLASH 3.17%, SRAM 9.95%; HW: LED blink verified |
-| xiao_esp32s3 | `xiao_esp32s3` | yes | pending | | |
-| xiao_mg24 | `xiao_mg24` | no | pending | | |
-| xiao_nrf54l15 | `xiao_nrf54l15` | no | pending | | |
-| xiao_ra4m1 | `xiao_ra4m1` | no | pending | | |
-| xiao_rp2040 | `xiao_rp2040` | no | pending | | |
-| xiao_rp2350 | `xiao_rp2350` | no | pending | | |
+| xiao_esp32s3 | `xiao_esp32s3/esp32s3/procpu` | yes | passed | v4.4.0 | bare name retries to fully-qualified CPU target |
+| xiao_mg24 | `xiao_mg24` | no | passed | v4.4.0 | build succeeded |
+| xiao_nrf54l15 | `xiao_nrf54l15/nrf54l15/cpuapp` | no | passed | v4.4.0 | bare name retries to fully-qualified CPU target |
+| xiao_ra4m1 | `xiao_ra4m1` | no | passed | v4.4.0 | build succeeded |
+| xiao_rp2040 | `xiao_rp2040` | no | passed | v4.4.0 | build succeeded |
+| xiao_rp2350 | `xiao_rp2350/rp2350a/hazard3` | no | passed | v4.4.0 | bare name retries to fully-qualified CPU target |
 
 Per-board evidence detail (filled as each build completes):
 
@@ -91,9 +99,9 @@ Zephyr checkout: v4.4.0
 Host: macOS 26.3.1 Apple Silicon (arm64)
 Board target: xiao_esp32c6
 Sample: samples/basic/blinky
-Result: pending
-Error head:
-Error tail:
+Result: see table above
+Error head: see tools/build_matrix/results.md and the follow-up notes below
+Error tail: see tools/build_matrix/results.md and the follow-up notes below
 Notes:
 ```
 
@@ -107,11 +115,16 @@ Notes:
   rebuild the venv. Checked against Zephyr getting-started guidance 2026-06-19.
 RESOLVED 2026-06-19: step 4 `west packages pip --install` succeeded on Python
 3.14.6 with no fallback needed; 3.14 is confirmed usable for this project's setup.
-- `docs/getting-started.md` section 5 states six of eleven boards are ESP32
-  (C3/C5/C6/S3 families), but `metadata/boards/` currently holds four ESP32
-  entries (c3, c5, c6, s3). Reconcile the count when populating evidence.
-- Boards with multiple variants (for example `xiao_ble`) require the
-  fully-qualified target name; record the exact name that builds.
+- `xiao_esp32c3`: `samples/basic/blinky` fails at compile time because
+  `GPIO_DT_SPEC_GET(LED0_NODE, gpios)` cannot resolve a usable `led0` GPIO
+  device from the board Devicetree in this environment. This is a baseline
+  sample compatibility issue to investigate before marking the board validated.
+- `xiao_esp32c5`: Zephyr v4.4.0 reports no board named `xiao_esp32c5`.
+  Validate against Zephyr `main` or the next stable release before updating
+  its status.
+- Boards with multiple CPU targets require the fully-qualified target name;
+  `xiao_esp32c6`, `xiao_esp32s3`, `xiao_nrf54l15`, and `xiao_rp2350` have been
+  reconciled in `metadata/boards/` and `docs/en/getting-started.md`.
 - Step 3 first attempt failed with two errors sharing one root cause:
   `command not found: west` (the shell had not activated the venv) and
   `no west workspace found from ".../seeed-zephyr-base"` (`west init` had not
@@ -123,10 +136,6 @@ RESOLVED 2026-06-19: step 4 `west packages pip --install` succeeded on Python
   `~/zephyrproject`. The one-command setup script must auto-activate the venv
   and confirm the workspace is initialized before calling `west update`; this
   is a high-frequency external-user trap.
-- Board target reconciliation: authored `zephyr_target` in `metadata/boards/`
-  (and the build examples in `docs/getting-started.md` section 6) use bare names
-  like `xiao_esp32c6`, but the build requires the fully-qualified
-  `xiao_esp32c6/esp32c6/hpcore`. Each of the 11 boards' real build target must be
-  confirmed by an actual build and reconciled into metadata and the docs.
-  `// TODO(metadata): correct zephyr_target after the full board sweep`
-  `// TODO(docs): fix the bare-name build examples in getting-started.md`
+RESOLVED 2026-06-20: Board target reconciliation was completed from the
+2026-06-19 build matrix. The authoritative docs and board metadata now use the
+validated fully-qualified targets where Zephyr requires them.

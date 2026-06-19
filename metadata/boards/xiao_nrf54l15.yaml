@@ -1,7 +1,7 @@
 # Authored board metadata (product layer). Derived status lives in metadata/status/.
 id: xiao_nrf54l15
 display_name: Seeed Studio XIAO nRF54L15
-zephyr_target: xiao_nrf54l15
+zephyr_target: xiao_nrf54l15/nrf54l15/cpuapp
 vendor: nordic
 soc: nrf54l15
 form_factor: xiao

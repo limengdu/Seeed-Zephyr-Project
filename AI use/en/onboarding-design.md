@@ -8,7 +8,7 @@ into the project rather than expose it to each user.
 
 ## 1. The Friction Being Removed
 
-A from-scratch manual setup (recorded in `docs/validation-log.md`) exposes three
+A from-scratch manual setup (recorded in `validation-log.md`) exposes three
 frictions that external users would otherwise hit:
 
 - **Scattered steps.** Ten-plus commands across Homebrew, a Python venv, `west`,
@@ -29,7 +29,7 @@ every one of those costs should be paid by the project, not the user.
 - **Simplest viable path per platform.** Cover macOS, Windows, and Linux; prefer
   one command over many.
 - **Built on evidence.** Every automated path is frozen from a manually verified
-  run, not assumed. Verification lives in `docs/validation-log.md`.
+  run, not assumed. Verification lives in `validation-log.md`.
 
 One-sentence summary: pay the setup cost once at the center, on real evidence, so
 users pay almost nothing.
@@ -74,7 +74,7 @@ reproduces the same tested set. Upgrading Zephyr is a project action — edit th
 manifest, re-validate, release — after which users simply move forward with a
 plain `west update`.
 
-This mirrors the metadata model in `docs/01-phase-one-zephyr-base.md`: the
+This mirrors the metadata model in `01-phase-one-zephyr-base.md`: the
 authored `version_policy` (`latest_stable`) declares intent, and the derived
 `validated_zephyr_version` records the exact release CI proved. The manifest is
 the mechanism that makes that pinned version real on every user's machine.
@@ -114,7 +114,7 @@ for plugin users.
 ## 7. Implementation Path
 
 1. **Verify manually on macOS first.** Record real commands, timings, and
-   pitfalls in `docs/validation-log.md`. (in progress)
+   pitfalls in `validation-log.md`. (in progress)
 2. **Freeze the verified steps** into a macOS setup script, the project
    `west.yml`, and step-by-step docs (English and Simplified Chinese).
 3. **Reproduce for Windows (WSL2) and Linux.** Mark each platform as unverified

@@ -4,7 +4,7 @@
 
 ## 1. 要移除的摩擦
 
-从零开始的手动设置流程（记录在 `docs/validation-log.md` 中）会暴露三个外部用户原本会遇到的摩擦:
+从零开始的手动设置流程（记录在 `AI use/en/validation-log.md` 中）会暴露三个外部用户原本会遇到的摩擦:
 
 - **步骤分散。** Homebrew、Python venv、`west`、workspace init 和 update、SDK install 之间有十多个命令。
 - **占用空间大。** 完整的 `west update` 会获取每个供应商 HAL，大约 5.4 GB，其中大部分不会被任何单块 XIAO 开发板使用。
@@ -16,7 +16,7 @@
 
 - **集中吸收一次复杂性。** 版本和依赖决策由项目制定和测试，绝不让每个用户重新推导。
 - **每个平台采用最简单可行路径。** 覆盖 macOS、Windows 和 Linux；优先用一个命令，而不是多个命令。
-- **建立在证据之上。** 每条自动化路径都从一次手动验证过的运行中冻结下来，而不是凭空假设。验证记录保存在 `docs/validation-log.md` 中。
+- **建立在证据之上。** 每条自动化路径都从一次手动验证过的运行中冻结下来，而不是凭空假设。验证记录保存在 `AI use/en/validation-log.md` 中。
 
 一句话总结: 在中心基于真实证据支付一次设置成本，让用户几乎不用付出成本。
 
@@ -42,7 +42,7 @@
 
 版本协调的复杂性由项目承担一次，而不是由每个用户承担。`west.yml` manifest 扮演 lockfile 的角色: 它固定 Zephyr revision 和每个 module 的准确 commit。项目维护这个单一文件，测试这组组合，然后发布它；每个用户的 `west update` 都会复现同一组已测试内容。升级 Zephyr 是项目动作：编辑 manifest、重新验证、发布；之后用户只需用普通的 `west update` 向前移动。
 
-这与 `docs/01-phase-one-zephyr-base.md` 中的元数据模型一致: authored `version_policy` (`latest_stable`) 声明意图，derived `validated_zephyr_version` 记录 CI 已证明的准确 release。manifest 是让这个固定版本在每个用户机器上变成现实的机制。
+这与 `AI use/zh/01-phase-one-zephyr-base.md` 中的元数据模型一致: authored `version_policy` (`latest_stable`) 声明意图，derived `validated_zephyr_version` 记录 CI 已证明的准确 release。manifest 是让这个固定版本在每个用户机器上变成现实的机制。
 
 一句话总结: 一个由项目维护的 lockfile，让每个用户都获得项目测试过的准确版本组合，用户自己无需做任何版本决策。
 
@@ -72,7 +72,7 @@ L4 (plugin):
 
 ## 7. 实现路径
 
-1. **先在 macOS 上手动验证。** 在 `docs/validation-log.md` 中记录真实命令、耗时和坑点。（进行中）
+1. **先在 macOS 上手动验证。** 在 `AI use/en/validation-log.md` 中记录真实命令、耗时和坑点。（进行中）
 2. **把已验证步骤冻结下来**，形成 macOS setup script、项目 `west.yml` 和分步骤文档（英文和简体中文）。
 3. **为 Windows (WSL2) 和 Linux 复现。** 在对应平台或 CI 中完成测试前，把每个平台标记为未验证。
 

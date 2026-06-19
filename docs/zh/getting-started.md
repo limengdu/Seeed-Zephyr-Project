@@ -98,29 +98,30 @@ west boards | grep -i xiao
 
 ```sh
 cd ~/zephyrproject/zephyr
-west build -p always -b xiao_esp32c6 samples/basic/blinky
+west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky
 west build -p always -b xiao_rp2040 samples/basic/blinky
-west build -p always -b xiao_ble/nrf52840 samples/basic/blinky
+west build -p always -b xiao_ble samples/basic/blinky
 ```
 
-有些开发板是多变体或多核的。使用裸名称，例如 `xiao_ble`，会报错并打印有效的全限定名称，例如 `xiao_ble/nrf52840` 和 `xiao_ble/nrf52840/sense`。请使用 Zephyr 打印出的完整名称。
+有些开发板是多变体或多核的。使用裸名称，例如 `xiao_esp32c6`，会报错并打印有效的全限定名称，例如 `xiao_esp32c6/esp32c6/hpcore`。请使用 Zephyr 打印出的完整名称。
+
+下表记录了 2026-06-19 基于 Zephyr v4.4.0 对 `samples/basic/blinky` 的构建矩阵。PASS 表示这个基线示例在当前环境中编译通过。FAIL 表示该 target 还需要后续排查，暂时不能视为已验证。
 
 权威开发板 targets:
 
-| 开发板显示名称 | Zephyr 构建 target |
-| --- | --- |
-| XIAO SAMD21 | `seeeduino_xiao` |
-| XIAO nRF52840 | `xiao_ble/nrf52840` |
-| XIAO nRF52840 Sense | `xiao_ble/nrf52840/sense` |
-| XIAO ESP32C3 | `xiao_esp32c3` |
-| XIAO ESP32C5 | `xiao_esp32c5` |
-| XIAO ESP32C6 | `xiao_esp32c6` |
-| XIAO ESP32S3 | `xiao_esp32s3` |
-| XIAO MG24 | `xiao_mg24` |
-| XIAO nRF54L15 | `xiao_nrf54l15` |
-| XIAO RA4M1 | `xiao_ra4m1` |
-| XIAO RP2040 | `xiao_rp2040` |
-| XIAO RP2350 | `xiao_rp2350` |
+| 开发板显示名称 | Zephyr 构建 target | v4.4.0 blinky 结果 | 备注 |
+| --- | --- | --- | --- |
+| XIAO SAMD21 | `seeeduino_xiao` | PASS | 构建成功。 |
+| XIAO nRF52840 | `xiao_ble` | PASS | 构建成功。 |
+| XIAO ESP32C3 | `xiao_esp32c3` | FAIL | target 存在，但 `samples/basic/blinky` 在当前环境中无法从开发板 Devicetree 解析出可用的 `led0` GPIO 设备。 |
+| XIAO ESP32C5 | `xiao_esp32c5` | FAIL | Zephyr v4.4.0 中还没有这个 target；需要检查 Zephyr `main` 或下一个 stable release。 |
+| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
+| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
+| XIAO MG24 | `xiao_mg24` | PASS | 构建成功。 |
+| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
+| XIAO RA4M1 | `xiao_ra4m1` | PASS | 构建成功。 |
+| XIAO RP2040 | `xiao_rp2040` | PASS | 构建成功。 |
+| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
 
 一句话总结: 用准确的 Zephyr target 名称构建一个小型上游 sample，来验证每块 XIAO 开发板。
 
@@ -129,8 +130,8 @@ west build -p always -b xiao_ble/nrf52840 samples/basic/blinky
 Zephyr 使用 shields 描述附加板。通过传入带上游 shield 名称的 `--shield` 来构建 shield samples:
 
 ```sh
-west build -p always -b xiao_esp32c6 --shield seeed_xiao_expansion_board samples/drivers/display
-west build -p always -b xiao_esp32s3 --shield seeed_xiao_round_display samples/subsys/display/lvgl
+west build -p always -b xiao_esp32c6/esp32c6/hpcore --shield seeed_xiao_expansion_board samples/drivers/display
+west build -p always -b xiao_esp32s3/esp32s3/procpu --shield seeed_xiao_round_display samples/subsys/display/lvgl
 ```
 
 XIAO 的 Grove Shield，SKU 103020312，没有上游 Zephyr shield。它是一个被动转接板，因此 Grove 模块连接到 XIAO 自身的 I2C 引脚，不使用 `--shield` 标志。

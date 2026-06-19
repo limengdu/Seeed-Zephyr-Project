@@ -98,29 +98,30 @@ Then build a small `blinky` firmware for representative boards:
 
 ```sh
 cd ~/zephyrproject/zephyr
-west build -p always -b xiao_esp32c6 samples/basic/blinky
+west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky
 west build -p always -b xiao_rp2040 samples/basic/blinky
-west build -p always -b xiao_ble/nrf52840 samples/basic/blinky
+west build -p always -b xiao_ble samples/basic/blinky
 ```
 
-Some boards are multi-variant or multi-core. Using the bare name, such as `xiao_ble`, will error and print the valid fully-qualified names, such as `xiao_ble/nrf52840` and `xiao_ble/nrf52840/sense`. Use the full name printed by Zephyr.
+Some boards are multi-variant or multi-core. Using the bare name, such as `xiao_esp32c6`, will error and print the valid fully-qualified names, such as `xiao_esp32c6/esp32c6/hpcore`. Use the full name printed by Zephyr.
+
+The table below records the `samples/basic/blinky` build matrix from 2026-06-19 against Zephyr v4.4.0. PASS means that baseline sample compiled in this environment. FAIL means the target needs follow-up before it can be treated as validated.
 
 Authoritative board targets:
 
-| Board display name | Zephyr build target |
-| --- | --- |
-| XIAO SAMD21 | `seeeduino_xiao` |
-| XIAO nRF52840 | `xiao_ble/nrf52840` |
-| XIAO nRF52840 Sense | `xiao_ble/nrf52840/sense` |
-| XIAO ESP32C3 | `xiao_esp32c3` |
-| XIAO ESP32C5 | `xiao_esp32c5` |
-| XIAO ESP32C6 | `xiao_esp32c6` |
-| XIAO ESP32S3 | `xiao_esp32s3` |
-| XIAO MG24 | `xiao_mg24` |
-| XIAO nRF54L15 | `xiao_nrf54l15` |
-| XIAO RA4M1 | `xiao_ra4m1` |
-| XIAO RP2040 | `xiao_rp2040` |
-| XIAO RP2350 | `xiao_rp2350` |
+| Board display name | Zephyr build target | v4.4.0 blinky result | Notes |
+| --- | --- | --- | --- |
+| XIAO SAMD21 | `seeeduino_xiao` | PASS | Build succeeded. |
+| XIAO nRF52840 | `xiao_ble` | PASS | Build succeeded. |
+| XIAO ESP32C3 | `xiao_esp32c3` | FAIL | Target exists, but `samples/basic/blinky` fails because the sample cannot resolve a usable `led0` GPIO device from the board Devicetree in this environment. |
+| XIAO ESP32C5 | `xiao_esp32c5` | FAIL | Target is not present in Zephyr v4.4.0; check Zephyr `main` or the next stable release for validation. |
+| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | PASS | Bare target retries to the fully-qualified CPU target. |
+| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | PASS | Bare target retries to the fully-qualified CPU target. |
+| XIAO MG24 | `xiao_mg24` | PASS | Build succeeded. |
+| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | PASS | Bare target retries to the fully-qualified CPU target. |
+| XIAO RA4M1 | `xiao_ra4m1` | PASS | Build succeeded. |
+| XIAO RP2040 | `xiao_rp2040` | PASS | Build succeeded. |
+| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | PASS | Bare target retries to the fully-qualified CPU target. |
 
 One-sentence summary: validate each XIAO board by building a small upstream sample with the exact Zephyr target name.
 
@@ -129,8 +130,8 @@ One-sentence summary: validate each XIAO board by building a small upstream samp
 Zephyr uses shields to describe add-on boards. Build shield samples by passing `--shield` with the upstream shield name:
 
 ```sh
-west build -p always -b xiao_esp32c6 --shield seeed_xiao_expansion_board samples/drivers/display
-west build -p always -b xiao_esp32s3 --shield seeed_xiao_round_display samples/subsys/display/lvgl
+west build -p always -b xiao_esp32c6/esp32c6/hpcore --shield seeed_xiao_expansion_board samples/drivers/display
+west build -p always -b xiao_esp32s3/esp32s3/procpu --shield seeed_xiao_round_display samples/subsys/display/lvgl
 ```
 
 The Grove Shield for XIAO, SKU 103020312, has no upstream Zephyr shield. It is a passive breakout, so Grove modules connect to the XIAO's own I2C pins and no `--shield` flag is used.

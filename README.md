@@ -37,7 +37,7 @@ Build the reliable foundation:
 - selected hardware-in-loop tests
 - version and release policy
 
-See [Phase 1: Zephyr Base](docs/01-phase-one-zephyr-base.md).
+See [Phase 1: Zephyr Base](AI%20use/en/01-phase-one-zephyr-base.md).
 
 ### Phase 2: CLI Generator
 
@@ -49,7 +49,7 @@ Turn the foundation into a deterministic project generator:
 - output README, wiring data, overlays, configuration files, and source code
 - avoid depending on large language models for correctness
 
-See [Phase 2: CLI Generator](docs/02-phase-two-cli-generator.md).
+See [Phase 2: CLI Generator](AI%20use/en/02-phase-two-cli-generator.md).
 
 ### Phase 3: VS Code Plugin
 
@@ -62,7 +62,7 @@ Turn the CLI and metadata into a developer-facing product:
 - generate projects
 - hand off build, flash, monitor, and debug to the official Zephyr VS Code extension
 
-See [Phase 3: VS Code Plugin](docs/03-phase-three-vscode-plugin.md).
+See [Phase 3: VS Code Plugin](AI%20use/en/03-phase-three-vscode-plugin.md).
 
 ## Repository Purpose
 
@@ -89,12 +89,22 @@ The system should let users start from hardware and intent:
 
 ## Document Index
 
-- [Executive Summary](docs/00-executive-summary.md)
-- [Phase 1: Zephyr Base](docs/01-phase-one-zephyr-base.md)
-- [Phase 2: CLI Generator](docs/02-phase-two-cli-generator.md)
-- [Phase 3: VS Code Plugin](docs/03-phase-three-vscode-plugin.md)
-- [Onboarding and Distribution Design](docs/onboarding-design.md)
-- [Getting Started](docs/getting-started.md)
-- [Validation Log](docs/validation-log.md)
-- [Roadmap and Risks](docs/04-roadmap-and-risks.md)
-- [Glossary](docs/05-glossary.md)
+- [Executive Summary](AI%20use/en/00-executive-summary.md)
+- [Phase 1: Zephyr Base](AI%20use/en/01-phase-one-zephyr-base.md)
+- [Phase 2: CLI Generator](AI%20use/en/02-phase-two-cli-generator.md)
+- [Phase 3: VS Code Plugin](AI%20use/en/03-phase-three-vscode-plugin.md)
+- [Onboarding and Distribution Design](AI%20use/en/onboarding-design.md)
+- [Getting Started](docs/en/getting-started.md)
+- [Validation Log](AI%20use/en/validation-log.md)
+- [Roadmap and Risks](AI%20use/en/04-roadmap-and-risks.md)
+- [Glossary](AI%20use/en/05-glossary.md)
+
+## Chinese Documents
+
+- [执行摘要](AI%20use/zh/00-executive-summary.md)
+- [第一阶段: Zephyr Base](AI%20use/zh/01-phase-one-zephyr-base.md)
+- [第二阶段: CLI Generator](AI%20use/zh/02-phase-two-cli-generator.md)
+- [第三阶段: VS Code Plugin](AI%20use/zh/03-phase-three-vscode-plugin.md)
+- [入门指南](docs/zh/getting-started.md)
+- [路线图与风险](AI%20use/zh/04-roadmap-and-risks.md)
+- [术语表](AI%20use/zh/05-glossary.md)
