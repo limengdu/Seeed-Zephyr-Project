@@ -61,6 +61,9 @@ Step 6 verified 2026-06-19: `samples/basic/blinky` built for
 The bare target `xiao_esp32c6` fails: ESP32-C6 is multi-core and needs the
 `/esp32c6/hpcore` qualifier. Output: zephyr.elf 1.8 MB, zephyr.bin 141 KB;
 FLASH 133020 B (3.17%), SRAM 50688 B (9.95%).
+Step 8 verified 2026-06-19: `west flash` programmed the physical
+xiao_esp32c6/esp32c6/hpcore board; on-board LED blink confirmed by direct
+observation. First hardware-in-loop evidence for this project.
 
 ## Board Build Evidence
 
@@ -73,7 +76,7 @@ target: `xiao_esp32c6`.
 | xiao_nrf52840 | `xiao_ble/nrf52840` | no | pending | | also `/sense` variant |
 | xiao_esp32c3 | `xiao_esp32c3` | yes | pending | | |
 | xiao_esp32c5 | `xiao_esp32c5` | yes | pending | | |
-| xiao_esp32c6 | `xiao_esp32c6/esp32c6/hpcore` | yes | passed | v4.4.0 | bare name fails (multi-core); FLASH 3.17%, SRAM 9.95% |
+| xiao_esp32c6 | `xiao_esp32c6/esp32c6/hpcore` | yes | passed | v4.4.0 | bare name fails (multi-core); FLASH 3.17%, SRAM 9.95%; HW: LED blink verified |
 | xiao_esp32s3 | `xiao_esp32s3` | yes | pending | | |
 | xiao_mg24 | `xiao_mg24` | no | pending | | |
 | xiao_nrf54l15 | `xiao_nrf54l15` | no | pending | | |
