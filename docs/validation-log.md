@@ -36,8 +36,8 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 1 | Install build tools | `brew install cmake ninja gperf python3 python-tk ccache qemu dtc libmagic wget openocd` | done (2026-06-19) |
 | 2 | venv + west | `python3 -m venv ~/zephyrproject/.venv && pip install west` | done (2026-06-19, west v1.5.0) |
 | 3 | Fetch source | `west init ~/zephyrproject --mr v4.4.0 && west update` | done (2026-06-19, v4.4.0, ~5.4 GB) |
-| 4 | CMake export + SDK | `west zephyr-export && west packages pip --install && west sdk install` | pending |
-| 5 | ESP32 blobs | `west blobs fetch hal_espressif` | pending |
+| 4 | CMake export + SDK | `west zephyr-export && west packages pip --install && west sdk install` | done (2026-06-19, SDK 1.0.1) |
+| 5 | ESP32 blobs | `west blobs fetch hal_espressif` | done (2026-06-19, ~31 MB) |
 | 6 | Build sample | `west build -p always -b xiao_esp32c6 samples/basic/blinky` | pending |
 | 7 | Record evidence | populate the board evidence table below | pending |
 
@@ -49,6 +49,13 @@ Step 3 verified 2026-06-19: workspace initialized at ~/zephyrproject, zephyr
 checked out at v4.4.0, west update fetched all modules; total ~5.4 GB on disk.
 A trimmed west.yml that fetches only XIAO-relevant modules is a future
 size/time optimization for the outward-facing path.
+Step 4 verified 2026-06-19: Zephyr SDK 1.0.1 installed (host tools + all GNU
+toolchains, including riscv64-zephyr-elf and arm-zephyr-eabi); SDK toolchains
+live under `sdk_gnu_toolchains/`, not the SDK root. `west packages pip --install`
+succeeded on Python 3.14.6 (pyelftools, pykwalify, anytree, intelhex, etc.);
+`west zephyr-export` registered the Zephyr and ZephyrUnittest CMake packages.
+Step 5 verified 2026-06-19: `west blobs fetch hal_espressif` fetched all
+Espressif blobs (~31 MB total); esp32c6 has its 8 `.a` blobs present.
 
 ## Board Build Evidence
 
@@ -90,6 +97,8 @@ Notes:
   require rebuilding the venv). Decision: proceed on 3.14.6. If a dependency
   fails to install on 3.14 at step 4, install `python@3.13` via Homebrew and
   rebuild the venv. Checked against Zephyr getting-started guidance 2026-06-19.
+RESOLVED 2026-06-19: step 4 `west packages pip --install` succeeded on Python
+3.14.6 with no fallback needed; 3.14 is confirmed usable for this project's setup.
 - `docs/getting-started.md` section 5 states six of eleven boards are ESP32
   (C3/C5/C6/S3 families), but `metadata/boards/` currently holds four ESP32
   entries (c3, c5, c6, s3). Reconcile the count when populating evidence.
