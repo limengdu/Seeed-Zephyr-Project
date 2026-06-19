@@ -15,7 +15,7 @@ section "Keeping Metadata Honest: Status Is Derived, Not Declared".
 | OS | macOS 26.3.1 (Darwin 25.3.0) |
 | Architecture | Apple Silicon (arm64) |
 | Homebrew | installed at `/opt/homebrew` |
-| Python | 3.14.5 |
+| Python | 3.14.6 (Homebrew `python@3.14`) |
 | git | 2.50.1 |
 | Free disk | ~602 GiB |
 | Baseline Zephyr | v4.4.0 (pinned, latest stable) |
@@ -33,13 +33,22 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 
 | # | Step | Command | Status |
 | --- | --- | --- | --- |
-| 1 | Install build tools | `brew install cmake ninja gperf python3 python-tk ccache qemu dtc libmagic wget openocd` | in progress |
-| 2 | venv + west | `python3 -m venv ~/zephyrproject/.venv && pip install west` | pending |
-| 3 | Fetch source | `west init ~/zephyrproject --mr v4.4.0 && west update` | pending |
+| 1 | Install build tools | `brew install cmake ninja gperf python3 python-tk ccache qemu dtc libmagic wget openocd` | done (2026-06-19) |
+| 2 | venv + west | `python3 -m venv ~/zephyrproject/.venv && pip install west` | done (2026-06-19, west v1.5.0) |
+| 3 | Fetch source | `west init ~/zephyrproject --mr v4.4.0 && west update` | done (2026-06-19, v4.4.0, ~5.4 GB) |
 | 4 | CMake export + SDK | `west zephyr-export && west packages pip --install && west sdk install` | pending |
 | 5 | ESP32 blobs | `west blobs fetch hal_espressif` | pending |
 | 6 | Build sample | `west build -p always -b xiao_esp32c6 samples/basic/blinky` | pending |
 | 7 | Record evidence | populate the board evidence table below | pending |
+
+Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
+ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
+Step 2 verified 2026-06-19: west v1.5.0 installed cleanly in a Python 3.14.6
+venv, confirming west itself runs on 3.14.
+Step 3 verified 2026-06-19: workspace initialized at ~/zephyrproject, zephyr
+checked out at v4.4.0, west update fetched all modules; total ~5.4 GB on disk.
+A trimmed west.yml that fetches only XIAO-relevant modules is a future
+size/time optimization for the outward-facing path.
 
 ## Board Build Evidence
 
@@ -75,11 +84,25 @@ Notes:
 
 ## Open Issues and Notes
 
-- Python 3.14.5 is newer than the versions commonly validated with west. If
-  `west packages pip --install` (step 4) fails to build a dependency, fall back
-  to a Homebrew-provided Python 3.13 virtual environment and rebuild the venv.
+- Python 3.14.6 (Homebrew `python@3.14`) is the host interpreter; Homebrew
+  provides no 3.13 build. Zephyr's documented minimum is Python 3.12 with no
+  upper bound, and community reports confirm 3.13/3.14 work (a 3.14 upgrade may
+  require rebuilding the venv). Decision: proceed on 3.14.6. If a dependency
+  fails to install on 3.14 at step 4, install `python@3.13` via Homebrew and
+  rebuild the venv. Checked against Zephyr getting-started guidance 2026-06-19.
 - `docs/getting-started.md` section 5 states six of eleven boards are ESP32
   (C3/C5/C6/S3 families), but `metadata/boards/` currently holds four ESP32
   entries (c3, c5, c6, s3). Reconcile the count when populating evidence.
 - Boards with multiple variants (for example `xiao_ble`) require the
   fully-qualified target name; record the exact name that builds.
+- Step 3 first attempt failed with two errors sharing one root cause:
+  `command not found: west` (the shell had not activated the venv) and
+  `no west workspace found from ".../seeed-zephyr-base"` (`west init` had not
+  completed, and the shell was outside the workspace). Confirmed
+  `~/zephyrproject` held only `.venv` (no `.west`, no zephyr tree). Fix:
+  activate the venv, run `west init ~/zephyrproject --mr v4.4.0` to completion,
+  then `cd ~/zephyrproject && west update`. Note the two distinct directories:
+  the product repo `~/seeed-zephyr-base` versus the Zephyr workspace
+  `~/zephyrproject`. The one-command setup script must auto-activate the venv
+  and confirm the workspace is initialized before calling `west update`; this
+  is a high-frequency external-user trap.
