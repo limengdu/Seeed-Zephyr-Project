@@ -64,16 +64,27 @@ west sdk install
 
 One-sentence summary: connect Zephyr to CMake, install Zephyr's Python packages, and install the compiler SDK.
 
-## 5. Fetch ESP32 Binary Blobs
+## 5. Fetch Board-Specific Binary Blobs
 
-This step is required for the ESP32 XIAO boards. Six of this project's eleven boards are ESP32 boards in the C3, C5, C6, and S3 families, and they will not build without these binary blobs.
+Only some XIAO chip families need Zephyr binary blobs. The macOS setup script derives the correct HAL module from `metadata/boards/<board_id>.yaml` by reading the board's `vendor:` value, then skips the fetch when `west blobs list <module>` is empty.
 
 ```sh
-cd ~/zephyrproject/zephyr
-west blobs fetch hal_espressif
+cd ~/seeed-zephyr-base
+bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
-One-sentence summary: fetch the required Espressif blobs before building ESP32-based XIAO targets.
+For manual setup, first map the board vendor to the Zephyr HAL module, then check whether that module has blobs before fetching. The example below uses the module for `xiao_esp32c6`; replace it with the module for your board vendor.
+
+```sh
+cd ~/zephyrproject
+MODULE=hal_espressif
+west blobs list "$MODULE"
+west blobs fetch "$MODULE"
+```
+
+If `west blobs list "$MODULE"` prints no blob entries, skip the fetch for that board.
+
+One-sentence summary: fetch chip-specific blobs only when the selected XIAO board's HAL module actually reports blob entries.
 
 ## 6. Build This Project's XIAO Boards
 

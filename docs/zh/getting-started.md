@@ -64,16 +64,27 @@ west sdk install
 
 一句话总结: 把 Zephyr 连接到 CMake，安装 Zephyr 的 Python 包，并安装编译器 SDK。
 
-## 5. 获取 ESP32 Binary Blobs
+## 5. 获取开发板专属 Binary Blobs
 
-这一步是 ESP32 XIAO 开发板必需的。本项目十一块开发板中有六块是 C3、C5、C6 和 S3 系列的 ESP32 开发板，没有这些 binary blobs 就无法构建。
+只有部分 XIAO 芯片系列需要 Zephyr binary blobs。macOS setup script 会读取 `metadata/boards/<board_id>.yaml` 里的 `vendor:` 值，由此推导正确的 HAL module，并在 `west blobs list <module>` 没有输出 blob 条目时跳过获取。
 
 ```sh
-cd ~/zephyrproject/zephyr
-west blobs fetch hal_espressif
+cd ~/seeed-zephyr-base
+bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
-一句话总结: 在构建基于 ESP32 的 XIAO targets 前，获取必需的 Espressif blobs。
+如果手动设置，先把开发板 vendor 映射到 Zephyr HAL module，再检查该 module 是否有 blobs。下面的例子使用 `xiao_esp32c6` 对应的 module；实际使用时请替换成你的开发板 vendor 对应的 module。
+
+```sh
+cd ~/zephyrproject
+MODULE=hal_espressif
+west blobs list "$MODULE"
+west blobs fetch "$MODULE"
+```
+
+如果 `west blobs list "$MODULE"` 没有打印 blob 条目，就跳过这块开发板的 fetch。
+
+一句话总结: 只在所选 XIAO 开发板的 HAL module 确实报告 blob 条目时，才获取芯片专属 blobs。
 
 ## 6. 构建本项目的 XIAO 开发板
 
