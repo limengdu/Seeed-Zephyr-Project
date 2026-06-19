@@ -211,8 +211,11 @@ ensure_chip_blobs() {
   list_status=$?
 
   if ((list_status != 0)); then
-    BLOB_OUTPUT="$list_output"
-    return "$list_status"
+    # `west blobs list` fails for modules with no blob declaration (e.g. hal_atmel).
+    # Treat that as "no blobs" and continue instead of failing the board.
+    # 对没有 blob 声明的模块（如 hal_atmel），`west blobs list` 会失败；
+    # 视为「无 blobs」并继续，而不是判定该开发板失败。
+    return 0
   fi
 
   if [[ -z "$(printf '%s\n' "$list_output" | sed '/^[[:space:]]*$/d')" ]]; then
@@ -375,6 +378,12 @@ main() {
   local board_files=("$BOARD_METADATA_DIR"/*.yaml)
 
   ensure_prerequisites
+
+  # Activate the venv so build tools like esptool are on PATH (ESP32 needs it).
+  # 激活虚拟环境，让 esptool 等构建工具位于 PATH 中（ESP32 构建需要它）。
+  # shellcheck source=/dev/null
+  source "$VENV_DIR/bin/activate"
+
   write_results_header
 
   for board_file in "${board_files[@]}"; do
