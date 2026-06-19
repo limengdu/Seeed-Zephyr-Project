@@ -5,7 +5,13 @@
 #   Zephyr workspace using the steps validated for this repository.
 #
 # Usage:
-#   bash scripts/setup-macos.sh
+#   bash scripts/setup-macos.sh [--board <board_id>]
+#
+# Example:
+#   bash scripts/setup-macos.sh --board xiao_esp32c6
+#
+# Board-specific binary blob fetching is derived from board metadata:
+# `metadata/boards/<board_id>.yaml` -> `vendor:` -> Zephyr HAL module.
 #
 # Prerequisites:
 #   - macOS Apple Silicon.
@@ -23,6 +29,10 @@ set -euo pipefail
 ZEPHYR_VERSION="${ZEPHYR_VERSION:-v4.4.0}"
 ZEPHYR_WORKSPACE="${ZEPHYR_WORKSPACE:-$HOME/zephyrproject}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+BOARD_METADATA_DIR="$REPO_ROOT/metadata/boards"
+VALIDATION_LOG="$REPO_ROOT/docs/validation-log.md"
 VENV_DIR="$ZEPHYR_WORKSPACE/.venv"
 WEST="$VENV_DIR/bin/west"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
@@ -41,12 +51,20 @@ BREW_PACKAGES=(
 )
 
 CURRENT_STEP="startup"
+BOARD_ID=""
+BOARD_VENDOR=""
+BOARD_HAL_MODULE=""
+BOARD_BUILD_TARGET=""
 
+# Prints an error message and exits the script.
+# 打印错误信息并退出脚本。
 fail() {
   printf 'Error: %s\n' "$*" >&2
   exit 1
 }
 
+# Reports which setup step failed when any command exits with an error.
+# 当任一命令失败时，报告失败发生在哪个安装步骤。
 on_error() {
   local exit_code=$?
   printf '\nSetup failed during: %s\n' "$CURRENT_STEP" >&2
@@ -56,15 +74,21 @@ on_error() {
 
 trap on_error ERR
 
+# Records and prints the current high-level setup step.
+# 记录并打印当前的高层安装步骤。
 step() {
   CURRENT_STEP="$2"
   printf '\n[%s] %s\n' "$1" "$2"
 }
 
+# Returns success when the named command is available in PATH.
+# 当指定命令存在于 PATH 中时返回成功。
 command_exists() {
   command -v "$1" >/dev/null 2>&1
 }
 
+# Compares two dotted version strings using the configured Python binary.
+# 使用配置的 Python 可执行文件比较两个点分版本号。
 version_at_least() {
   local actual=$1
   local required=$2
@@ -81,6 +105,168 @@ sys.exit(0 if parse(sys.argv[1]) >= parse(sys.argv[2]) else 1)
 PY
 }
 
+# Lists board ids from metadata/boards/*.yaml, one id per line.
+# 从 metadata/boards/*.yaml 列出开发板 id，每行一个。
+list_available_board_ids() {
+  find "$BOARD_METADATA_DIR" -maxdepth 1 -type f -name '*.yaml' -exec basename {} .yaml \; | sort
+}
+
+# Prints the available board ids for help and validation errors.
+# 打印可用开发板 id，用于帮助信息和校验错误。
+print_available_board_ids() {
+  printf 'Available board ids:\n'
+  list_available_board_ids | sed 's/^/  - /'
+}
+
+# Parses command-line arguments into global setup options.
+# 解析命令行参数并写入全局安装选项。
+parse_args() {
+  while (($# > 0)); do
+    case "$1" in
+      --board)
+        (($# >= 2)) || fail "--board requires a board id."
+        BOARD_ID="$2"
+        shift 2
+        ;;
+      -h | --help)
+        printf 'Usage: bash scripts/setup-macos.sh [--board <board_id>]\n\n'
+        print_available_board_ids
+        exit 0
+        ;;
+      *)
+        fail "Unknown argument: $1"
+        ;;
+    esac
+  done
+}
+
+# Reads a flat YAML scalar value from a board metadata file.
+# 从开发板 metadata 文件读取一个扁平 YAML 标量值。
+read_board_metadata_value() {
+  local board_file=$1
+  local key=$2
+
+  sed -n "s/^[[:space:]]*$key:[[:space:]]*//p" "$board_file" | head -n 1
+}
+
+# Maps the board vendor name to the corresponding Zephyr HAL module.
+# 将开发板厂商名称映射到对应的 Zephyr HAL 模块。
+vendor_to_hal_module() {
+  local vendor=$1
+
+  case "$vendor" in
+    espressif)
+      printf 'hal_espressif\n'
+      ;;
+    nordic)
+      printf 'hal_nordic\n'
+      ;;
+    renesas)
+      printf 'hal_renesas\n'
+      ;;
+    silabs)
+      printf 'hal_silabs\n'
+      ;;
+    raspberrypi)
+      printf 'hal_rpi_pico\n'
+      ;;
+    microchip)
+      printf 'hal_atmel\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# Returns the best known Zephyr build target for the selected board.
+# 返回所选开发板目前最可靠的 Zephyr 构建 target。
+resolve_build_target_hint() {
+  local board_id=$1
+  local fallback_target=$2
+  local validation_target
+
+  validation_target="$(
+    awk -F'|' -v board_id="$board_id" '
+      $2 ~ "^[[:space:]]*" board_id "[[:space:]]*$" {
+        target = $3
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", target)
+        gsub(/`/, "", target)
+        print target
+        exit
+      }
+    ' "$VALIDATION_LOG"
+  )"
+
+  if [[ -n "$validation_target" ]]; then
+    printf '%s\n' "$validation_target"
+  else
+    printf '%s\n' "$fallback_target"
+  fi
+}
+
+# Resolves board metadata into vendor, HAL module, and build target globals.
+# 将开发板 metadata 解析为厂商、HAL 模块和构建 target 全局变量。
+resolve_board_metadata() {
+  local board_id=$1
+  local board_file="$BOARD_METADATA_DIR/$board_id.yaml"
+  local metadata_target
+
+  if [[ ! -f "$board_file" ]]; then
+    printf 'Error: board metadata was not found for "%s".\n' "$board_id" >&2
+    print_available_board_ids >&2
+    exit 1
+  fi
+
+  BOARD_VENDOR="$(read_board_metadata_value "$board_file" "vendor")"
+  [[ -n "$BOARD_VENDOR" ]] || fail "Board $board_id does not define a vendor."
+
+  metadata_target="$(read_board_metadata_value "$board_file" "zephyr_target")"
+  [[ -n "$metadata_target" ]] || fail "Board $board_id does not define a zephyr_target."
+  BOARD_BUILD_TARGET="$(resolve_build_target_hint "$board_id" "$metadata_target")"
+
+  if BOARD_HAL_MODULE="$(vendor_to_hal_module "$BOARD_VENDOR")"; then
+    return 0
+  fi
+
+  BOARD_HAL_MODULE=""
+  return 0
+}
+
+# Checks whether a Zephyr HAL module reports any binary blobs.
+# 检查 Zephyr HAL 模块是否报告了任何二进制 blobs。
+module_has_blobs() {
+  local module=$1
+  local blobs_output
+
+  blobs_output="$(
+    cd "$ZEPHYR_WORKSPACE"
+    "$WEST" blobs list "$module"
+  )"
+
+  [[ -n "$(printf '%s\n' "$blobs_output" | sed '/^[[:space:]]*$/d')" ]]
+}
+
+# Fetches board-specific blobs only when the resolved HAL module has blobs.
+# 仅在解析出的 HAL 模块确实包含 blobs 时，获取开发板专属 blobs。
+fetch_board_blobs() {
+  if [[ -z "$BOARD_HAL_MODULE" ]]; then
+    printf 'Board %s uses vendor %s, which has no mapped Zephyr HAL module; skipping blobs.\n' "$BOARD_ID" "$BOARD_VENDOR"
+    return
+  fi
+
+  if module_has_blobs "$BOARD_HAL_MODULE"; then
+    (
+      cd "$ZEPHYR_WORKSPACE"
+      "$WEST" blobs fetch "$BOARD_HAL_MODULE"
+    )
+  else
+    printf 'Board %s (vendor %s, module %s) needs no blobs; skipping.\n' "$BOARD_ID" "$BOARD_VENDOR" "$BOARD_HAL_MODULE"
+  fi
+}
+
+# Installs the Homebrew packages required by Zephyr builds.
+# 安装 Zephyr 构建所需的 Homebrew 软件包。
 install_brew_packages() {
   local missing_packages=()
   local package
@@ -102,6 +288,8 @@ install_brew_packages() {
   brew install "${missing_packages[@]}"
 }
 
+# Verifies that the configured Python binary meets Zephyr's minimum version.
+# 确认配置的 Python 可执行文件满足 Zephyr 的最低版本要求。
 ensure_python_version() {
   local python_version
 
@@ -113,6 +301,8 @@ ensure_python_version() {
   printf 'Using Python %s from %s.\n' "$python_version" "$(command -v "$PYTHON_BIN")"
 }
 
+# Creates the Python venv when needed and ensures west is installed in it.
+# 按需创建 Python 虚拟环境，并确保其中已安装 west。
 ensure_venv_and_west() {
   local python_version
 
@@ -143,8 +333,11 @@ ensure_venv_and_west() {
   fi
 }
 
+# Initializes or updates the Zephyr west workspace at the configured version.
+# 按配置版本初始化或更新 Zephyr west 工作区。
 ensure_workspace() {
   # TODO(mirrors): Add optional regional mirror configuration after mirror policy is validated.
+  # TODO(mirrors): 在镜像策略验证后，添加可选的区域镜像配置。
   if [[ -d "$ZEPHYR_WORKSPACE/.west" ]]; then
     printf 'West workspace is already initialized at %s.\n' "$ZEPHYR_WORKSPACE"
   else
@@ -158,6 +351,8 @@ ensure_workspace() {
   )
 }
 
+# Returns success when a Zephyr SDK installation is already visible locally.
+# 当本机已经能找到 Zephyr SDK 安装目录时返回成功。
 zephyr_sdk_present() {
   local sdk_dir
 
@@ -172,6 +367,8 @@ zephyr_sdk_present() {
   return 1
 }
 
+# Exports Zephyr CMake packages, installs Python packages, and installs the SDK.
+# 导出 Zephyr CMake 包、安装 Python 包，并安装 SDK。
 install_zephyr_tools() {
   (
     cd "$ZEPHYR_WORKSPACE"
@@ -186,36 +383,61 @@ install_zephyr_tools() {
   )
 }
 
-fetch_espressif_blobs() {
-  (
-    cd "$ZEPHYR_WORKSPACE"
-    "$WEST" blobs fetch hal_espressif
-  )
+# Prints board ids and the next command to fetch chip-specific blobs later.
+# 打印开发板 id，并提示之后如何获取芯片专属 blobs。
+print_no_board_next_steps() {
+  printf '\nSetup complete.\n'
+  printf 'The common Zephyr environment is ready.\n'
+  printf 'To fetch chip-specific blobs later, rerun with:\n'
+  printf '  bash scripts/setup-macos.sh --board <your_board_id>\n\n'
+  print_available_board_ids
 }
 
-main() {
-  step "1/5" "Installing build tools..."
-  command_exists brew || fail "Homebrew was not found. Install Homebrew from https://brew.sh/, then rerun this script."
-  install_brew_packages
-
-  step "2/5" "Creating Python venv and installing west..."
-  ensure_python_version
-  ensure_venv_and_west
-
-  step "3/5" "Initializing and updating the Zephyr workspace..."
-  ensure_workspace
-
-  step "4/5" "Exporting Zephyr, installing Python packages, and checking the SDK..."
-  install_zephyr_tools
-
-  step "5/5" "Fetching Espressif blobs..."
-  fetch_espressif_blobs
-
+# Prints the build command for the selected board after setup succeeds.
+# 安装成功后，打印所选开发板的构建命令。
+print_board_next_steps() {
   printf '\nSetup complete.\n'
   printf 'Next step:\n'
   printf '  cd %s\n' "$ZEPHYR_WORKSPACE/zephyr"
-  printf '  west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky\n'
+  printf '  west build -p always -b %s samples/basic/blinky\n' "$BOARD_BUILD_TARGET"
   printf '\nMulti-core boards require the fully-qualified target, such as xiao_esp32c6/esp32c6/hpcore.\n'
 }
 
-main "$@"
+# Runs the full macOS setup flow in the required common-step order.
+# 按要求的公共步骤顺序执行完整 macOS 安装流程。
+main() {
+  local total_steps=4
+
+  parse_args "$@"
+
+  if [[ -n "$BOARD_ID" ]]; then
+    total_steps=5
+    resolve_board_metadata "$BOARD_ID"
+  fi
+
+  step "1/$total_steps" "Installing build tools..."
+  command_exists brew || fail "Homebrew was not found. Install Homebrew from https://brew.sh/, then rerun this script."
+  install_brew_packages
+
+  step "2/$total_steps" "Creating Python venv and installing west..."
+  ensure_python_version
+  ensure_venv_and_west
+
+  step "3/$total_steps" "Initializing and updating the Zephyr workspace..."
+  ensure_workspace
+
+  step "4/$total_steps" "Exporting Zephyr, installing Python packages, and checking the SDK..."
+  install_zephyr_tools
+
+  if [[ -n "$BOARD_ID" ]]; then
+    step "5/$total_steps" "Resolving and fetching board-specific blobs..."
+    fetch_board_blobs
+    print_board_next_steps
+  else
+    print_no_board_next_steps
+  fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
