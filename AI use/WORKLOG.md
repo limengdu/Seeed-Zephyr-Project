@@ -506,3 +506,56 @@ Result:
 Verification:
 - Grep checks confirmed `setup-linux.sh`, `setup-windows.ps1`, and `seeed-zephyr debug`
   appear in `README.md`, `docs/en/getting-started.md`, and `docs/zh/getting-started.md`.
+
+## 2026-06-20 - Hardware blinky testing: c6/s3/c3 PASS, samd21 blocked
+
+Scope:
+- Real hardware testing of `seeed-zephyr flash <board> --monitor` on physical
+  XIAO boards.
+
+Result:
+- xiao_esp32c6: PASS — LED blinks, serial output confirmed with banner.
+- xiao_esp32s3: PASS — LED blinks, serial output confirmed.
+- xiao_esp32c3: PASS — hello_world serial output confirmed (no on-board LED).
+- xiao_samd21: BLOCKED — `seeed-zephyr flash xiao_samd21 --monitor` rejected
+  with "Monitor is currently implemented for Espressif boards only" before
+  flashing. The `flash --monitor` path checks monitor support BEFORE building,
+  so non-Espressif boards never even start the build/flash sequence.
+
+Remaining:
+- Fix CLI monitor to support non-Espressif boards (see next entry).
+- After fix: resume samd21 testing, then test nrf52840, nrf54l15, rp2040,
+  rp2350, mg24, ra4m1.
+
+## 2026-06-20 - Monitor investigation: Zephyr has no generic west monitor
+
+Scope:
+- Investigated whether Zephyr provides a built-in serial monitor for
+  non-Espressif boards.
+
+Result:
+- `west --help` in the v4.4.0 workspace lists NO generic `west monitor`
+  command. Only `west espressif monitor` exists (hal_espressif extension).
+- Zephyr GitHub Issue #97954 (opened 2025-10-21) proposes adding
+  `west monitor`, but as of 2026-06-20 it is still Open with no PR and no
+  target release version.
+- `west rtt` exists but requires a J-Link debugger (SEGGER RTT), not a
+  standard serial connection.
+- pyserial (`serial.tools.miniterm` and `serial.tools.list_ports`) is already
+  installed in the Zephyr venv by `west packages pip --install`. It is a
+  Zephyr dependency, not an externally introduced tool.
+
+Decision:
+- ESP32 boards: keep `west espressif monitor` (idf_monitor).
+- Non-ESP32 boards: use pyserial miniterm from the Zephyr venv, invoked as
+  a subprocess (`<venv>/bin/python -m serial.tools.miniterm <port> <baud>`).
+  This keeps the CLI itself standard-library-only while using a tool Zephyr
+  already installs.
+- Add `--port` and `--baud` arguments to both `monitor` and `flash` commands.
+- Auto-detect serial port via `serial.tools.list_ports` when `--port` is not
+  given.
+
+Remaining:
+- Implement the above in `tools/cli/seeed_zephyr.py`.
+- Update CLI docs, README, getting-started guides.
+- Resume per-board hardware testing after implementation.
