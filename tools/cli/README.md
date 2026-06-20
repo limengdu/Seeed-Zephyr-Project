@@ -27,11 +27,11 @@ and repository-driven.
 `seeed-zephyr flash <board_id> --monitor` builds, flashes, and opens the board
 monitor after a successful flash.
 
-For Raspberry Pi UF2 boards such as XIAO RP2040 and XIAO RP2350, `flash` checks
-for a visible UF2 mass-storage volume before calling `west flash`. When no UF2
-volume is visible, XIAO RP2040 can request UF2 mode through the running USB CDC
-serial port at 1200 baud. If no serial port is available or the request times
-out, the CLI reports a BOOTSEL recovery hint.
+For UF2 boards such as XIAO RP2040, XIAO RP2350, and XIAO nRF52840, `flash`
+checks for a visible UF2 mass-storage volume before calling `west flash`. XIAO
+nRF52840 uses Zephyr's `uf2` runner instead of the default `nrfutil` runner.
+When no UF2 volume is visible, the CLI tries the board serial path when
+available, then reports the board-specific manual bootloader hint.
 
 `seeed-zephyr monitor <board_id> --port <device> --baud <rate>` opens a serial
 monitor. If `--port` is omitted, the CLI tries to auto-detect one USB serial
@@ -60,9 +60,10 @@ CLI 是仓库知识层，不是替代 Zephyr 的构建系统。build、flash、m
 
 `seeed-zephyr flash <board_id> --monitor` 会构建、烧录，并在烧录成功后打开开发板 monitor。
 
-对于 XIAO RP2040 和 XIAO RP2350 这类 Raspberry Pi UF2 开发板，`flash` 会先检查能否看到
-UF2 存储卷，再调用 `west flash`。如果看不到 UF2 卷，XIAO RP2040 可以通过正在运行的 USB CDC
-串口 1200 baud 请求进入 UF2 模式。如果找不到串口，或者请求超时，CLI 会输出 BOOTSEL 恢复提示。
+对于 XIAO RP2040、XIAO RP2350 和 XIAO nRF52840 这类 UF2 开发板，`flash` 会先检查能否看到
+UF2 存储卷，再调用 `west flash`。XIAO nRF52840 会使用 Zephyr 的 `uf2` runner，而不是默认的
+`nrfutil` runner。如果看不到 UF2 卷，CLI 会在可用时尝试串口请求，然后输出对应开发板的手动
+bootloader 提示。
 
 `seeed-zephyr monitor <board_id> --port <device> --baud <rate>` 会打开串口 monitor。
 如果省略 `--port`，CLI 会尝试自动检测一个 USB 串口设备。

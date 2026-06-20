@@ -36,6 +36,7 @@ RP2_BOOTLOADER_SNIPPET = "rp2-boot-mode-retention"
 RP2_BOOTLOADER_BAUD = 1200
 RP2_BOOTLOADER_TOUCH_SECONDS = 1.5
 RP2_BOOTLOADER_WAIT_SECONDS = 10
+UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
 
 
 class CliError(Exception):
@@ -317,11 +318,18 @@ def samd21_bootloader_hint(port: str | None) -> str:
 
 
 def uf2_bootloader_hint(board_id: str) -> str:
+    if board_id == "xiao_nrf52840":
+        return (
+            "XIAO nRF52840 flashing uses Zephyr's UF2 runner with the Adafruit "
+            "nRF52 Bootloader. Double-tap RESET, wait for the UF2 mass storage "
+            "volume to appear, then rerun the flash command."
+        )
+
     return (
-        f"{board_id} flashing uses Zephyr's UF2 runner. If the board is running "
-        "older firmware, hold BOOTSEL while plugging in USB, or hold BOOTSEL "
-        "and press RESET, then wait for the UF2 mass storage volume to appear "
-        "and rerun the flash command."
+        f"{board_id} flashing uses Zephyr's UF2 runner. If the current firmware "
+        "does not expose an automatic UF2 request path, hold BOOTSEL while "
+        "plugging in USB, or hold BOOTSEL and press RESET, then wait for the "
+        "UF2 mass storage volume to appear and rerun the flash command."
     )
 
 
@@ -340,6 +348,12 @@ def require_flash_tools(board_id: str) -> None:
         )
     if board["target"] == "seeeduino_xiao":
         require_host_tool("bossac", bossac_install_hint())
+
+
+def uses_uf2_runner(board: dict[str, str]) -> bool:
+    # Identifies boards whose normal repository flash path is UF2 mass storage.
+    # 识别仓库默认通过 UF2 存储盘烧录的开发板。
+    return board["vendor"] == "raspberrypi" or board["id"] in UF2_RUNNER_BOARD_IDS
 
 
 def resolve_flash_port(board: dict[str, str], port: str | None) -> str | None:
@@ -424,7 +438,7 @@ def touch_serial_1200(port: str) -> None:
         raise CliError(message)
 
 
-def prepare_rp2_uf2_bootloader(board_id: str, port: str | None) -> str | None:
+def prepare_uf2_bootloader(board_id: str, port: str | None) -> str | None:
     mounts = uf2_mounts()
     if len(mounts) == 1:
         return port
@@ -460,10 +474,12 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     # 执行 Zephyr 烧录，并返回后续 monitor 可复用的串口。
     board = require_board(board_id)
     port = resolve_flash_port(board, port)
-    if board["vendor"] == "raspberrypi":
-        port = prepare_rp2_uf2_bootloader(board_id, port)
+    if uses_uf2_runner(board):
+        port = prepare_uf2_bootloader(board_id, port)
 
     command = ["flash"]
+    if board["id"] in UF2_RUNNER_BOARD_IDS:
+        command.extend(["--runner", "uf2"])
     if board["target"] == "seeeduino_xiao" and port is not None:
         command.extend(["--bossac-port", port, "--delay", SAMD21_BOSSAC_DELAY_SECONDS])
 
@@ -472,7 +488,7 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     except CliError as error:
         if board["target"] == "seeeduino_xiao":
             raise CliError(f"{error}\nHint: {samd21_bootloader_hint(port)}") from error
-        if board["vendor"] == "raspberrypi":
+        if uses_uf2_runner(board):
             raise CliError(f"{error}\nHint: {uf2_bootloader_hint(board_id)}") from error
         raise
 
@@ -640,7 +656,7 @@ def cmd_flash(args: argparse.Namespace) -> None:
         monitor_port = port
         if board["target"] == "seeeduino_xiao" and args.port is None:
             monitor_port = None
-        if board["vendor"] == "raspberrypi" and args.port is None:
+        if uses_uf2_runner(board) and args.port is None:
             monitor_port = None
         run_monitor(args.board_id, port=monitor_port, baud=args.baud)
 

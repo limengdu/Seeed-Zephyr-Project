@@ -91,6 +91,48 @@ Verification:
 Remaining:
 - None for the RP2350 M33 default target and monitor flow.
 
+## 2026-06-20 - Route XIAO nRF52840 flashing through UF2
+
+Scope:
+- Updated `tools/cli/seeed_zephyr.py`.
+- Updated `tools/cli/test_seeed_zephyr.py`.
+- Added XIAO nRF52840 board development docs under `docs/en/boards/` and
+  `docs/zh/boards/`.
+- Updated CLI docs, Getting Started docs, and the nRF52840 example README.
+
+Reason:
+- The XIAO nRF52840 Zephyr board supports UF2 flashing through the Adafruit
+  nRF52 Bootloader, but Zephyr's default runner selection used `nrfutil`.
+  Ordinary XIAO nRF52840 boards do not have an onboard J-Link debugger, so the
+  repository CLI should default to the UF2 path.
+
+Result:
+- `seeed-zephyr flash xiao_nrf52840 --monitor` now calls
+  `west flash --runner uf2` after build.
+- The CLI no longer treats missing `nrfutil` as the normal blocker for the
+  repository nRF52840 UF2 flow.
+- The CLI emits an nRF52840-specific double-tap RESET hint when no UF2 volume
+  appears.
+
+Verification:
+- Added a failing regression test showing that `xiao_nrf52840` did not pass
+  `--runner uf2`, then implemented the fix.
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py`: passed,
+  11 tests.
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py tools/cli/test_seeed_zephyr.py`:
+  passed.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  passed, 29 total.
+- `bash scripts/build-example.sh examples/boards/xiao_nrf52840/blinky`: passed.
+- `seeed-zephyr flash xiao_nrf52840 --monitor`: built the repository example,
+  attempted the UF2 path, and failed waiting for a UF2 mass-storage volume
+  instead of failing on missing `nrfutil`.
+
+Remaining:
+- Put the physical XIAO nRF52840 into UF2 mode by double-tapping RESET, then
+  rerun `seeed-zephyr flash xiao_nrf52840 --monitor` to complete hardware
+  flash and monitor validation.
+
 ## 2026-06-20 - Refine RP2040 board guide
 
 Scope:

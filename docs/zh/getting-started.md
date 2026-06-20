@@ -166,7 +166,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | 开发板 | board target | 仓库示例 | v4.4.0 状态 | 说明 |
 | --- | --- | --- | --- | --- |
 | XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
-| XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 可构建 |
+| XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 可构建；CLI 使用 UF2 runner |
 | XIAO ESP32C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 无板载 LED |
 | XIAO ESP32C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
 | XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 可构建 |
@@ -289,16 +289,20 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 
 一句话总结：ESP32 烧录和 monitor 使用 Zephyr 的 `hal_espressif` 工具，CLI 会把 Zephyr venv 暴露给这些工具。
 
-### `No matching UF2 partitions found`
+### UF2 开发板找不到存储盘
 
-对 RP2040 或 RP2350 开发板，先确认 UF2 存储卷已经可见，然后重新运行烧录命令：
+对 RP2040、RP2350 或 nRF52840 开发板，先确认 UF2 存储卷已经可见，然后重新运行烧录命令：
 
 ```sh
-seeed-zephyr flash xiao_rp2040 --monitor
+seeed-zephyr flash xiao_nrf52840 --monitor
 ```
 
 如果 XIAO RP2040 或 XIAO RP2350 已经运行支持自动进入 UF2 的本仓库示例，CLI 通常会通过
 USB CDC 1200 baud 自动请求进入 UF2 模式。若当前程序不支持这个请求，或者看不到 USB CDC
 串口，就按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。运行 `west flash` 的环境必须能看到 UF2 存储卷。
 
-一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；XIAO RP2040 和 XIAO RP2350 装入对应本仓库示例后可以自动进入这个模式。
+XIAO nRF52840 使用 Adafruit nRF52 Bootloader。若没有出现 UF2 存储盘，快速双击 `RESET`，
+看到存储盘后重新运行命令。本仓库 CLI 会使用 Zephyr 的 `uf2` runner，不需要为普通 UF2 烧录安装
+`nrfutil`。
+
+一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；nRF52840 要双击 RESET 进入这个模式。

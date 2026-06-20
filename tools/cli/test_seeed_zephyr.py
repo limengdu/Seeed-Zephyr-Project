@@ -64,6 +64,14 @@ class FlashHintTests(unittest.TestCase):
         detect.assert_not_called()
         touch.assert_called_once_with("/dev/cu.usbmodem1101")
 
+    def test_xiao_nrf52840_flash_uses_uf2_runner(self) -> None:
+        with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=["/Volumes/XIAO-SENSE"]):
+            with mock.patch.object(seeed_zephyr, "run_west") as run_west:
+                selected_port = seeed_zephyr.run_west_flash("xiao_nrf52840")
+
+        self.assertIsNone(selected_port)
+        run_west.assert_called_once_with(["flash", "--runner", "uf2"])
+
     def test_raspberrypi_flash_timeout_keeps_manual_bootsel_hint(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[]):
             with mock.patch.object(seeed_zephyr, "detect_serial_port", return_value="/dev/cu.usbmodem1101"):
