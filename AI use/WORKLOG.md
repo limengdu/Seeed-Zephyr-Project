@@ -420,3 +420,38 @@ Verification:
 Remaining:
 - Create the first repository-owned examples under `examples/`.
 - Add contribution rules for community examples and projects.
+
+## 2026-06-20 - Add Linux setup entrypoint
+
+Scope:
+- Added `scripts/setup-linux.sh`.
+- Updated `scripts/README.md` to list the Linux setup script.
+- Appended this work log entry.
+
+Reason:
+- The cross-platform setup path needed a Linux phase that mirrors the macOS
+  platform-entry pattern while keeping the Zephyr workspace flow centralized in
+  `scripts/lib/common.sh`.
+
+Result:
+- `setup-linux.sh` sets the same platform variables as `setup-macos.sh`, then
+  sources `scripts/lib/common.sh`.
+- Linux-specific work is limited to host package installation, serial group
+  membership, optional `plugdev` membership, and available Zephyr SDK/OpenOCD
+  udev rule installation.
+- The script keeps board selection, venv, west, SDK installation, package
+  installation, blob fetching, CLI installation, and next-step output delegated
+  to the shared common setup flow.
+- The script header clearly states `NOT YET VERIFIED ON REAL LINUX`.
+
+Verification:
+- Written and bash-syntax-checked on macOS only.
+- `bash -n scripts/setup-linux.sh`: passed.
+- Structural checks confirmed that the script sources `scripts/lib/common.sh`,
+  defines `install_system_dependencies`, sets the same platform variables as
+  `setup-macos.sh`, and calls `run_setup_flow "$@"` only when executed directly.
+
+Remaining:
+- NOT YET VERIFIED ON REAL LINUX. Package installation, group changes, udev
+  copying, and real flash/monitor/debug device access still need validation on
+  Debian/Ubuntu and Fedora machines.
