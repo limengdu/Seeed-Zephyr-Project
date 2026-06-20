@@ -312,6 +312,14 @@ def samd21_bootloader_hint(port: str | None) -> str:
     )
 
 
+def uf2_bootloader_hint(board_id: str) -> str:
+    return (
+        f"{board_id} flashing uses Zephyr's UF2 runner. Hold BOOTSEL while "
+        "plugging in USB, or hold BOOTSEL and press RESET, then wait for the "
+        "UF2 mass storage volume to appear and rerun the flash command."
+    )
+
+
 def require_host_tool(tool_name: str, install_hint: str) -> None:
     if shutil.which(tool_name, path=west_command_env().get("PATH")) is None:
         raise CliError(f"{tool_name} was not found. {install_hint}.")
@@ -355,6 +363,8 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     except CliError as error:
         if board["target"] == "seeeduino_xiao":
             raise CliError(f"{error}\nHint: {samd21_bootloader_hint(port)}") from error
+        if board["vendor"] == "raspberrypi":
+            raise CliError(f"{error}\nHint: {uf2_bootloader_hint(board_id)}") from error
         raise
 
     return port

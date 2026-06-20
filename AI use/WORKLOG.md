@@ -30,6 +30,63 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Verify RP2040 UF2 flash and monitor flow
+
+Scope:
+- Updated `tools/cli/seeed_zephyr.py` so Raspberry Pi vendor UF2 flash failures
+  include a BOOTSEL and UF2 mass-storage hint.
+- Added `tools/cli/test_seeed_zephyr.py` regression coverage for the
+  Raspberry Pi UF2 flash hint on `xiao_rp2040` and `xiao_rp2350`.
+- Added USB CDC ACM console configuration to
+  `examples/boards/xiao_rp2040/blinky`.
+- Marked `examples/boards/xiao_rp2040/blinky/example.yaml` as
+  `hardware-tested`.
+- Added `docs/en/boards/xiao-rp2040.md` and
+  `docs/zh/boards/xiao-rp2040.md`, then linked them from the board-note indexes
+  and Getting Started docs.
+- Added XIAO RP2040 hardware evidence to
+  `AI use/HARDWARE_VERIFICATION.md`.
+
+Reason:
+- `seeed-zephyr flash xiao_rp2040 --monitor` built the firmware but Zephyr's
+  UF2 runner failed with `No matching UF2 partitions found` when the board was
+  not in UF2 bootloader mode.
+- The repository example also needed a USB CDC ACM console so `--monitor` could
+  show user-visible output after a successful UF2 flash.
+
+Result:
+- RP2040 UF2 flash failures now include a direct BOOTSEL/UF2 hint.
+- The XIAO RP2040 blinky example now exposes monitor output through USB CDC ACM.
+- `seeed-zephyr flash xiao_rp2040 --monitor` can build, copy `zephyr.uf2` to
+  the mounted UF2 volume, and open pyserial miniterm.
+- User-facing docs now state that RP2040 repeated flashing requires entering
+  UF2 mode again before each flash.
+
+Verification:
+- `python3 tools/cli/test_seeed_zephyr.py`: passed.
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py tools/cli/test_seeed_zephyr.py`:
+  passed.
+- `scripts/seeed-zephyr build xiao_rp2040`: passed.
+- Generated `.config` contains `CONFIG_USB_DEVICE_STACK_NEXT=y`,
+  `CONFIG_USBD_CDC_ACM_CLASS=y`,
+  `CONFIG_CDC_ACM_SERIAL_INITIALIZE_AT_BOOT=y`,
+  `CONFIG_CDC_ACM_SERIAL_PRODUCT_STRING="Seeed XIAO RP2040 blinky"`,
+  `CONFIG_UART_CONSOLE=y`, and `CONFIG_STDOUT_CONSOLE=y`.
+- Generated `zephyr.dts` contains `zephyr,console = &cdc_acm_uart0` and a
+  `zephyr,cdc-acm-uart` compatible node.
+- `seeed-zephyr flash xiao_rp2040 --monitor` without UF2 mode: build passed,
+  `west flash` failed with `No matching UF2 partitions found`, and the CLI
+  showed the BOOTSEL/UF2 hint.
+- `seeed-zephyr flash xiao_rp2040 --monitor` with UF2 mode: build passed,
+  Zephyr copied `zephyr.uf2` to `/Volumes/RPI-RP2`, pyserial miniterm opened
+  `/dev/cu.usbmodem1101`, and repeated LED state output was observed.
+- A second consecutive `seeed-zephyr flash xiao_rp2040 --monitor` without
+  entering UF2 mode again failed with the expected UF2 error and CLI hint.
+
+Remaining:
+- None for RP2040 UF2 flash and monitor support. Requiring UF2 mode before each
+  flash is the currently verified board behavior.
+
 ## 2026-06-20 - Document SAMD21 BOSSA auto-reset behavior
 
 Scope:

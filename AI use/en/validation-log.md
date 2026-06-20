@@ -143,6 +143,9 @@ Baseline CLI: `scripts/seeed-zephyr`, 2026-06-20.
 | `seeed-zephyr flash xiao_esp32c6 --monitor` in a TTY session | passed | build, flash, hash verification, monitor startup, and serial LED state output observed |
 | direct `west build` delegation through `scripts/seeed-zephyr build xiao_esp32c3` | passed | CLI selected the repository example and called `west build`; output order was verified |
 | direct `west flash` and monitor delegation through `seeed-zephyr flash xiao_esp32c6 --monitor` | passed | CLI called `west build`, `west flash`, and Zephyr's Espressif monitor; flash wrote 144300 bytes and serial output showed Zephyr boot plus `LED state` toggles |
+| `seeed-zephyr flash xiao_rp2040 --monitor` without UF2 mode | expected error | build passed; `west flash` reported no matching UF2 partition and CLI showed the BOOTSEL/UF2 hint |
+| `seeed-zephyr flash xiao_rp2040 --monitor` with UF2 mode | passed | build passed; Zephyr copied `zephyr.uf2` to `/Volumes/RPI-RP2`; pyserial miniterm showed repeated LED state output |
+| second consecutive `seeed-zephyr flash xiao_rp2040 --monitor` without UF2 mode | expected error | repeated flashing requires entering UF2 mode again before each flash |
 
 ## Repository Example Build Evidence
 
@@ -161,7 +164,7 @@ overrides are recorded in `tools/build_matrix/board-overrides.tsv`.
 | xiao_mg24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | no | passed | v4.4.0 | build succeeded |
 | xiao_nrf54l15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | no | passed | v4.4.0 | build succeeded |
 | xiao_ra4m1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | no | passed | v4.4.0 | build succeeded |
-| xiao_rp2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_rp2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | no | passed | v4.4.0 | build, UF2 flash, and USB CDC monitor passed on hardware |
 | xiao_rp2350 | `xiao_rp2350/rp2350a/hazard3` | `examples/boards/xiao_rp2350/blinky` | no | passed | v4.4.0 | build succeeded |
 
 ## Historical Upstream Sample Build Evidence

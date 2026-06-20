@@ -142,6 +142,7 @@ seeed-zephyr debug xiao_esp32c6
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
 seeed-zephyr flash xiao_samd21 --monitor
+seeed-zephyr flash xiao_rp2040 --monitor
 ```
 
 运行完整构建矩阵：
@@ -173,7 +174,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 可构建 |
 | XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 可构建 |
 | XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建 |
-| XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 可构建 |
+| XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；每次烧录需要 UF2 模式 |
 | XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | `examples/boards/xiao_rp2350/blinky` | PASS | 可构建 |
 
 `UNSUPPORTED` 的意思不是脚本写错了，而是当前固定使用的 Zephyr v4.4.0 里没有这个
@@ -214,6 +215,9 @@ seeed-zephyr monitor xiao_samd21
 
 关于 XIAO SAMD21 连续烧录和 BOSSA 自动重启行为，见
 [XIAO SAMD21 开发板说明](boards/xiao-samd21.md)。
+
+关于 XIAO RP2040 UF2 烧录和 USB CDC monitor 行为，见
+[XIAO RP2040 开发板说明](boards/xiao-rp2040.md)。
 
 如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
 
@@ -284,3 +288,16 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
 一句话总结：ESP32 烧录和 monitor 使用 Zephyr 的 `hal_espressif` 工具，CLI 会把 Zephyr venv 暴露给这些工具。
+
+### `No matching UF2 partitions found`
+
+把 RP2040 或 RP2350 开发板放进 UF2 模式，然后重新运行烧录命令：
+
+```sh
+seeed-zephyr flash xiao_rp2040 --monitor
+```
+
+进入方式是：按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。运行 `west flash` 的环境必须能看到
+UF2 存储卷。
+
+一句话总结：UF2 开发板必须先露出 bootloader 存储盘，Zephyr 才能复制固件。

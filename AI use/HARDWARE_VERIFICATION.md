@@ -49,3 +49,11 @@ Entry format:
 - Result: `PASS`
 - Serial output: `*** Booting Zephyr OS build v4.4.0 ***`; repeated `LED state: OFF` and `LED state: ON`
 - Notes: `seeed-zephyr flash xiao_samd21 --monitor` built the repository example, flashed through Zephyr's BOSSA runner, verified flash contents, opened pyserial miniterm on `/dev/cu.usbmodem1101`, and observed Zephyr boot plus LED state toggles. A second consecutive `seeed-zephyr flash xiao_samd21 --monitor` run passed without manual reset.
+
+## 2026-06-20T19:37:00+08:00 - xiao_rp2040 - PASS
+
+- Board: `xiao_rp2040`
+- Example: `examples/boards/xiao_rp2040/blinky`
+- Result: `PASS`
+- Serial output: repeated `LED state: OFF` and `LED state: ON`
+- Notes: `seeed-zephyr flash xiao_rp2040 --monitor` first produced the expected BOOTSEL/UF2 hint when no UF2 volume was mounted. After the board entered UF2 mode, the command built the repository example, copied `zephyr.uf2` to `/Volumes/RPI-RP2`, opened pyserial miniterm on `/dev/cu.usbmodem1101`, and observed repeated LED state output. A second consecutive flash without entering UF2 mode again failed with the expected `No matching UF2 partitions found` behavior and BOOTSEL hint.

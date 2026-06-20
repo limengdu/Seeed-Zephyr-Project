@@ -79,6 +79,7 @@ Flash and then open the monitor:
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
 seeed-zephyr flash xiao_samd21 --monitor
+seeed-zephyr flash xiao_rp2040 --monitor
 ```
 
 The CLI selects repository examples and board metadata. Firmware build, flash,
@@ -191,6 +192,7 @@ The system should let users start from hardware and intent:
 - [Onboarding and Distribution Design](AI%20use/en/onboarding-design.md)
 - [Getting Started](docs/en/getting-started.md)
 - [XIAO SAMD21 Board Notes](docs/en/boards/xiao-samd21.md)
+- [XIAO RP2040 Board Notes](docs/en/boards/xiao-rp2040.md)
 - [Validation Log](AI%20use/en/validation-log.md)
 - [Roadmap and Quality Controls](AI%20use/en/04-roadmap-and-risks.md)
 - [Glossary](AI%20use/en/05-glossary.md)
@@ -205,5 +207,6 @@ The system should let users start from hardware and intent:
 - [第三阶段: VS Code 产品体验](AI%20use/zh/03-phase-three-vscode-plugin.md)
 - [入门指南](docs/zh/getting-started.md)
 - [XIAO SAMD21 开发板说明](docs/zh/boards/xiao-samd21.md)
+- [XIAO RP2040 开发板说明](docs/zh/boards/xiao-rp2040.md)
 - [路线图与质量控制](AI%20use/zh/04-roadmap-and-risks.md)
 - [术语表](AI%20use/zh/05-glossary.md)

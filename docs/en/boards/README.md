@@ -18,3 +18,4 @@ bootloader entry, and board-specific validation notes.
 ## Documents
 
 - [XIAO SAMD21](xiao-samd21.md)
+- [XIAO RP2040](xiao-rp2040.md)
