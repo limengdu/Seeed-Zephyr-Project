@@ -419,6 +419,22 @@ def wait_for_uf2_mount(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECONDS) -> st
     raise CliError("Timed out waiting for the UF2 mass storage volume.")
 
 
+def wait_for_uf2_detach(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECONDS) -> None:
+    # Waits for UF2 storage to disappear after Zephyr copies the firmware.
+    # 等待 Zephyr 复制固件后 UF2 存储盘消失。
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        if not uf2_mounts():
+            return
+        time.sleep(0.5)
+
+    raise CliError(
+        "UF2 mass storage volume did not detach after flashing. "
+        "Unplug and reconnect the board, then open monitor again."
+    )
+
+
 def touch_serial_1200(port: str) -> None:
     python = zephyr_venv_python()
     script = (
@@ -608,15 +624,16 @@ def wait_for_serial_port(timeout_seconds: int = 10) -> str:
     )
 
 
-def serial_port_is_openable(port: str, baud: int) -> tuple[bool, str]:
-    python = zephyr_venv_python()
+def serial_port_open_check_script() -> str:
     # Checks whether pyserial can open and close the selected port.
     # 检查 pyserial 是否可以打开并关闭选中的串口。
-    script = (
-        "import sys;"
-        "import serial;"
-        "port = sys.argv[1];"
-        "baud = int(sys.argv[2]);"
+    return (
+        "import sys\n"
+        "import serial\n"
+        "\n"
+        "port = sys.argv[1]\n"
+        "baud = int(sys.argv[2])\n"
+        "\n"
         "try:\n"
         "    ser = serial.Serial(port=port, baudrate=baud, timeout=0.1)\n"
         "    ser.close()\n"
@@ -624,8 +641,12 @@ def serial_port_is_openable(port: str, baud: int) -> tuple[bool, str]:
         "    print(error)\n"
         "    raise SystemExit(1)\n"
     )
+
+
+def serial_port_is_openable(port: str, baud: int) -> tuple[bool, str]:
+    python = zephyr_venv_python()
     result = run_command_capture(
-        [str(python), "-c", script, port, str(baud)],
+        [str(python), "-c", serial_port_open_check_script(), port, str(baud)],
         cwd=zephyr_workspace(),
         env=west_command_env(),
     )
@@ -717,6 +738,7 @@ def cmd_flash(args: argparse.Namespace) -> None:
             monitor_port = None
         if uses_uf2_runner(board) and args.port is None:
             monitor_port = None
+            wait_for_uf2_detach()
         run_monitor(args.board_id, port=monitor_port, baud=args.baud)
 
 

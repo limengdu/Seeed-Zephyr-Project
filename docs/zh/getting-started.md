@@ -166,7 +166,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | 开发板 | board target | 仓库示例 | v4.4.0 状态 | 说明 |
 | --- | --- | --- | --- | --- |
 | XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
-| XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 可构建；重复烧录会自动请求 UF2 |
+| XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO ESP32C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 无板载 LED |
 | XIAO ESP32C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
 | XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 可构建 |

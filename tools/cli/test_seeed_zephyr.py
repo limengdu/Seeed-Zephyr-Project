@@ -107,6 +107,9 @@ class FlashHintTests(unittest.TestCase):
 
 
 class MonitorCommandTests(unittest.TestCase):
+    def test_serial_open_check_script_is_valid_python(self) -> None:
+        compile(seeed_zephyr.serial_port_open_check_script(), "<serial-open-check>", "exec")
+
     def test_monitor_waits_until_serial_port_is_openable(self) -> None:
         with mock.patch.object(seeed_zephyr, "require_board", return_value={"vendor": "nordic"}):
             with mock.patch.object(
@@ -146,6 +149,29 @@ class MonitorCommandTests(unittest.TestCase):
                         port = seeed_zephyr.wait_for_serial_port_ready(timeout_seconds=1)
 
         self.assertEqual(port, "/dev/cu.usbmodem1101")
+
+    def test_uf2_flash_monitor_waits_for_bootloader_volume_to_detach(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_nrf52840", port=None, monitor=True, baud=115200
+        )
+        board = {"id": "xiao_nrf52840", "vendor": "nordic", "target": "xiao_ble"}
+
+        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "require_flash_tools"):
+                with mock.patch.object(seeed_zephyr, "run_west_build"):
+                    with mock.patch.object(seeed_zephyr, "run_west_flash", return_value="/dev/cu.usbmodem1101"):
+                        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+                            with mock.patch.object(seeed_zephyr, "wait_for_uf2_detach") as wait_detach:
+                                with mock.patch.object(seeed_zephyr, "run_monitor") as run_monitor:
+                                    seeed_zephyr.cmd_flash(args)
+
+        wait_detach.assert_called_once_with()
+        run_monitor.assert_called_once_with("xiao_nrf52840", port=None, baud=115200)
+
+    def test_wait_for_uf2_detach_returns_after_volume_disappears(self) -> None:
+        with mock.patch.object(seeed_zephyr, "uf2_mounts", side_effect=[["/Volumes/XIAO-SENSE"], []]):
+            with mock.patch.object(seeed_zephyr.time, "sleep"):
+                seeed_zephyr.wait_for_uf2_detach(timeout_seconds=1)
 
 
 class BuildCommandTests(unittest.TestCase):

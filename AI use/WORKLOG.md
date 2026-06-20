@@ -1024,6 +1024,9 @@ Result:
 - `seeed-zephyr flash xiao_nrf52840 --monitor` still uses Zephyr's UF2 runner.
 - The monitor path now retries while a newly re-enumerated serial port is still
   temporarily busy, which avoids opening miniterm too early after UF2 copy.
+- The UF2 `flash --monitor` path now waits for the UF2 mass-storage volume to
+  detach before opening monitor, so it does not reuse the bootloader serial
+  device while the board is rebooting into the application.
 
 Verification:
 - `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py`
@@ -1033,10 +1036,10 @@ Verification:
 - `seeed-zephyr flash xiao_nrf52840 --monitor` built successfully, then timed
   out waiting for the UF2 volume because the board was still running firmware
   without the 1200 baud bootloader request handler.
+- After the updated firmware was installed, a consecutive
+  `seeed-zephyr flash xiao_nrf52840 --monitor` run requested UF2 mode at 1200
+  baud, detected `/Volumes/XIAO-SENSE`, copied `zephyr.uf2`, waited for UF2
+  detach, opened pyserial miniterm, and observed repeated LED state output.
 
 Remaining:
-- Flash once on real XIAO nRF52840 hardware. If the currently running firmware
-  does not support 1200 baud UF2 entry yet, the first update may still require
-  double-tapping RESET.
-- After that first update, rerun `seeed-zephyr flash xiao_nrf52840 --monitor`
-  without double-tapping RESET to confirm repeated flashing works.
+- Continue with the next board in the hardware verification sequence.

@@ -65,3 +65,11 @@ Entry format:
 - Result: `PASS`
 - Serial output: repeated `LED state: OFF` and `LED state: ON`
 - Notes: `xiao_rp2350/rp2350a/hazard3` built and copied by UF2, but did not enumerate a USB CDC serial device after flashing. `xiao_rp2350/rp2350a/m33` built, copied `zephyr.uf2` to `/Volumes/RP2350`, enumerated `/dev/cu.usbmodem1101` as `Seeed XIAO RP2350 blinky`, opened pyserial miniterm through `seeed-zephyr flash xiao_rp2350 --monitor`, and observed repeated LED state output. The repository firmware handled USB CDC 1200-baud UF2 requests and re-entered UF2 automatically.
+
+## 2026-06-20T23:13:50+08:00 - xiao_nrf52840 - PASS
+
+- Board: `xiao_nrf52840`
+- Example: `examples/boards/xiao_nrf52840/blinky`
+- Result: `PASS`
+- Serial output: repeated `LED state: OFF` and `LED state: ON`
+- Notes: `seeed-zephyr flash xiao_nrf52840 --monitor` built the repository example, requested UF2 mode via `/dev/cu.usbmodem1101` at 1200 baud, detected `/Volumes/XIAO-SENSE`, copied `zephyr.uf2` through Zephyr's UF2 runner, waited for the UF2 volume to detach, opened pyserial miniterm on `/dev/cu.usbmodem1101`, and observed repeated LED state output. A consecutive run passed without double-tapping RESET.
