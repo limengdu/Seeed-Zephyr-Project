@@ -175,7 +175,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 可构建 |
 | XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建 |
 | XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
-| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | `examples/boards/xiao_rp2350/blinky` | PASS | 可构建 |
+| XIAO RP2350 | `xiao_rp2350/rp2350a/m33` | `examples/boards/xiao_rp2350/blinky` | PASS | 硬件已验证；M33 target |
 
 `UNSUPPORTED` 的意思不是脚本写错了，而是当前固定使用的 Zephyr v4.4.0 里没有这个
 XIAO board target。XIAO ESP32C5 已经有仓库 demo 记录，但要等选定 Zephyr 基线提供
@@ -297,8 +297,8 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 seeed-zephyr flash xiao_rp2040 --monitor
 ```
 
-如果 XIAO RP2040 已经运行本仓库固件，CLI 通常会通过 USB CDC 1200 baud 自动请求进入 UF2 模式。
-如果板子运行的是旧固件，或者看不到 USB CDC 串口，就按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL
-再按 RESET。运行 `west flash` 的环境必须能看到 UF2 存储卷。
+如果 XIAO RP2040 或 XIAO RP2350 已经运行支持自动进入 UF2 的本仓库示例，CLI 通常会通过
+USB CDC 1200 baud 自动请求进入 UF2 模式。若当前程序不支持这个请求，或者看不到 USB CDC
+串口，就按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。运行 `west flash` 的环境必须能看到 UF2 存储卷。
 
-一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；XIAO RP2040 装入本仓库固件后可以自动进入这个模式。
+一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；XIAO RP2040 和 XIAO RP2350 装入对应本仓库示例后可以自动进入这个模式。

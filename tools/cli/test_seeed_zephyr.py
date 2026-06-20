@@ -134,5 +134,40 @@ class BuildCommandTests(unittest.TestCase):
         self.assertNotIn("rp2-boot-mode-retention", command)
 
 
+class ExampleConfigTests(unittest.TestCase):
+    def test_rp2350_defaults_to_m33_target(self) -> None:
+        board_file = seeed_zephyr.REPO_ROOT / "metadata/boards/xiao_rp2350.yaml"
+        example_file = (
+            seeed_zephyr.REPO_ROOT / "examples/boards/xiao_rp2350/blinky/example.yaml"
+        )
+        board = seeed_zephyr.read_flat_yaml(board_file)
+        example = seeed_zephyr.read_flat_yaml(example_file)
+
+        self.assertEqual(board["zephyr_target"], "xiao_rp2350/rp2350a/m33")
+        self.assertEqual(example["zephyr_target"], "xiao_rp2350/rp2350a/m33")
+
+    def test_rp2350_example_enables_usb_cdc_monitor_and_bootloader_request(self) -> None:
+        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_rp2350/blinky"
+        prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
+        overlay = (example_dir / "app.overlay").read_text(encoding="utf-8")
+        main_c = (example_dir / "src/main.c").read_text(encoding="utf-8")
+
+        for symbol in (
+            "CONFIG_USB_DEVICE_STACK_NEXT=y",
+            "CONFIG_CDC_ACM_SERIAL_INITIALIZE_AT_BOOT=y",
+            "CONFIG_UART_LINE_CTRL=y",
+            "CONFIG_RETENTION_BOOT_MODE=y",
+            "CONFIG_REBOOT=y",
+        ):
+            self.assertIn(symbol, prj_conf)
+
+        self.assertIn("rp2350-boot-mode-retention.dtsi", overlay)
+        self.assertIn("zephyr,console = &cdc_acm_uart0", overlay)
+        self.assertIn("compatible = \"zephyr,cdc-acm-uart\"", overlay)
+        self.assertIn("UART_LINE_CTRL_BAUD_RATE", main_c)
+        self.assertIn("BOOT_MODE_TYPE_BOOTLOADER", main_c)
+        self.assertIn("sys_reboot(SYS_REBOOT_COLD)", main_c)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -59,6 +59,38 @@ Verification:
 Remaining:
 - None for this documentation scope update.
 
+## 2026-06-20 - Add RP2350 USB CDC monitor support
+
+Scope:
+- Updated `examples/boards/xiao_rp2350/blinky`.
+- Added XIAO RP2350 board development docs under `docs/en/boards/` and
+  `docs/zh/boards/`.
+- Updated board docs indexes.
+- Added CLI regression coverage for RP2350 example requirements.
+
+Reason:
+- XIAO RP2350 UF2 flashing can succeed while `--monitor` fails if the running
+  firmware does not expose a USB CDC serial device.
+
+Result:
+- The RP2350 baseline example now enables USB CDC serial output.
+- The RP2350 baseline example now handles 1200-baud UF2 bootloader requests.
+- The RP2350 example overlay provides the RP2350 boot-mode retention devicetree
+  node required by Zephyr retention boot mode.
+- The RP2350 repository default target is now `xiao_rp2350/rp2350a/m33`.
+
+Verification:
+- `xiao_rp2350/rp2350a/hazard3` built and copied by UF2, but did not enumerate
+  a USB CDC serial device after flashing.
+- `xiao_rp2350/rp2350a/m33` built, flashed through UF2, enumerated as
+  `/dev/cu.usbmodem1101`, and printed repeated `LED state: ON/OFF` lines.
+- `seeed-zephyr flash xiao_rp2350 --monitor` built the repository example,
+  requested UF2 mode through USB CDC, copied `zephyr.uf2` to `/Volumes/RP2350`,
+  opened pyserial miniterm, and printed repeated `LED state: ON/OFF` lines.
+
+Remaining:
+- None for the RP2350 M33 default target and monitor flow.
+
 ## 2026-06-20 - Refine RP2040 board guide
 
 Scope:

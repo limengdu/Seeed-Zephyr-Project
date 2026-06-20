@@ -57,3 +57,11 @@ Entry format:
 - Result: `PASS`
 - Serial output: repeated `LED state: OFF` and `LED state: ON`
 - Notes: `seeed-zephyr flash xiao_rp2040 --monitor` first produced the expected BOOTSEL/UF2 hint when the board was running firmware without automatic UF2 request support and no UF2 volume was mounted. After the board entered UF2 mode manually once, the command built the repository example, copied `zephyr.uf2` to `/Volumes/RPI-RP2`, opened pyserial miniterm on `/dev/cu.usbmodem1101`, and observed repeated LED state output. The repository firmware then handled USB CDC 1200-baud UF2 requests. Second, third, and fourth consecutive `seeed-zephyr flash xiao_rp2040 --monitor` runs passed without manual BOOTSEL entry: each run requested UF2 mode via `/dev/cu.usbmodem1101`, detected `/Volumes/RPI-RP2`, copied `zephyr.uf2`, reopened pyserial miniterm, and observed repeated LED state output.
+
+## 2026-06-20T21:49:00+08:00 - xiao_rp2350 - PASS
+
+- Board: `xiao_rp2350`
+- Example: `examples/boards/xiao_rp2350/blinky`
+- Result: `PASS`
+- Serial output: repeated `LED state: OFF` and `LED state: ON`
+- Notes: `xiao_rp2350/rp2350a/hazard3` built and copied by UF2, but did not enumerate a USB CDC serial device after flashing. `xiao_rp2350/rp2350a/m33` built, copied `zephyr.uf2` to `/Volumes/RP2350`, enumerated `/dev/cu.usbmodem1101` as `Seeed XIAO RP2350 blinky`, opened pyserial miniterm through `seeed-zephyr flash xiao_rp2350 --monitor`, and observed repeated LED state output. The repository firmware handled USB CDC 1200-baud UF2 requests and re-entered UF2 automatically.
