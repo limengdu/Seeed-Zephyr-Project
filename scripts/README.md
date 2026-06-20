@@ -17,6 +17,10 @@ Current scripts:
 - `setup-linux.sh`: installs Linux host dependencies and device access, then
   delegates the Zephyr workspace, SDK, blob, CLI, and next-step flow to
   `lib/common.sh`. It is marked not yet verified on real Linux.
+- `setup-windows.ps1`: prepares Windows for the WSL2 strategy by checking or
+  installing WSL2 and usbipd-win, then directs users to run
+  `scripts/setup-linux.sh` inside WSL2. It is marked not yet verified on real
+  Windows.
 - `lib/common.sh`: contains the shared setup flow used by platform setup
   entrypoints. Platform scripts install system dependencies, then reuse this
   file for Zephyr workspace, SDK, Python package, blob, CLI, and next-step
@@ -40,6 +44,8 @@ Current scripts:
 - `setup-macos.sh`: 准备 macOS Zephyr 工作区，并打印下一条仓库示例命令。它也会询问是否安装全局 `seeed-zephyr` 命令，默认安装。
 - `setup-linux.sh`: 安装 Linux 主机依赖和设备访问配置，然后把 Zephyr 工作区、SDK、blob、CLI
   和下一步提示流程交给 `lib/common.sh`。它已标记为尚未在真实 Linux 上验证。
+- `setup-windows.ps1`: 按 WSL2 策略准备 Windows，检查或安装 WSL2 与
+  usbipd-win，然后引导用户在 WSL2 内运行 `scripts/setup-linux.sh`。它已标记为尚未在真实 Windows 上验证。
 - `lib/common.sh`: 保存平台 setup 入口共用的安装流程。平台脚本先安装系统依赖，然后复用这里的
   Zephyr 工作区、SDK、Python 包、blob、CLI 和下一步提示逻辑。
 - `seeed-zephyr`: 运行轻量 CLI 实现。`setup-macos.sh` 可以把它符号链接到用户 PATH 目录。

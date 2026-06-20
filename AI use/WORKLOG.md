@@ -455,3 +455,39 @@ Remaining:
 - NOT YET VERIFIED ON REAL LINUX. Package installation, group changes, udev
   copying, and real flash/monitor/debug device access still need validation on
   Debian/Ubuntu and Fedora machines.
+
+## 2026-06-20 - Add Windows WSL2 setup preparer
+
+Scope:
+- Added `scripts/setup-windows.ps1`.
+- Updated `scripts/README.md` to list the Windows setup entrypoint.
+- Appended this work log entry.
+
+Reason:
+- Phase 3 of cross-platform setup needs a Windows path that stays Zephyr-first:
+  Windows only prepares WSL2 and USB forwarding, while the actual Zephyr setup
+  remains delegated to the existing `scripts/setup-linux.sh` inside WSL2.
+
+Result:
+- `scripts/setup-windows.ps1` checks for WSL2, reports or starts `wsl --install`
+  when no distro exists, and reports the detected default WSL distro when found.
+- The script checks for `usbipd`, installs usbipd-win with
+  `winget install --exact --id dorssel.usbipd-win` when possible, and prints an
+  actionable message when winget or Administrator rights are missing.
+- The script prints the interactive per-device USB forwarding flow:
+  `usbipd list`, `usbipd bind --busid <BUSID>`, and
+  `usbipd attach --wsl --busid <BUSID>`.
+- The script prominently states `NOT YET VERIFIED ON REAL WINDOWS`.
+
+Verification:
+- NOT YET VERIFIED ON REAL WINDOWS.
+- This was written on macOS, where no PowerShell runtime or Windows WSL/usbipd
+  environment is available.
+- macOS-side verification was limited to careful source review for PowerShell
+  syntax, quoting, and the intended `wsl`, `winget`, and `usbipd` command lines.
+
+Remaining:
+- Run `powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1` on a
+  real Windows 10 2004+ or Windows 11 machine.
+- Validate `wsl --status`, `wsl -l -v`, `winget install --exact --id dorssel.usbipd-win`,
+  and the usbipd XIAO attach flow on real hardware.
