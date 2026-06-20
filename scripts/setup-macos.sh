@@ -32,7 +32,8 @@ ZEPHYR_WORKSPACE="${ZEPHYR_WORKSPACE:-$HOME/zephyrproject}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BOARD_METADATA_DIR="$REPO_ROOT/metadata/boards"
-VALIDATION_LOG="$REPO_ROOT/docs/validation-log.md"
+BUILD_MATRIX_RESULTS="$REPO_ROOT/tools/build_matrix/results.md"
+BOARD_OVERRIDES_FILE="$REPO_ROOT/tools/build_matrix/board-overrides.tsv"
 VENV_DIR="$ZEPHYR_WORKSPACE/.venv"
 WEST="$VENV_DIR/bin/west"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
@@ -55,6 +56,8 @@ BOARD_ID=""
 BOARD_VENDOR=""
 BOARD_HAL_MODULE=""
 BOARD_BUILD_TARGET=""
+BOARD_SAMPLE_PATH=""
+BOARD_BUILD_STATUS=""
 
 # Prints an error message and exits the script.
 # 打印错误信息并退出脚本。
@@ -179,29 +182,86 @@ vendor_to_hal_module() {
   esac
 }
 
+# Returns a Markdown table cell from the latest build matrix results.
+# 从最新构建矩阵结果中读取一个 Markdown 表格单元格。
+read_build_matrix_cell() {
+  local board_id=$1
+  local column_index=$2
+
+  [[ -f "$BUILD_MATRIX_RESULTS" ]] || return 1
+
+  awk -F'|' -v board_id="$board_id" -v column_index="$column_index" '
+    $2 ~ "^[[:space:]]*" board_id "[[:space:]]*$" {
+      value = $column_index
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+      gsub(/`/, "", value)
+      print value
+      found = 1
+      exit
+    }
+    END {
+      if (!found) {
+        exit 1
+      }
+    }
+  ' "$BUILD_MATRIX_RESULTS"
+}
+
 # Returns the best known Zephyr build target for the selected board.
 # 返回所选开发板目前最可靠的 Zephyr 构建 target。
 resolve_build_target_hint() {
   local board_id=$1
   local fallback_target=$2
-  local validation_target
+  local matrix_target
 
-  validation_target="$(
-    awk -F'|' -v board_id="$board_id" '
-      $2 ~ "^[[:space:]]*" board_id "[[:space:]]*$" {
-        target = $3
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "", target)
-        gsub(/`/, "", target)
-        print target
-        exit
-      }
-    ' "$VALIDATION_LOG"
-  )"
-
-  if [[ -n "$validation_target" ]]; then
-    printf '%s\n' "$validation_target"
+  if matrix_target="$(read_build_matrix_cell "$board_id" 5)" && [[ -n "$matrix_target" ]]; then
+    printf '%s\n' "$matrix_target"
   else
     printf '%s\n' "$fallback_target"
+  fi
+}
+
+# Returns the baseline sample path for the selected board.
+# 返回所选开发板的基线样例路径。
+resolve_sample_path_hint() {
+  local board_id=$1
+  local fallback_sample="samples/basic/blinky"
+  local override_sample
+
+  if [[ -f "$BOARD_OVERRIDES_FILE" ]]; then
+    if override_sample="$(
+      awk -F '\t' -v board_id="$board_id" '
+        $0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/ {
+          next
+        }
+        $1 == board_id {
+          print $3
+          found = 1
+          exit
+        }
+        END {
+          if (!found) {
+            exit 1
+          }
+        }
+      ' "$BOARD_OVERRIDES_FILE"
+    )" && [[ -n "$override_sample" ]]; then
+      printf '%s\n' "$override_sample"
+      return
+    fi
+  fi
+
+  printf '%s\n' "$fallback_sample"
+}
+
+# Returns the latest build status for the selected board when available.
+# 在可用时返回所选开发板的最新构建状态。
+resolve_build_status_hint() {
+  local board_id=$1
+  local matrix_status
+
+  if matrix_status="$(read_build_matrix_cell "$board_id" 6)" && [[ -n "$matrix_status" ]]; then
+    printf '%s\n' "$matrix_status"
   fi
 }
 
@@ -211,6 +271,8 @@ resolve_board_metadata() {
   local board_id=$1
   local board_file="$BOARD_METADATA_DIR/$board_id.yaml"
   local metadata_target
+
+  BOARD_ID="$board_id"
 
   if [[ ! -f "$board_file" ]]; then
     printf 'Error: board metadata was not found for "%s".\n' "$board_id" >&2
@@ -224,6 +286,8 @@ resolve_board_metadata() {
   metadata_target="$(read_board_metadata_value "$board_file" "zephyr_target")"
   [[ -n "$metadata_target" ]] || fail "Board $board_id does not define a zephyr_target."
   BOARD_BUILD_TARGET="$(resolve_build_target_hint "$board_id" "$metadata_target")"
+  BOARD_SAMPLE_PATH="$(resolve_sample_path_hint "$board_id")"
+  BOARD_BUILD_STATUS="$(resolve_build_status_hint "$board_id")"
 
   if BOARD_HAL_MODULE="$(vendor_to_hal_module "$BOARD_VENDOR")"; then
     return 0
@@ -397,9 +461,17 @@ print_no_board_next_steps() {
 # 安装成功后，打印所选开发板的构建命令。
 print_board_next_steps() {
   printf '\nSetup complete.\n'
+
+  if [[ "$BOARD_BUILD_STATUS" == "UNSUPPORTED" ]]; then
+    printf 'Board %s is marked UNSUPPORTED in the pinned Zephyr baseline.\n' "$BOARD_ID"
+    printf 'No verified build command is available yet.\n'
+    printf 'Check tools/build_matrix/results.md before trying a development-branch target.\n'
+    return
+  fi
+
   printf 'Next step:\n'
   printf '  cd %s\n' "$ZEPHYR_WORKSPACE/zephyr"
-  printf '  west build -p always -b %s samples/basic/blinky\n' "$BOARD_BUILD_TARGET"
+  printf '  west build -p always -b %s %s\n' "$BOARD_BUILD_TARGET" "$BOARD_SAMPLE_PATH"
   printf '\nMulti-core boards require the fully-qualified target, such as xiao_esp32c6/esp32c6/hpcore.\n'
 }
 

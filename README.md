@@ -8,6 +8,15 @@ In simple terms, upstream Zephyr answers: "Can this board run Zephyr?"
 
 This project answers: "Can a XIAO user choose a board, add Grove modules, generate a project, wire the hardware correctly, build it, flash it, and debug it with confidence?"
 
+## Start Here
+
+If you are new to this repository, start with the Getting Started guide before reading the phase documents:
+
+- [English Getting Started](docs/en/getting-started.md)
+- [中文入门指南](docs/zh/getting-started.md)
+
+The short version: this repository stores XIAO/Grove metadata, scripts, docs, and validation results. The actual Zephyr source tree and firmware builds live in a separate workspace, normally `~/zephyrproject`.
+
 ## Why This Exists
 
 XIAO is becoming a multi-chip ecosystem. Different XIAO boards use different silicon vendors, wireless stacks, SDKs, flashing tools, and development workflows. Arduino remains important for beginner-friendly workflows, but new chips often support vendor SDKs or Zephyr before Arduino support is complete.
