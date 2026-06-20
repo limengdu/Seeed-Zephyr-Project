@@ -21,7 +21,6 @@ def resolve_repo_root() -> Path:
 REPO_ROOT = resolve_repo_root()
 BOARD_DIR = REPO_ROOT / "metadata" / "boards"
 EXAMPLES_DIR = REPO_ROOT / "examples" / "boards"
-BUILD_SCRIPT = REPO_ROOT / "scripts" / "build-example.sh"
 BUILD_MATRIX_SCRIPT = REPO_ROOT / "tools" / "build_matrix" / "run.sh"
 HARDWARE_LOG = REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md"
 
@@ -166,13 +165,16 @@ def require_board(board_id: str) -> dict[str, str]:
     raise CliError(f"Unknown board id: {board_id}. Available boards: {available}")
 
 
-def require_supported_example(board_id: str) -> str:
+def require_supported_example(board_id: str) -> dict[str, str]:
     board = require_board(board_id)
     if not board["example_path"]:
         raise CliError(f"No repository example found for {board_id}.")
     if board["status"] == "unsupported":
         raise CliError(f"{board_id} is unsupported in the selected Zephyr baseline.")
-    return board["example_path"]
+    example = resolve_example(board_id)
+    if example is None:
+        raise CliError(f"No repository example found for {board_id}.")
+    return example
 
 
 def run_command(
@@ -181,6 +183,20 @@ def run_command(
     result = subprocess.run(command, cwd=cwd, env=env, check=False)
     if result.returncode != 0:
         raise CliError(f"Command failed with status {result.returncode}: {' '.join(command)}")
+
+
+def run_command_capture(
+    command: list[str], *, cwd: Path = REPO_ROOT, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        cwd=cwd,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
 
 
 def west_path() -> Path:
@@ -210,6 +226,14 @@ def run_west(command: list[str]) -> None:
     run_command([str(west), *command], cwd=zephyr_workspace(), env=west_command_env())
 
 
+def run_west_capture(command: list[str]) -> subprocess.CompletedProcess[str]:
+    west = west_path()
+    if not west.exists():
+        raise CliError(f"west was not found: {west}")
+
+    return run_command_capture([str(west), *command], cwd=zephyr_workspace(), env=west_command_env())
+
+
 def require_west_venv_tool(tool_name: str, install_hint: str) -> None:
     tool_path = west_path().parent / tool_name
     if not tool_path.exists():
@@ -224,6 +248,45 @@ def require_flash_tools(board_id: str) -> None:
             "Run setup again, or install it with: "
             f"{zephyr_workspace()}/.venv/bin/python -m pip install esptool",
         )
+
+
+def vendor_to_hal_module(vendor: str) -> str | None:
+    # Maps repository vendor ids to Zephyr HAL module names.
+    # 将仓库 vendor id 映射为 Zephyr HAL 模块名称。
+    return {
+        "espressif": "hal_espressif",
+        "nordic": "hal_nordic",
+        "renesas": "hal_renesas",
+        "silabs": "hal_silabs",
+        "raspberrypi": "hal_rpi_pico",
+        "microchip": "hal_atmel",
+    }.get(vendor)
+
+
+def ensure_chip_blobs(board: dict[str, str]) -> None:
+    # Fetches Zephyr-declared binary blobs for the board vendor when present.
+    # 当开发板厂商对应的 Zephyr 模块声明二进制 blobs 时，获取这些 blobs。
+    module = vendor_to_hal_module(board["vendor"])
+    if module is None:
+        return
+
+    result = run_west_capture(["blobs", "list", module])
+    if result.returncode != 0 or not result.stdout.strip():
+        return
+
+    run_west(["blobs", "fetch", module])
+
+
+def run_west_build(board_id: str, example: dict[str, str]) -> None:
+    # Builds the selected repository example through Zephyr's west command.
+    # 通过 Zephyr 的 west 命令构建选中的仓库示例。
+    board = require_board(board_id)
+    target = example.get("zephyr_target") or board["target"]
+    example_dir = REPO_ROOT / example["path"]
+    ensure_chip_blobs(board)
+    print(f"Building {example['path']} for {target}...", flush=True)
+    run_west(["build", "-p", "always", "-b", target, str(example_dir)])
+    print(f"Build succeeded: {example['path']}", flush=True)
 
 
 def require_monitor_supported(board_id: str) -> dict[str, str]:
@@ -255,17 +318,17 @@ def cmd_list_examples(_args: argparse.Namespace) -> None:
 
 
 def cmd_build(args: argparse.Namespace) -> None:
-    example_path = require_supported_example(args.board_id)
-    run_command(["bash", str(BUILD_SCRIPT), example_path])
+    example = require_supported_example(args.board_id)
+    run_west_build(args.board_id, example)
 
 
 def cmd_flash(args: argparse.Namespace) -> None:
-    example_path = require_supported_example(args.board_id)
+    example = require_supported_example(args.board_id)
     require_flash_tools(args.board_id)
     if args.monitor:
         require_monitor_supported(args.board_id)
 
-    run_command(["bash", str(BUILD_SCRIPT), example_path])
+    run_west_build(args.board_id, example)
     run_west(["flash"])
     if args.monitor:
         run_monitor(args.board_id)
@@ -286,8 +349,9 @@ def cmd_matrix(_args: argparse.Namespace) -> None:
 
 
 def cmd_verify_hardware(args: argparse.Namespace) -> None:
-    example_path = require_supported_example(args.board_id)
-    run_command(["bash", str(BUILD_SCRIPT), example_path])
+    example = require_supported_example(args.board_id)
+    require_flash_tools(args.board_id)
+    run_west_build(args.board_id, example)
     run_west(["flash"])
 
     print("\nHardware observation")
@@ -298,7 +362,7 @@ def cmd_verify_hardware(args: argparse.Namespace) -> None:
 
     append_hardware_log(
         board_id=args.board_id,
-        example_path=example_path,
+        example_path=example["path"],
         observed=observed,
         serial_output=serial_output,
         notes=notes,

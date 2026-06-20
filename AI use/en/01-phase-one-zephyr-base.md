@@ -172,8 +172,8 @@ tools/
 
 scripts/
   setup-macos.sh
+  seeed-zephyr
   build-example.sh
-  flash-example.sh
 
 docs/
   getting-started.md

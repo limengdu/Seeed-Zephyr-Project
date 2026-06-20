@@ -30,6 +30,56 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Delegate CLI execution to Zephyr tools
+
+Scope:
+- Refactored `tools/cli/seeed_zephyr.py` so `build`, `flash`, and
+  `verify-hardware` select repository examples, then call Zephyr `west`
+  commands directly.
+- Updated README, Getting Started docs, script docs, CLI docs, Phase 1 and
+  Phase 2 AI guidance, and validation evidence to state the CLI boundary.
+- Added an AI constraint that CLI execution for build, flash, and monitor must
+  stay delegated to Zephyr `west` commands or Zephyr module tools.
+
+Reason:
+- The CLI should be a repository knowledge layer for selecting boards,
+  examples, and validated metadata. Zephyr should remain the execution layer for
+  building, flashing, and monitoring firmware.
+
+Result:
+- `seeed-zephyr build <board_id>` now calls `west build` directly after
+  resolving the repository example and Zephyr target.
+- `seeed-zephyr flash <board_id>` now calls `west build`, then `west flash`.
+- `seeed-zephyr flash <board_id> --monitor` now calls `west build`,
+  `west flash`, and then Zephyr's Espressif monitor through
+  `west espressif monitor`.
+- CLI progress messages flush before Zephyr output, so logs appear in the
+  expected order.
+
+Verification:
+- `bash -n scripts/setup-macos.sh`: passed.
+- `bash -n scripts/seeed-zephyr`: passed.
+- `PYTHONPYCACHEPREFIX=/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- `scripts/seeed-zephyr flash --help`: passed.
+- `scripts/seeed-zephyr build xiao_esp32c5`: returned the expected unsupported
+  board error.
+- `scripts/seeed-zephyr flash xiao_nrf52840 --monitor`: returned the expected
+  Espressif-only monitor error before build or flash.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  29 passed, 0 failed.
+- `scripts/seeed-zephyr build xiao_esp32c3`: passed through direct
+  `west build` delegation.
+- `seeed-zephyr flash xiao_esp32c6 --monitor` in a TTY session: build passed,
+  flash wrote 144300 bytes, hash verification passed, monitor opened on
+  `/dev/cu.usbmodem101`, Zephyr booted, and `LED state` toggles were observed
+  in serial output.
+
+Remaining:
+- Keep `scripts/build-example.sh` only as a project-root helper unless a later
+  workflow still needs it. The CLI should not depend on it for normal build or
+  flash operations.
+
 ## 2026-06-20 - Fix Espressif flash environment
 
 Scope:

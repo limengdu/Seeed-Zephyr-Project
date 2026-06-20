@@ -38,12 +38,16 @@ seeed-zephyr show project xiao_esp32c6_grove_as5600_display
 ### 构建和烧录仓库资产
 
 ```bash
-seeed-zephyr build-example boards/xiao_esp32c6/blinky
-seeed-zephyr flash-example boards/xiao_esp32c6/blinky
+seeed-zephyr build xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6 --monitor
 seeed-zephyr build-project xiao_esp32c6_grove_as5600_display
 ```
 
-一句话总结: 用户应默认从本仓库示例开始构建。
+build、flash、monitor 和 debug 的执行应委托给 Zephyr 的 `west` 命令或 Zephyr 模块自带工具。
+CLI 应选择仓库资产和已验证 metadata，再交给 Zephyr 工具执行。
+
+一句话总结: 用户应通过 CLI 构建仓库资产，而 CLI 应使用 Zephyr 工具完成执行。
 
 ### 验证贡献
 

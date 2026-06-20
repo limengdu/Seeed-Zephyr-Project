@@ -87,12 +87,13 @@ XIAO ESP32C3 没有板载 LED，所以它不用 `blinky`，而是用 `hello_worl
 seeed-zephyr build xiao_esp32c3
 ```
 
-`seeed-zephyr build <board_id>` 会读取开发板 metadata，找到仓库示例，然后调用已经验证过的底层构建脚本。
+`seeed-zephyr build <board_id>` 会读取开发板 metadata，找到仓库示例，然后把验证过的
+target 和示例路径交给 Zephyr 的 `west build`。
 
 如果你在 setup 里跳过了 CLI 安装，备用入口是从项目根目录运行
 `scripts/seeed-zephyr <command>`。
 
-一句话总结：安装后的命令可以离开仓库目录使用，Zephyr 的复杂参数由脚本处理。
+一句话总结：安装后的命令可以离开仓库目录使用，但真正构建固件的仍然是 Zephyr。
 
 ## 4. 常用 CLI 命令
 
@@ -177,7 +178,7 @@ ESP32 系列查看串口日志可以运行：
 seeed-zephyr monitor xiao_esp32c6
 ```
 
-一句话总结：CLI 从本仓库构建，再把烧录交给 Zephyr 官方工具。
+一句话总结：CLI 负责选择本仓库示例，真正的 `west build`、`west flash` 和模块工具仍由 Zephyr 执行。
 
 ## 7. 维护者常用命令
 

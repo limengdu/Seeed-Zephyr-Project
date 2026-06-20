@@ -47,6 +47,10 @@ Build, flash, and open the monitor after flashing:
 seeed-zephyr flash xiao_esp32c6 --monitor
 ```
 
+The CLI selects repository examples and board metadata. Firmware build, flash,
+and monitor execution still run through Zephyr `west` commands and Zephyr
+module tools.
+
 ## Why This Exists
 
 XIAO is becoming a multi-chip ecosystem. Different XIAO boards use different silicon vendors, wireless stacks, SDKs, flashing tools, and development workflows. Arduino remains important for beginner-friendly workflows, but new chips often support vendor SDKs or Zephyr before Arduino support is complete.
@@ -128,6 +132,10 @@ This repository should eventually become the single source of truth for:
 Examples and project directories are the product core. Metadata, scripts, CLIs, generators, and editor extensions exist to make those examples easier to find, build, validate, and extend.
 
 Users should be able to build a useful XIAO + Grove project before they understand every Zephyr detail.
+
+The CLI should stay a thin repository knowledge layer. It can choose the board,
+example, and validated metadata, but it must delegate build, flash, monitor,
+and debug execution to Zephyr tooling.
 
 The system should let users start from hardware and intent:
 

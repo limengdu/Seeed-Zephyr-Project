@@ -141,6 +141,8 @@ Baseline CLI: `scripts/seeed-zephyr`, 2026-06-20.
 | `source scripts/setup-macos.sh; BOARD_VENDOR=espressif; check_board_host_tools` | passed | board-specific setup checks Zephyr's Espressif tools |
 | `source scripts/setup-macos.sh; BOARD_VENDOR=nordic; check_board_host_tools` | passed | non-Espressif board-specific setup does not check Espressif tools |
 | `seeed-zephyr flash xiao_esp32c6 --monitor` in a TTY session | passed | build, flash, hash verification, monitor startup, and serial LED state output observed |
+| direct `west build` delegation through `scripts/seeed-zephyr build xiao_esp32c3` | passed | CLI selected the repository example and called `west build`; output order was verified |
+| direct `west flash` and monitor delegation through `seeed-zephyr flash xiao_esp32c6 --monitor` | passed | CLI called `west build`, `west flash`, and Zephyr's Espressif monitor; flash wrote 144300 bytes and serial output showed Zephyr boot plus `LED state` toggles |
 
 ## Repository Example Build Evidence
 

@@ -42,13 +42,18 @@ validation status is.
 ### Build And Flash Repository Assets
 
 ```bash
-seeed-zephyr build-example boards/xiao_esp32c6/blinky
-seeed-zephyr flash-example boards/xiao_esp32c6/blinky
+seeed-zephyr build xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6 --monitor
 seeed-zephyr build-project xiao_esp32c6_grove_as5600_display
 ```
 
-One-sentence summary: users should build from repository examples as the normal
-path.
+Build, flash, monitor, and debug execution should be delegated to Zephyr `west`
+commands or Zephyr module-provided tools. The CLI should select repository
+assets and validated metadata, then pass them to Zephyr tooling.
+
+One-sentence summary: users should build repository assets through the CLI, and
+the CLI should use Zephyr tooling for execution.
 
 ### Validate Contributions
 

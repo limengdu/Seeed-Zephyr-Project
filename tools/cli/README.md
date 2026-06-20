@@ -2,12 +2,21 @@
 
 ## English
 
-This directory contains the lightweight command-line interface for operating
-repository examples.
+This directory contains the lightweight command-line interface for selecting
+and operating repository examples.
 
 The CLI should help users list boards, build examples, flash hardware, run the
-build matrix, and record hardware observations without remembering the lower
-level Zephyr commands.
+build matrix, and record hardware observations without memorizing board ids,
+example paths, or Zephyr target strings.
+
+The CLI is a repository knowledge layer, not a replacement build system. Build,
+flash, and monitor execution must delegate to Zephyr `west` commands or Zephyr
+module-provided tools:
+
+- `build` selects a repository example, then calls `west build`.
+- `flash` builds with `west build`, then calls `west flash`.
+- `monitor` calls the Zephyr Espressif module monitor through
+  `west espressif monitor`.
 
 The user-facing command is installed by `scripts/setup-macos.sh` as
 `seeed-zephyr`. The implementation lives here so the command can remain small
@@ -18,9 +27,17 @@ monitor after a successful flash.
 
 ## 中文
 
-这个目录保存用于操作仓库示例的轻量命令行工具。
+这个目录保存用于选择和操作仓库示例的轻量命令行工具。
 
-CLI 应帮助用户列出开发板、构建示例、烧录硬件、运行构建矩阵，并记录硬件观察结果，让用户不用记住底层 Zephyr 命令。
+CLI 应帮助用户列出开发板、构建示例、烧录硬件、运行构建矩阵，并记录硬件观察结果，
+让用户不用记住开发板 id、示例路径或 Zephyr target 字符串。
+
+CLI 是仓库知识层，不是替代 Zephyr 的构建系统。build、flash、monitor 的执行必须委托给
+Zephyr 的 `west` 命令或 Zephyr 模块自带工具：
+
+- `build` 选择仓库示例，然后调用 `west build`。
+- `flash` 先用 `west build` 构建，然后调用 `west flash`。
+- `monitor` 通过 `west espressif monitor` 调用 Zephyr Espressif 模块的 monitor。
 
 面向用户的命令由 `scripts/setup-macos.sh` 安装为 `seeed-zephyr`。实现代码放在这里，让命令本身保持轻量，并始终由仓库内容驱动。
 

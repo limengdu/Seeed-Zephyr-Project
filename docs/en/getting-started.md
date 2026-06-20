@@ -87,13 +87,14 @@ seeed-zephyr build xiao_esp32c3
 ```
 
 `seeed-zephyr build <board_id>` reads the board metadata, finds the repository
-example, and calls the verified lower-level build helper.
+example, and calls Zephyr's `west build` with the validated target and example
+path.
 
 If CLI installation was skipped, the project-root fallback is
 `scripts/seeed-zephyr <command>`.
 
-One-sentence summary: the installed command works outside the repository, and
-the helper handles the Zephyr details.
+One-sentence summary: the installed command works outside the repository, while
+Zephyr still performs the actual firmware build.
 
 ## 4. Useful CLI Commands
 
@@ -180,8 +181,8 @@ be monitored with:
 seeed-zephyr monitor xiao_esp32c6
 ```
 
-One-sentence summary: the CLI builds from this repository, then hands flashing
-to Zephyr's standard tooling.
+One-sentence summary: the CLI chooses the repository example, then Zephyr's
+`west build`, `west flash`, and module tools do the actual device work.
 
 ## 7. Maintainer Commands
 

@@ -40,6 +40,10 @@ AI constraints:
   `AI use/WORKLOG.md`.
 - Do not write private conversation details into source code, examples, README
   files, commit messages, or user-facing project assets.
+- CLI commands must delegate build, flash, and monitor execution to Zephyr
+  `west` commands or Zephyr module-provided tools. The CLI may select
+  repository examples and board ids, but it must not replace Zephyr's execution
+  layer.
 - When unsure whether a task supports the mission, choose the path that creates
   or improves examples, projects, validation evidence, or contribution quality.
 
@@ -77,6 +81,8 @@ AI 约束:
   constraints。
 - 每次完成有意义的 AI 工作后，必须向 `AI use/WORKLOG.md` 追加详细、客观的记录。
 - 不要把私人对话细节写入源代码、示例、README、commit message 或面向用户的项目资产。
+- CLI 命令的 build、flash、monitor 执行层必须委托给 Zephyr 的 `west` 命令或 Zephyr
+  模块自带工具。CLI 可以选择仓库示例和开发板 id，但不能替代 Zephyr 的执行层。
 - 当不确定一个任务是否支持项目使命时，优先选择能创建或改善示例、项目、验证证据、
   贡献质量的路径。
 
