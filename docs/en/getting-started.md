@@ -10,8 +10,8 @@ Think of the work in two folders:
 | `~/seeed-zephyr-base` | This project | XIAO/Grove examples, metadata, scripts, docs, and validation results |
 | `~/zephyrproject` | Upstream Zephyr workspace | Zephyr source, SDK, west workspace, and firmware build output |
 
-One-sentence summary: stay in `~/seeed-zephyr-base` for this project's examples
-and scripts; the scripts call `~/zephyrproject` for Zephyr itself.
+One-sentence summary: run setup from `~/seeed-zephyr-base`; after the CLI is
+installed, use `seeed-zephyr` from any directory.
 
 ## 1. What This Project Solves
 
@@ -51,65 +51,75 @@ The setup script prepares the Zephyr workspace at `~/zephyrproject`, installs
 the Python venv and `west`, downloads Zephyr v4.4.0, installs Zephyr packages
 and the SDK, and fetches board-specific blobs when needed.
 
+During setup, the script asks:
+
+```text
+Install seeed-zephyr CLI? [Y/n]
+```
+
+Press Enter to install the CLI. After installation, the `seeed-zephyr` command
+can be used from any directory. If the chosen install directory is not in
+`PATH`, the setup script prints the exact `PATH` command to add.
+
 At the end, the script prints the next repository example command, such as:
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr build xiao_esp32c6
+seeed-zephyr build xiao_esp32c6
 ```
 
-One-sentence summary: setup prepares the toolchain, then points back to this
-repository's examples.
+One-sentence summary: setup prepares the toolchain, then installs the command
+used to operate this repository's examples.
 
 ## 3. Build One Board Demo
 
-Build a demo from the project root:
+Build a demo from any directory after CLI installation:
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr build xiao_esp32c6
+seeed-zephyr build xiao_esp32c6
 ```
 
 For XIAO ESP32C3, use `hello_world` because the board has no on-board LED:
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr build xiao_esp32c3
+seeed-zephyr build xiao_esp32c3
 ```
 
-`scripts/seeed-zephyr build <board_id>` reads the board metadata, finds the
-repository example, and calls the verified lower-level build helper.
+`seeed-zephyr build <board_id>` reads the board metadata, finds the repository
+example, and calls the verified lower-level build helper.
 
-One-sentence summary: the build command starts in this repository, and the
-helper handles the Zephyr details.
+If CLI installation was skipped, the project-root fallback is
+`scripts/seeed-zephyr <command>`.
+
+One-sentence summary: the installed command works outside the repository, and
+the helper handles the Zephyr details.
 
 ## 4. Useful CLI Commands
 
 List boards and examples:
 
 ```sh
-scripts/seeed-zephyr list boards
-scripts/seeed-zephyr list examples
+seeed-zephyr list boards
+seeed-zephyr list examples
 ```
 
 Build, flash, and monitor:
 
 ```sh
-scripts/seeed-zephyr build xiao_esp32c6
-scripts/seeed-zephyr flash xiao_esp32c6
-scripts/seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr build xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
+seeed-zephyr monitor xiao_esp32c6
 ```
 
 Run the full build matrix:
 
 ```sh
-scripts/seeed-zephyr matrix
+seeed-zephyr matrix
 ```
 
 Record a hardware observation:
 
 ```sh
-scripts/seeed-zephyr verify-hardware xiao_esp32c6
+seeed-zephyr verify-hardware xiao_esp32c6
 ```
 
 One-sentence summary: the CLI is the normal entry point for operating repository
@@ -145,15 +155,14 @@ is tracked but unsupported in the selected baseline.
 After a successful build, flash through the CLI:
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr flash xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
 ```
 
 ESP32 boards may require manual bootloader entry before flashing. ESP32 logs can
 be monitored with:
 
 ```sh
-scripts/seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr monitor xiao_esp32c6
 ```
 
 One-sentence summary: the CLI builds from this repository, then hands flashing
@@ -171,8 +180,7 @@ cd ~/seeed-zephyr-base
 Rebuild the full board demo matrix:
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr matrix
+seeed-zephyr matrix
 ```
 
 One-sentence summary: maintainers use metadata validation and the build matrix
@@ -209,7 +217,7 @@ targets that are not in the selected Zephyr release.
 Use a non-LED demo for boards without an on-board LED:
 
 ```sh
-scripts/seeed-zephyr build xiao_esp32c3
+seeed-zephyr build xiao_esp32c3
 ```
 
 One-sentence summary: not every XIAO board is a valid LED blink board.

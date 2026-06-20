@@ -22,17 +22,23 @@ If you are an AI agent, maintainer, or contributor preparing project work, start
 
 The short version: this repository stores XIAO/Grove examples, project examples, metadata, scripts, docs, and validation results. The actual Zephyr source tree and firmware builds live in a separate workspace, normally `~/zephyrproject`.
 
-Build a repository board demo from the project root:
+Run setup from the repository root. When setup asks `Install seeed-zephyr CLI? [Y/n]`, press Enter to install the command:
 
 ```sh
-scripts/seeed-zephyr build xiao_esp32c6
+bash scripts/setup-macos.sh
+```
+
+After setup installs the CLI, build a repository board demo from any directory:
+
+```sh
+seeed-zephyr build xiao_esp32c6
 ```
 
 List supported boards and examples:
 
 ```sh
-scripts/seeed-zephyr list boards
-scripts/seeed-zephyr list examples
+seeed-zephyr list boards
+seeed-zephyr list examples
 ```
 
 ## Why This Exists

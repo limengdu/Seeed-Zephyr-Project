@@ -10,7 +10,7 @@
 | `~/seeed-zephyr-base` | 本项目 | 放 XIAO/Grove 示例、metadata、脚本、文档、验证结果 |
 | `~/zephyrproject` | 上游 Zephyr 工作区 | 放 Zephyr 源码、SDK、west workspace 和固件构建输出 |
 
-一句话总结：平时从 `~/seeed-zephyr-base` 运行本项目脚本；脚本会调用 `~/zephyrproject` 里的 Zephyr。
+一句话总结：从 `~/seeed-zephyr-base` 运行 setup；CLI 安装后，就可以在任意目录使用 `seeed-zephyr`。
 
 ## 1. 这个项目解决什么问题
 
@@ -55,62 +55,71 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 这个脚本会准备 `~/zephyrproject`，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
 安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。
 
+执行到 CLI 安装步骤时，脚本会询问：
+
+```text
+Install seeed-zephyr CLI? [Y/n]
+```
+
+直接按回车就是安装。安装后，`seeed-zephyr` 命令可以在任意目录使用。如果安装目录不在
+`PATH` 里，setup 会打印需要添加的 `PATH` 命令。
+
 脚本最后会打印下一条本仓库示例命令，例如：
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr build xiao_esp32c6
+seeed-zephyr build xiao_esp32c6
 ```
 
-一句话总结：setup 负责装工具链，装完后把你带回本仓库示例。
+一句话总结：setup 负责装工具链，也会默认安装后续操作示例用的命令。
 
 ## 3. 构建一块板子的 demo
 
-从项目根目录构建：
+CLI 安装后，从任意目录构建：
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr build xiao_esp32c6
+seeed-zephyr build xiao_esp32c6
 ```
 
 XIAO ESP32C3 没有板载 LED，所以它不用 `blinky`，而是用 `hello_world`：
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr build xiao_esp32c3
+seeed-zephyr build xiao_esp32c3
 ```
 
-`scripts/seeed-zephyr build <board_id>` 会读取开发板 metadata，找到仓库示例，然后调用已经验证过的底层构建脚本。
+`seeed-zephyr build <board_id>` 会读取开发板 metadata，找到仓库示例，然后调用已经验证过的底层构建脚本。
 
-一句话总结：构建命令从本仓库开始，Zephyr 的复杂参数由脚本处理。
+如果你在 setup 里跳过了 CLI 安装，备用入口是从项目根目录运行
+`scripts/seeed-zephyr <command>`。
+
+一句话总结：安装后的命令可以离开仓库目录使用，Zephyr 的复杂参数由脚本处理。
 
 ## 4. 常用 CLI 命令
 
 列出开发板和示例：
 
 ```sh
-scripts/seeed-zephyr list boards
-scripts/seeed-zephyr list examples
+seeed-zephyr list boards
+seeed-zephyr list examples
 ```
 
 构建、烧录和查看日志：
 
 ```sh
-scripts/seeed-zephyr build xiao_esp32c6
-scripts/seeed-zephyr flash xiao_esp32c6
-scripts/seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr build xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
+seeed-zephyr monitor xiao_esp32c6
 ```
 
 运行完整构建矩阵：
 
 ```sh
-scripts/seeed-zephyr matrix
+seeed-zephyr matrix
 ```
 
 记录一次真实硬件观察：
 
 ```sh
-scripts/seeed-zephyr verify-hardware xiao_esp32c6
+seeed-zephyr verify-hardware xiao_esp32c6
 ```
 
 一句话总结：CLI 是操作本仓库示例的默认入口。
@@ -144,8 +153,7 @@ XIAO board target。XIAO ESP32C5 已经有仓库 demo 记录，但要等选定 Z
 构建成功后，通过 CLI 烧录：
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr flash xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
 ```
 
 ESP32 系列有时需要手动进入 bootloader。通俗说，就是让板子进入“准备接收新程序”的状态。
@@ -153,7 +161,7 @@ ESP32 系列有时需要手动进入 bootloader。通俗说，就是让板子进
 ESP32 系列查看串口日志可以运行：
 
 ```sh
-scripts/seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr monitor xiao_esp32c6
 ```
 
 一句话总结：CLI 从本仓库构建，再把烧录交给 Zephyr 官方工具。
@@ -170,8 +178,7 @@ cd ~/seeed-zephyr-base
 重新构建全部开发板 demo：
 
 ```sh
-cd ~/seeed-zephyr-base
-scripts/seeed-zephyr matrix
+seeed-zephyr matrix
 ```
 
 一句话总结：维护者用 metadata 校验和构建矩阵，让示例目录保持可信。
@@ -205,7 +212,7 @@ west boards | grep -i xiao
 没有板载 LED 的板子要用非 LED demo：
 
 ```sh
-scripts/seeed-zephyr build xiao_esp32c3
+seeed-zephyr build xiao_esp32c3
 ```
 
 一句话总结：不是每块 XIAO 都适合用 LED blink 做最小验证。

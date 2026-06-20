@@ -10,7 +10,15 @@ import sys
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+def resolve_repo_root() -> Path:
+    env_root = os.environ.get("SEEED_ZEPHYR_REPO_ROOT")
+    if env_root:
+        return Path(env_root).expanduser().resolve()
+
+    return Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = resolve_repo_root()
 BOARD_DIR = REPO_ROOT / "metadata" / "boards"
 EXAMPLES_DIR = REPO_ROOT / "examples" / "boards"
 BUILD_SCRIPT = REPO_ROOT / "scripts" / "build-example.sh"

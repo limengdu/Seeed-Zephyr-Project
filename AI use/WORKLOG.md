@@ -30,6 +30,56 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Install CLI as a global user command
+
+Scope:
+- Updated `scripts/setup-macos.sh` to ask whether to install the
+  `seeed-zephyr` CLI, defaulting to installation.
+- Updated `scripts/seeed-zephyr` so an installed symlink resolves back to the
+  repository root.
+- Updated `tools/cli/seeed_zephyr.py` to accept the repository root from the
+  launcher environment.
+- Updated README, Getting Started docs, script docs, CLI docs, and validation
+  evidence to describe `seeed-zephyr` as the normal command.
+
+Reason:
+- The user-facing CLI should be available as `seeed-zephyr` from any directory
+  after setup, not only as `scripts/seeed-zephyr` from the repository root.
+
+Result:
+- `setup-macos.sh` now prompts `Install seeed-zephyr CLI? [Y/n]`.
+- Pressing Enter installs the command.
+- If the selected install directory is in `PATH`, users can run
+  `seeed-zephyr` from any directory.
+- If the selected install directory is not in `PATH`, setup prints the exact
+  `PATH` line and an absolute command fallback.
+- If installation is skipped, setup prints the repository-local fallback.
+
+Verification:
+- `bash -n scripts/setup-macos.sh`: passed.
+- `bash -n scripts/seeed-zephyr`: passed.
+- `PYTHONPYCACHEPREFIX=/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- Temporary install to `/tmp/seeed-zephyr-cli-test-bin`: passed.
+- From `/tmp`, `seeed-zephyr --help`: passed.
+- From `/tmp`, `seeed-zephyr list boards`: passed.
+- From `/tmp`, `seeed-zephyr list examples`: passed.
+- From `/tmp`, `seeed-zephyr build xiao_esp32c5`: returned the expected
+  unsupported board error.
+- From `/tmp`, `seeed-zephyr build xiao_esp32c3`: passed.
+- Non-interactive default install through `install_cli_if_requested`: installed
+  and listed boards successfully.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  29 passed, 0 failed.
+- `git diff --check`: passed.
+- Directory README coverage check: no project directory missing `README.md`.
+- Sensitive keyword scan over README, docs, scripts, tools, metadata, examples,
+  `AI use/`, and `.github`: no matches.
+
+Remaining:
+- Real user setup runs should confirm the final chosen install directory on
+  machines where neither `~/.local/bin` nor `/opt/homebrew/bin` is in `PATH`.
+
 ## 2026-06-20 - Add repository CLI for examples and hardware checks
 
 Scope:

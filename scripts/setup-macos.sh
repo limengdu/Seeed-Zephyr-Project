@@ -37,6 +37,7 @@ BOARD_OVERRIDES_FILE="$REPO_ROOT/tools/build_matrix/board-overrides.tsv"
 VENV_DIR="$ZEPHYR_WORKSPACE/.venv"
 WEST="$VENV_DIR/bin/west"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+CLI_INSTALL_DIR="${SEEED_ZEPHYR_CLI_INSTALL_DIR:-}"
 BREW_PACKAGES=(
   cmake
   ninja
@@ -58,6 +59,8 @@ BOARD_HAL_MODULE=""
 BOARD_BUILD_TARGET=""
 BOARD_EXAMPLE_PATH=""
 BOARD_BUILD_STATUS=""
+CLI_COMMAND_PATH=""
+CLI_INSTALL_STATUS="pending"
 
 # Prints an error message and exits the script.
 # 打印错误信息并退出脚本。
@@ -88,6 +91,130 @@ step() {
 # 当指定命令存在于 PATH 中时返回成功。
 command_exists() {
   command -v "$1" >/dev/null 2>&1
+}
+
+# Returns success when a directory is present in PATH.
+# 当目录已经位于 PATH 中时返回成功。
+path_contains_dir() {
+  local path_dir=$1
+
+  case ":${PATH:-}:" in
+    *":$path_dir:"*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# Prompts for a yes/no answer where Enter means yes.
+# 询问 yes/no，其中直接回车代表 yes。
+prompt_yes_default() {
+  local prompt=$1
+  local answer
+
+  if [[ ! -t 0 ]]; then
+    return 0
+  fi
+
+  while true; do
+    read -r -p "$prompt [Y/n] " answer
+    case "$answer" in
+      "" | [Yy] | [Yy][Ee][Ss])
+        return 0
+        ;;
+      [Nn] | [Nn][Oo])
+        return 1
+        ;;
+      *)
+        printf 'Please answer y or n.\n'
+        ;;
+    esac
+  done
+}
+
+# Selects a user-writable install directory for the global CLI command.
+# 选择一个用户可写的全局 CLI 命令安装目录。
+select_cli_install_dir() {
+  local candidate
+
+  if [[ -n "$CLI_INSTALL_DIR" ]]; then
+    printf '%s\n' "$CLI_INSTALL_DIR"
+    return
+  fi
+
+  for candidate in "$HOME/.local/bin" "/opt/homebrew/bin"; do
+    if path_contains_dir "$candidate"; then
+      if [[ ! -e "$candidate" || ( -d "$candidate" && -w "$candidate" ) ]]; then
+        printf '%s\n' "$candidate"
+        return
+      fi
+    fi
+  done
+
+  printf '%s\n' "$HOME/.local/bin"
+}
+
+# Installs the seeed-zephyr command as a user-level symlink.
+# 以用户级符号链接安装 seeed-zephyr 命令。
+install_cli_command() {
+  local install_dir
+  local command_path
+  local source_path="$REPO_ROOT/scripts/seeed-zephyr"
+
+  install_dir="$(select_cli_install_dir)"
+  command_path="$install_dir/seeed-zephyr"
+
+  mkdir -p "$install_dir"
+
+  if [[ -e "$command_path" && ! -L "$command_path" ]]; then
+    fail "$command_path already exists and is not a symlink. Move it before installing the CLI."
+  fi
+
+  ln -sfn "$source_path" "$command_path"
+
+  CLI_COMMAND_PATH="$command_path"
+  CLI_INSTALL_STATUS="installed"
+
+  printf 'Installed seeed-zephyr CLI at %s.\n' "$command_path"
+
+  if path_contains_dir "$install_dir"; then
+    printf 'You can run seeed-zephyr from any directory.\n'
+  else
+    printf 'Add this directory to PATH to run seeed-zephyr from any directory:\n'
+    printf '  export PATH="%s:$PATH"\n' "$install_dir"
+    printf 'Until PATH is updated, run the CLI with:\n'
+    printf '  %s --help\n' "$command_path"
+  fi
+}
+
+# Asks whether to install the CLI and defaults to installation.
+# 询问是否安装 CLI，并默认执行安装。
+install_cli_if_requested() {
+  if prompt_yes_default "Install seeed-zephyr CLI?"; then
+    install_cli_command
+  else
+    CLI_INSTALL_STATUS="skipped"
+    printf 'Skipped seeed-zephyr CLI installation.\n'
+  fi
+}
+
+# Returns the command users should run after setup completes.
+# 返回安装完成后用户应运行的命令。
+next_cli_command() {
+  local install_dir
+
+  if [[ "$CLI_INSTALL_STATUS" == "installed" && -n "$CLI_COMMAND_PATH" ]]; then
+    install_dir="$(dirname "$CLI_COMMAND_PATH")"
+    if path_contains_dir "$install_dir"; then
+      printf 'seeed-zephyr\n'
+    else
+      printf '%s\n' "$CLI_COMMAND_PATH"
+    fi
+  else
+    printf 'scripts/seeed-zephyr\n'
+  fi
 }
 
 # Compares two dotted version strings using the configured Python binary.
@@ -450,8 +577,18 @@ install_zephyr_tools() {
 # Prints board ids and the next command to fetch chip-specific blobs later.
 # 打印开发板 id，并提示之后如何获取芯片专属 blobs。
 print_no_board_next_steps() {
+  local cli_command
+
+  cli_command="$(next_cli_command)"
+
   printf '\nSetup complete.\n'
   printf 'The common Zephyr environment is ready.\n'
+  printf 'List repository boards with:\n'
+  if [[ "$CLI_INSTALL_STATUS" == "skipped" ]]; then
+    printf '  cd %s\n' "$REPO_ROOT"
+  fi
+  printf '  %s list boards\n' "$cli_command"
+  printf '\n'
   printf 'To fetch chip-specific blobs later, rerun with:\n'
   printf '  bash scripts/setup-macos.sh --board <your_board_id>\n\n'
   print_available_board_ids
@@ -460,6 +597,10 @@ print_no_board_next_steps() {
 # Prints the build command for the selected board after setup succeeds.
 # 安装成功后，打印所选开发板的构建命令。
 print_board_next_steps() {
+  local cli_command
+
+  cli_command="$(next_cli_command)"
+
   printf '\nSetup complete.\n'
 
   if [[ "$BOARD_BUILD_STATUS" == "UNSUPPORTED" ]]; then
@@ -470,20 +611,22 @@ print_board_next_steps() {
   fi
 
   printf 'Next step:\n'
-  printf '  cd %s\n' "$REPO_ROOT"
-  printf '  scripts/seeed-zephyr build %s\n' "$BOARD_ID"
+  if [[ "$CLI_INSTALL_STATUS" == "skipped" ]]; then
+    printf '  cd %s\n' "$REPO_ROOT"
+  fi
+  printf '  %s build %s\n' "$cli_command" "$BOARD_ID"
   printf '\nThe helper builds the repository example with target %s.\n' "$BOARD_BUILD_TARGET"
 }
 
 # Runs the full macOS setup flow in the required common-step order.
 # 按要求的公共步骤顺序执行完整 macOS 安装流程。
 main() {
-  local total_steps=4
+  local total_steps=5
 
   parse_args "$@"
 
   if [[ -n "$BOARD_ID" ]]; then
-    total_steps=5
+    total_steps=6
     resolve_board_metadata "$BOARD_ID"
   fi
 
@@ -501,8 +644,11 @@ main() {
   step "4/$total_steps" "Exporting Zephyr, installing Python packages, and checking the SDK..."
   install_zephyr_tools
 
+  step "5/$total_steps" "Installing the seeed-zephyr CLI..."
+  install_cli_if_requested
+
   if [[ -n "$BOARD_ID" ]]; then
-    step "5/$total_steps" "Resolving and fetching board-specific blobs..."
+    step "6/$total_steps" "Resolving and fetching board-specific blobs..."
     fetch_board_blobs
     print_board_next_steps
   else

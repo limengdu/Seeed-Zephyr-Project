@@ -2,7 +2,23 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_PATH="${BASH_SOURCE[0]}"
+
+# Resolve symlinks so an installed command can still find this repository.
+# 解析符号链接，让安装后的全局命令仍然能找到本仓库。
+while [[ -L "$SOURCE_PATH" ]]; do
+  SOURCE_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
+  LINK_TARGET="$(readlink "$SOURCE_PATH")"
+  if [[ "$LINK_TARGET" == /* ]]; then
+    SOURCE_PATH="$LINK_TARGET"
+  else
+    SOURCE_PATH="$SOURCE_DIR/$LINK_TARGET"
+  fi
+done
+
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE_PATH")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+export SEEED_ZEPHYR_REPO_ROOT="$REPO_ROOT"
 
 exec python3 "$REPO_ROOT/tools/cli/seeed_zephyr.py" "$@"
