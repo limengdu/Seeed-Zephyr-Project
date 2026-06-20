@@ -29,6 +29,7 @@ BOARD_METADATA_DIR="$REPO_ROOT/metadata/boards"
 BOARD_EXAMPLES_DIR="$REPO_ROOT/examples/boards"
 RESULTS_FILE="$SCRIPT_DIR/results.md"
 BOARD_OVERRIDES_FILE="$SCRIPT_DIR/board-overrides.tsv"
+RP2_BOOTLOADER_SNIPPET="rp2-boot-mode-retention"
 
 TOTAL_COUNT=0
 PASS_COUNT=0
@@ -53,6 +54,35 @@ read_board_metadata_value() {
   local key=$2
 
   sed -n "s/^[[:space:]]*$key:[[:space:]]*//p" "$board_file" | head -n 1
+}
+
+# Reads a flat YAML scalar value from a repository example metadata file.
+# 从仓库示例 metadata 文件读取一个扁平 YAML 标量值。
+read_example_metadata_value() {
+  local example_path=$1
+  local key=$2
+  local example_file="$REPO_ROOT/$example_path/example.yaml"
+
+  [[ -f "$example_file" ]] || return 1
+
+  sed -n "s/^[[:space:]]*$key:[[:space:]]*//p" "$example_file" | head -n 1
+}
+
+# Formats notes for a successful build matrix row.
+# 格式化构建矩阵成功行的说明。
+build_success_notes() {
+  local override_note=$1
+  local validation_status=$2
+  local notes="Build succeeded."
+
+  if [[ "$validation_status" == "hardware-tested" ]]; then
+    notes="$notes Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md."
+  fi
+  if [[ -n "$override_note" ]]; then
+    notes="$notes $override_note"
+  fi
+
+  printf '%s\n' "$notes"
 }
 
 # Reads a board-specific build matrix override row.
@@ -279,8 +309,10 @@ ensure_chip_blobs() {
 run_build() {
   local target=$1
   local example_path=$2
+  local vendor=$3
   local example_abs_path
   local build_status
+  local build_args
 
   case "$example_path" in
     /*)
@@ -294,7 +326,12 @@ run_build() {
   BUILD_OUTPUT="$(
     (
       cd "$ZEPHYR_WORKSPACE" &&
-        "$WEST" build -p always -b "$target" "$example_abs_path"
+        build_args=(-p always -b "$target") &&
+        if [[ "$vendor" == "raspberrypi" ]]; then
+          build_args+=("-S" "$RP2_BOOTLOADER_SNIPPET")
+        fi &&
+        build_args+=("$example_abs_path") &&
+        "$WEST" build "${build_args[@]}"
     ) 2>&1
   )"
   build_status=$?
@@ -383,6 +420,7 @@ process_board() {
   local build_status
   local retry_target
   local first_output
+  local validation_status
 
   board_id="$(basename "$board_file" .yaml)"
   vendor="$(read_board_metadata_value "$board_file" "vendor")"
@@ -422,19 +460,18 @@ process_board() {
     return
   fi
 
+  validation_status="$(read_example_metadata_value "$example_path" "validation_status")"
+
   if ! ensure_chip_blobs "$vendor"; then
     notes="$(error_excerpt "$BLOB_OUTPUT")"
     record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "FAIL" "$notes"
     return
   fi
 
-  run_build "$metadata_target" "$example_path"
+  run_build "$metadata_target" "$example_path" "$vendor"
   build_status=$?
   if ((build_status == 0)); then
-    notes="Build succeeded."
-    if [[ -n "$override_note" ]]; then
-      notes="Build succeeded. $override_note"
-    fi
+    notes="$(build_success_notes "$override_note" "$validation_status")"
     record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "PASS" "$notes"
     return
   fi
@@ -447,8 +484,8 @@ process_board() {
     if [[ -n "$retry_target" && "$retry_target" != "$metadata_target" ]]; then
       final_target="$retry_target"
 
-      if run_build "$retry_target" "$example_path"; then
-        notes="Retried from $metadata_target after Zephyr board qualifier suggestion."
+      if run_build "$retry_target" "$example_path" "$vendor"; then
+        notes="$(build_success_notes "$override_note" "$validation_status") Retried from $metadata_target after Zephyr board qualifier suggestion."
         record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "PASS" "$notes"
         return
       fi

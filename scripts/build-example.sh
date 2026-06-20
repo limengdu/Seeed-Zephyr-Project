@@ -18,6 +18,7 @@ WEST="$VENV_DIR/bin/west"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BOARD_METADATA_DIR="$REPO_ROOT/metadata/boards"
+RP2_BOOTLOADER_SNIPPET="rp2-boot-mode-retention"
 
 # Prints an error message and exits the script.
 # 打印错误信息并退出脚本。
@@ -120,6 +121,7 @@ main() {
 	local validation_status
 	local board_file
 	local vendor
+	local build_args
 	local display_path
 
 	[[ -n "$example_input" ]] || fail "Usage: bash scripts/build-example.sh <example-directory>"
@@ -156,7 +158,12 @@ main() {
 	ensure_chip_blobs "$vendor"
 
 	printf 'Building %s for %s...\n' "$display_path" "$target"
-	(cd "$ZEPHYR_WORKSPACE" && "$WEST" build -p always -b "$target" "$example_dir")
+	build_args=(-p always -b "$target")
+	if [[ "$vendor" == "raspberrypi" ]]; then
+		build_args+=("-S" "$RP2_BOOTLOADER_SNIPPET")
+	fi
+	build_args+=("$example_dir")
+	(cd "$ZEPHYR_WORKSPACE" && "$WEST" build "${build_args[@]}")
 	printf 'Build succeeded: %s\n' "$display_path"
 }
 

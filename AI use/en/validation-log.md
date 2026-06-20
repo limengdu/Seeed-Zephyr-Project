@@ -145,7 +145,9 @@ Baseline CLI: `scripts/seeed-zephyr`, 2026-06-20.
 | direct `west flash` and monitor delegation through `seeed-zephyr flash xiao_esp32c6 --monitor` | passed | CLI called `west build`, `west flash`, and Zephyr's Espressif monitor; flash wrote 144300 bytes and serial output showed Zephyr boot plus `LED state` toggles |
 | `seeed-zephyr flash xiao_rp2040 --monitor` without UF2 mode | expected error | build passed; `west flash` reported no matching UF2 partition and CLI showed the BOOTSEL/UF2 hint |
 | `seeed-zephyr flash xiao_rp2040 --monitor` with UF2 mode | passed | build passed; Zephyr copied `zephyr.uf2` to `/Volumes/RPI-RP2`; pyserial miniterm showed repeated LED state output |
-| second consecutive `seeed-zephyr flash xiao_rp2040 --monitor` without UF2 mode | expected error | repeated flashing requires entering UF2 mode again before each flash |
+| second consecutive `seeed-zephyr flash xiao_rp2040 --monitor` after repository firmware install | passed | CLI requested UF2 via `/dev/cu.usbmodem1101` at 1200 baud, detected `/Volumes/RPI-RP2`, copied `zephyr.uf2`, and monitor showed LED state output |
+| third consecutive `seeed-zephyr flash xiao_rp2040 --monitor` after repository firmware install | passed | repeated automatic UF2 request, UF2 copy, and monitor output passed without manual BOOTSEL |
+| fourth consecutive `seeed-zephyr flash xiao_rp2040 --monitor` after repository firmware install | passed | repeated automatic UF2 request, UF2 copy, and monitor output passed without manual BOOTSEL |
 
 ## Repository Example Build Evidence
 

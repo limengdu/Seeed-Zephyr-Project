@@ -27,8 +27,11 @@ and repository-driven.
 `seeed-zephyr flash <board_id> --monitor` builds, flashes, and opens the board
 monitor after a successful flash.
 
-For Raspberry Pi UF2 boards such as XIAO RP2040 and XIAO RP2350, flash failures
-include a BOOTSEL hint when the UF2 mass-storage volume is not visible.
+For Raspberry Pi UF2 boards such as XIAO RP2040 and XIAO RP2350, `flash` checks
+for a visible UF2 mass-storage volume before calling `west flash`. When no UF2
+volume is visible, XIAO RP2040 can request UF2 mode through the running USB CDC
+serial port at 1200 baud. If no serial port is available or the request times
+out, the CLI reports a BOOTSEL recovery hint.
 
 `seeed-zephyr monitor <board_id> --port <device> --baud <rate>` opens a serial
 monitor. If `--port` is omitted, the CLI tries to auto-detect one USB serial
@@ -57,8 +60,9 @@ CLI 是仓库知识层，不是替代 Zephyr 的构建系统。build、flash、m
 
 `seeed-zephyr flash <board_id> --monitor` 会构建、烧录，并在烧录成功后打开开发板 monitor。
 
-对于 XIAO RP2040 和 XIAO RP2350 这类 Raspberry Pi UF2 开发板，如果看不到 UF2 存储卷，
-烧录失败信息会包含 BOOTSEL 提示。
+对于 XIAO RP2040 和 XIAO RP2350 这类 Raspberry Pi UF2 开发板，`flash` 会先检查能否看到
+UF2 存储卷，再调用 `west flash`。如果看不到 UF2 卷，XIAO RP2040 可以通过正在运行的 USB CDC
+串口 1200 baud 请求进入 UF2 模式。如果找不到串口，或者请求超时，CLI 会输出 BOOTSEL 恢复提示。
 
 `seeed-zephyr monitor <board_id> --port <device> --baud <rate>` 会打开串口 monitor。
 如果省略 `--port`，CLI 会尝试自动检测一个 USB 串口设备。

@@ -174,7 +174,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 可构建 |
 | XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 可构建 |
 | XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建 |
-| XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；每次烧录需要 UF2 模式 |
+| XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | `examples/boards/xiao_rp2350/blinky` | PASS | 可构建 |
 
 `UNSUPPORTED` 的意思不是脚本写错了，而是当前固定使用的 Zephyr v4.4.0 里没有这个
@@ -291,13 +291,14 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 
 ### `No matching UF2 partitions found`
 
-把 RP2040 或 RP2350 开发板放进 UF2 模式，然后重新运行烧录命令：
+对 RP2040 或 RP2350 开发板，先确认 UF2 存储卷已经可见，然后重新运行烧录命令：
 
 ```sh
 seeed-zephyr flash xiao_rp2040 --monitor
 ```
 
-进入方式是：按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。运行 `west flash` 的环境必须能看到
-UF2 存储卷。
+如果 XIAO RP2040 已经运行本仓库固件，CLI 通常会通过 USB CDC 1200 baud 自动请求进入 UF2 模式。
+如果板子运行的是旧固件，或者看不到 USB CDC 串口，就按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL
+再按 RESET。运行 `west flash` 的环境必须能看到 UF2 存储卷。
 
-一句话总结：UF2 开发板必须先露出 bootloader 存储盘，Zephyr 才能复制固件。
+一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；XIAO RP2040 装入本仓库固件后可以自动进入这个模式。

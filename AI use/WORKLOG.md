@@ -30,6 +30,61 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Fix RP2040 automatic UF2 repeated flashing
+
+Scope:
+- Updated `tools/cli/seeed_zephyr.py` so Raspberry Pi UF2 flashing detects UF2
+  volumes before `west flash`, requests XIAO RP2040 UF2 mode through USB CDC at
+  1200 baud when needed, waits for the UF2 volume, and then delegates flashing
+  to Zephyr.
+- Added `rp2-boot-mode-retention` to Raspberry Pi builds through
+  `tools/cli/seeed_zephyr.py`, `scripts/build-example.sh`, and
+  `tools/build_matrix/run.sh`.
+- Updated `examples/boards/xiao_rp2040/blinky` so the firmware handles USB CDC
+  1200-baud requests and reboots through Zephyr's RP2040 boot-mode retention
+  path.
+- Expanded `tools/cli/test_seeed_zephyr.py` coverage for UF2 volume detection,
+  1200-baud requests, timeout hints, explicit ports, and RP2 build snippets.
+- Updated RP2040 user docs, CLI docs, example docs, build matrix results, and
+  hardware verification evidence.
+
+Reason:
+- Requiring manual BOOTSEL for every XIAO RP2040 flash is not acceptable after
+  repository firmware is installed, because the board can expose USB CDC serial
+  and use a 1200-baud request to enter UF2 mode automatically.
+
+Result:
+- A first install from older firmware may still use manual BOOTSEL.
+- After the repository firmware is running, repeated
+  `seeed-zephyr flash xiao_rp2040 --monitor` runs can request UF2 mode
+  automatically, copy `zephyr.uf2`, and reopen the serial monitor.
+- Manual BOOTSEL remains the recovery path when no compatible running firmware
+  or USB CDC serial port is available.
+
+Verification:
+- Added a failing regression test first for the 1200-baud touch duration, then
+  implemented the fix.
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py`: passed,
+  8 tests.
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py tools/cli/test_seeed_zephyr.py`:
+  passed.
+- `bash -n scripts/build-example.sh tools/build_matrix/run.sh`: passed.
+- `scripts/seeed-zephyr build xiao_rp2040`: passed; output included
+  `Snippet(s): rp2-boot-mode-retention`.
+- Hardware first install: `seeed-zephyr flash xiao_rp2040 --monitor` passed
+  with `/Volumes/RPI-RP2` already mounted, copied `zephyr.uf2`, opened
+  `/dev/cu.usbmodem1101`, and printed repeated LED state lines.
+- Hardware repeated flash: second, third, and fourth consecutive
+  `seeed-zephyr flash xiao_rp2040 --monitor` runs passed without manual
+  BOOTSEL. Each run requested UF2 mode via `/dev/cu.usbmodem1101` at 1200 baud,
+  detected `/Volumes/RPI-RP2`, copied `zephyr.uf2`, reopened pyserial miniterm,
+  and printed repeated LED state lines.
+
+Remaining:
+- Normal unplug/replug after the repository firmware is installed should expose
+  the same USB CDC serial interface, but a dedicated replug hardware record has
+  not yet been captured.
+
 ## 2026-06-20 - Verify RP2040 UF2 flash and monitor flow
 
 Scope:
@@ -59,8 +114,8 @@ Result:
 - The XIAO RP2040 blinky example now exposes monitor output through USB CDC ACM.
 - `seeed-zephyr flash xiao_rp2040 --monitor` can build, copy `zephyr.uf2` to
   the mounted UF2 volume, and open pyserial miniterm.
-- User-facing docs now state that RP2040 repeated flashing requires entering
-  UF2 mode again before each flash.
+- User-facing docs for RP2040 were later updated by the automatic UF2
+  repeated-flashing verification entry.
 
 Verification:
 - `python3 tools/cli/test_seeed_zephyr.py`: passed.
@@ -80,12 +135,12 @@ Verification:
 - `seeed-zephyr flash xiao_rp2040 --monitor` with UF2 mode: build passed,
   Zephyr copied `zephyr.uf2` to `/Volumes/RPI-RP2`, pyserial miniterm opened
   `/dev/cu.usbmodem1101`, and repeated LED state output was observed.
-- A second consecutive `seeed-zephyr flash xiao_rp2040 --monitor` without
-  entering UF2 mode again failed with the expected UF2 error and CLI hint.
+- Before automatic UF2 request support was added to the repository firmware,
+  the older firmware path produced the expected UF2 error and CLI hint.
 
 Remaining:
-- None for RP2040 UF2 flash and monitor support. Requiring UF2 mode before each
-  flash is the currently verified board behavior.
+- This earlier repeated-flash conclusion was replaced by the later automatic
+  UF2 repeated-flashing verification entry.
 
 ## 2026-06-20 - Document SAMD21 BOSSA auto-reset behavior
 

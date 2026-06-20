@@ -14,6 +14,6 @@ Values below come from real per-board repository example builds. The default exa
 | xiao_nrf52840 | nordic | `examples/boards/xiao_nrf52840/blinky` | `xiao_ble` | PASS | Build succeeded. |
 | xiao_nrf54l15 | nordic | `examples/boards/xiao_nrf54l15/blinky` | `xiao_nrf54l15/nrf54l15/cpuapp` | PASS | Build succeeded. |
 | xiao_ra4m1 | renesas | `examples/boards/xiao_ra4m1/blinky` | `xiao_ra4m1` | PASS | Build succeeded. |
-| xiao_rp2040 | raspberrypi | `examples/boards/xiao_rp2040/blinky` | `xiao_rp2040` | PASS | Build succeeded; UF2 flash and USB CDC monitor passed on hardware. Repeated flash requires UF2 mode again. |
+| xiao_rp2040 | raspberrypi | `examples/boards/xiao_rp2040/blinky` | `xiao_rp2040` | PASS | Build succeeded. Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md. |
 | xiao_rp2350 | raspberrypi | `examples/boards/xiao_rp2350/blinky` | `xiao_rp2350/rp2350a/hazard3` | PASS | Build succeeded. |
-| xiao_samd21 | microchip | `examples/boards/xiao_samd21/blinky` | `seeeduino_xiao` | PASS | Build succeeded; flash, monitor, and repeated flash without manual reset passed on hardware. |
+| xiao_samd21 | microchip | `examples/boards/xiao_samd21/blinky` | `seeeduino_xiao` | PASS | Build succeeded. Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md. |

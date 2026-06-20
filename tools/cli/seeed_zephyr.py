@@ -32,6 +32,10 @@ DEBUG_HINT = (
     "for everyday debugging."
 )
 SAMD21_BOSSAC_DELAY_SECONDS = "3"
+RP2_BOOTLOADER_SNIPPET = "rp2-boot-mode-retention"
+RP2_BOOTLOADER_BAUD = 1200
+RP2_BOOTLOADER_TOUCH_SECONDS = 1.5
+RP2_BOOTLOADER_WAIT_SECONDS = 10
 
 
 class CliError(Exception):
@@ -314,9 +318,10 @@ def samd21_bootloader_hint(port: str | None) -> str:
 
 def uf2_bootloader_hint(board_id: str) -> str:
     return (
-        f"{board_id} flashing uses Zephyr's UF2 runner. Hold BOOTSEL while "
-        "plugging in USB, or hold BOOTSEL and press RESET, then wait for the "
-        "UF2 mass storage volume to appear and rerun the flash command."
+        f"{board_id} flashing uses Zephyr's UF2 runner. If the board is running "
+        "older firmware, hold BOOTSEL while plugging in USB, or hold BOOTSEL "
+        "and press RESET, then wait for the UF2 mass storage volume to appear "
+        "and rerun the flash command."
     )
 
 
@@ -349,11 +354,115 @@ def resolve_flash_port(board: dict[str, str], port: str | None) -> str | None:
         raise CliError(f"{error}\nHint: {samd21_bootloader_hint(port)}") from error
 
 
+def uf2_mounts() -> list[str]:
+    python = zephyr_venv_python()
+    # Mirrors Zephyr's UF2 runner mount detection before invoking west flash.
+    # 在调用 west flash 前，复用 Zephyr UF2 runner 的挂载盘判断规则。
+    script = (
+        "from pathlib import Path\n"
+        "import psutil\n"
+        "mounts = []\n"
+        "for part in psutil.disk_partitions():\n"
+        "    info = Path(part.mountpoint) / 'INFO_UF2.TXT'\n"
+        "    if part.fstype in ('vfat', 'FAT', 'msdos') and info.is_file():\n"
+        "        mounts.append(part.mountpoint)\n"
+        "print('\\n'.join(mounts))\n"
+    )
+    result = run_command_capture(
+        [str(python), "-c", script], cwd=zephyr_workspace(), env=west_command_env()
+    )
+    if result.returncode != 0:
+        raise CliError(
+            "UF2 volume detection failed. Zephyr's UF2 runner requires psutil "
+            f"in the Zephyr venv: {zephyr_workspace()}/.venv"
+        )
+
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def wait_for_uf2_mount(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECONDS) -> str:
+    # Waits for exactly one UF2 mass-storage volume after the board reboots.
+    # 等待开发板重启后出现唯一的 UF2 存储卷。
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        mounts = uf2_mounts()
+        if len(mounts) == 1:
+            return mounts[0]
+        if len(mounts) > 1:
+            mount_list = "\n".join(f"  {mount}" for mount in mounts)
+            raise CliError(
+                f"Multiple UF2 mass storage volumes found:\n{mount_list}\n"
+                "Disconnect the extra UF2 boards and rerun the flash command."
+            )
+        time.sleep(0.5)
+
+    raise CliError("Timed out waiting for the UF2 mass storage volume.")
+
+
+def touch_serial_1200(port: str) -> None:
+    python = zephyr_venv_python()
+    script = (
+        "import sys, time;"
+        "import serial;"
+        "port = sys.argv[1];"
+        "hold_seconds = float(sys.argv[2]);"
+        "ser = serial.Serial(port=port, baudrate=1200, timeout=0.1);"
+        "time.sleep(hold_seconds);"
+        "ser.close()"
+    )
+    result = run_command_capture(
+        [str(python), "-c", script, port, str(RP2_BOOTLOADER_TOUCH_SECONDS)],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+    if result.returncode != 0:
+        details = result.stdout.strip()
+        message = f"Unable to open {port} at {RP2_BOOTLOADER_BAUD} baud."
+        if details:
+            message = f"{message}\n{details}"
+        raise CliError(message)
+
+
+def prepare_rp2_uf2_bootloader(board_id: str, port: str | None) -> str | None:
+    mounts = uf2_mounts()
+    if len(mounts) == 1:
+        return port
+    if len(mounts) > 1:
+        mount_list = "\n".join(f"  {mount}" for mount in mounts)
+        raise CliError(
+            f"Multiple UF2 mass storage volumes found:\n{mount_list}\n"
+            "Disconnect the extra UF2 boards and rerun the flash command."
+        )
+
+    try:
+        selected_port = port or detect_serial_port()
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {uf2_bootloader_hint(board_id)}") from error
+
+    print(
+        f"Requesting UF2 bootloader via {selected_port} at {RP2_BOOTLOADER_BAUD} baud...",
+        flush=True,
+    )
+    touch_serial_1200(selected_port)
+
+    try:
+        mount = wait_for_uf2_mount()
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {uf2_bootloader_hint(board_id)}") from error
+
+    print(f"UF2 bootloader volume detected: {mount}", flush=True)
+    return selected_port
+
+
 def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     # Runs Zephyr flash and returns the serial port selected for later monitor use.
     # 执行 Zephyr 烧录，并返回后续 monitor 可复用的串口。
     board = require_board(board_id)
     port = resolve_flash_port(board, port)
+    if board["vendor"] == "raspberrypi":
+        port = prepare_rp2_uf2_bootloader(board_id, port)
+
     command = ["flash"]
     if board["target"] == "seeeduino_xiao" and port is not None:
         command.extend(["--bossac-port", port, "--delay", SAMD21_BOSSAC_DELAY_SECONDS])
@@ -405,7 +514,11 @@ def run_west_build(board_id: str, example: dict[str, str]) -> None:
     example_dir = REPO_ROOT / example["path"]
     ensure_chip_blobs(board)
     print(f"Building {example['path']} for {target}...", flush=True)
-    run_west(["build", "-p", "always", "-b", target, str(example_dir)])
+    command = ["build", "-p", "always", "-b", target]
+    if board["vendor"] == "raspberrypi":
+        command.extend(["-S", RP2_BOOTLOADER_SNIPPET])
+    command.append(str(example_dir))
+    run_west(command)
     print(f"Build succeeded: {example['path']}", flush=True)
 
 
@@ -526,6 +639,8 @@ def cmd_flash(args: argparse.Namespace) -> None:
         board = require_board(args.board_id)
         monitor_port = port
         if board["target"] == "seeeduino_xiao" and args.port is None:
+            monitor_port = None
+        if board["vendor"] == "raspberrypi" and args.port is None:
             monitor_port = None
         run_monitor(args.board_id, port=monitor_port, baud=args.baud)
 

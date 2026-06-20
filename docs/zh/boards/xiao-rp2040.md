@@ -2,7 +2,7 @@
 
 这页记录 Seeed Studio XIAO RP2040 在 Zephyr 下已经验证过的行为。
 
-一句话总结：XIAO RP2040 使用 UF2 U 盘模式烧录，所以每次烧录前，都要先让 UF2 卷出现在电脑上。
+一句话总结：XIAO RP2040 仍然使用 UF2 U 盘模式烧录，但装入本仓库固件后，CLI 可以自动让板子进入 UF2 模式。
 
 ## 已验证的仓库示例
 
@@ -32,9 +32,14 @@ seeed-zephyr flash xiao_rp2040 --monitor --port /dev/cu.usbmodem1101
 XIAO RP2040 使用 UF2 bootloader。通俗说，bootloader 会把开发板临时变成一个 USB 存储盘，
 就像一个很小的 U 盘。Zephyr 的 UF2 runner 会把生成好的 `zephyr.uf2` 文件复制到这个盘里。
 
-进入 UF2 模式的方式是：按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。macOS 上常见
-卷路径是 `/Volumes/RPI-RP2`。Linux、Windows 或 WSL2 USB 转发环境里的名字和路径可能不同。
-关键不是路径长什么样，而是运行 `west flash` 的环境必须能看到这个 UF2 存储卷。
+装入本仓库的 `xiao_rp2040/blinky` 固件后，CLI 会用 1200 baud 打开开发板的 USB CDC 串口。
+正在运行的固件会把这个动作当成进入 bootloader 的请求，然后自动重启到 UF2 模式，最后由 Zephyr 的
+UF2 runner 复制新固件。
+
+如果板子当前运行的是旧固件，不支持这个 1200 baud 请求，就需要手动进入 UF2 模式：按住 BOOTSEL
+再插入 USB，或者按住 BOOTSEL 再按 RESET。macOS 上常见卷路径是 `/Volumes/RPI-RP2`。
+Linux、Windows 或 WSL2 USB 转发环境里的名字和路径可能不同。关键不是路径长什么样，
+而是运行 `west flash` 的环境必须能看到这个 UF2 存储卷。
 
 如果开发板没有进入 UF2 模式，Zephyr 会报：
 
@@ -42,20 +47,23 @@ XIAO RP2040 使用 UF2 bootloader。通俗说，bootloader 会把开发板临时
 No matching UF2 partitions found
 ```
 
-本仓库 CLI 会在这类烧录失败后追加 BOOTSEL 提示。
+本仓库 CLI 会先尝试 1200 baud 自动请求。如果找不到正在运行的 USB CDC 串口，或者请求后仍然看不到
+UF2 卷，就会追加 BOOTSEL 恢复提示。
 
-一句话总结：RP2040 烧录本质上是把固件复制到 bootloader U 盘，不是串口上传。
+一句话总结：RP2040 烧录本质仍然是复制 UF2 文件；串口只负责通知正在运行的仓库固件进入 UF2 模式。
 
 ## 预期连续烧录行为
 
 已经验证到的行为是：
 
-- 开发板处于 UF2 模式、UF2 卷已经挂载时，`seeed-zephyr flash xiao_rp2040 --monitor` 可以成功。
+- 如果板子当前是旧固件，第一次安装本仓库固件可能需要手动按 BOOTSEL，让 UF2 卷先出现。
 - 烧录完成后，开发板会重启进入应用程序，UF2 卷会消失，然后应用程序暴露 USB CDC 串口给 monitor 使用。
-- 如果第二次不重新进入 UF2 模式，直接再次烧录，会失败并出现 `No matching UF2 partitions found`
-  和 CLI 的 BOOTSEL 提示。
+- 连续第二次、第三次、第四次运行 `seeed-zephyr flash xiao_rp2040 --monitor` 都已经验证通过，
+  中间不需要再次手动进入 UF2 模式。
+- 正常拔插 USB 后，只要开发板启动的是本仓库固件，并且重新暴露出一个 USB CDC 串口，后续烧录也应继续走
+  自动请求流程。如果串口没有出现，手动 BOOTSEL 仍然是恢复方式。
 
-一句话总结：和已经验证过的 XIAO SAMD21 不同，当前 RP2040 流程应按“每次烧录都需要先进入 UF2 模式”来使用。
+一句话总结：手动 BOOTSEL 是首次安装旧固件或异常恢复用的，不是本仓库固件正常连续烧录的日常步骤。
 
 ## 串口监视器行为
 
@@ -82,10 +90,10 @@ USB 串口设备，就用 `--port` 明确指定端口。
 - `seeed-zephyr flash xiao_rp2040 --monitor` 完成构建，把 `zephyr.uf2` 复制到
   `/Volumes/RPI-RP2`，并打开串口监视器。
 - 串口输出里看到了持续出现的 `LED state: OFF` 和 `LED state: ON`。
-- 连续第二次不重新进入 UF2 模式直接烧录，会出现预期的 `No matching UF2 partitions found`
-  和 BOOTSEL 提示。
+- 连续第二次、第三次、第四次运行 `seeed-zephyr flash xiao_rp2040 --monitor` 都通过 USB CDC 串口
+  1200 baud 请求自动进入 UF2 模式，不需要手动 BOOTSEL。
 
 详细硬件记录在
 [`AI use/HARDWARE_VERIFICATION.md`](../../../AI%20use/HARDWARE_VERIFICATION.md)。
 
-一句话总结：这个示例已经过真实硬件验证，但重复烧录仍然需要 RP2040 的 UF2 bootloader 卷。
+一句话总结：这个示例已经过真实硬件验证；装入本仓库固件后，重复烧录不再需要手动 BOOTSEL。
