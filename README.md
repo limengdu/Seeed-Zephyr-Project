@@ -76,7 +76,7 @@ Flash and then open the monitor:
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
-seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem101
+seeed-zephyr flash xiao_samd21 --monitor
 ```
 
 The CLI selects repository examples and board metadata. Firmware build, flash,

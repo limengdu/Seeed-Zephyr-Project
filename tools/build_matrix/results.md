@@ -16,4 +16,4 @@ Values below come from real per-board repository example builds. The default exa
 | xiao_ra4m1 | renesas | `examples/boards/xiao_ra4m1/blinky` | `xiao_ra4m1` | PASS | Build succeeded. |
 | xiao_rp2040 | raspberrypi | `examples/boards/xiao_rp2040/blinky` | `xiao_rp2040` | PASS | Build succeeded. |
 | xiao_rp2350 | raspberrypi | `examples/boards/xiao_rp2350/blinky` | `xiao_rp2350/rp2350a/hazard3` | PASS | Build succeeded. |
-| xiao_samd21 | microchip | `examples/boards/xiao_samd21/blinky` | `seeeduino_xiao` | PASS | Build succeeded. |
+| xiao_samd21 | microchip | `examples/boards/xiao_samd21/blinky` | `seeeduino_xiao` | PASS | Build succeeded; flash, monitor, and repeated flash without manual reset passed on hardware. |

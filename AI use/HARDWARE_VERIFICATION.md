@@ -41,3 +41,11 @@ Entry format:
 - Result: `PASS`
 - Serial output: `*** Booting Zephyr OS build v4.4.0 ***`; repeated `LED state: OFF` and `LED state: ON`
 - Notes: `seeed-zephyr flash xiao_esp32c6 --monitor` built the repository example, flashed `/dev/cu.usbmodem101`, verified the written hash, opened `idf_monitor`, and observed Zephyr boot plus LED state toggles in serial output.
+
+## 2026-06-20T18:59:44+08:00 - xiao_samd21 - PASS
+
+- Board: `xiao_samd21`
+- Example: `examples/boards/xiao_samd21/blinky`
+- Result: `PASS`
+- Serial output: `*** Booting Zephyr OS build v4.4.0 ***`; repeated `LED state: OFF` and `LED state: ON`
+- Notes: `seeed-zephyr flash xiao_samd21 --monitor` built the repository example, flashed through Zephyr's BOSSA runner, verified flash contents, opened pyserial miniterm on `/dev/cu.usbmodem1101`, and observed Zephyr boot plus LED state toggles. A second consecutive `seeed-zephyr flash xiao_samd21 --monitor` run passed without manual reset.

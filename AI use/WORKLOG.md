@@ -30,6 +30,57 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Fix SAMD21 repeated flash reset
+
+Scope:
+- Updated `examples/boards/xiao_samd21/blinky/app.overlay` to give the USB CDC
+  ACM console node the `CDC_ACM_0` label used by Zephyr's SAMD21 BOSSA reset
+  hook.
+- Updated `examples/boards/xiao_samd21/blinky/prj.conf` to use Zephyr's legacy
+  USB device stack for this example, enabling the CDC ACM DTE rate callback
+  that Zephyr's SAMD21 BOSSA reset path depends on.
+- Updated `examples/boards/xiao_samd21/blinky/src/main.c` to enable the USB
+  device stack before printing the startup banner.
+- Marked `examples/boards/xiao_samd21/blinky/example.yaml` as
+  `hardware-tested`.
+- Added XIAO SAMD21 hardware evidence to `AI use/HARDWARE_VERIFICATION.md`.
+- Updated user-facing command examples and matrix notes to show the verified
+  no-port default command.
+
+Reason:
+- `seeed-zephyr flash xiao_samd21 --monitor` worked once when the board was
+  already in the bootloader, but a second run against the running application
+  failed with `Device unsupported`. The running firmware exposed a monitor
+  serial port but did not provide the Zephyr CDC ACM callback path that performs
+  the 1200-baud BOSSA reset.
+
+Result:
+- The XIAO SAMD21 blinky example now exposes USB CDC serial output and supports
+  Zephyr's BOSSA auto-reset path.
+- `seeed-zephyr flash xiao_samd21 --monitor` can build, flash, verify, and open
+  the monitor.
+- A second consecutive flash and monitor run succeeds without manually entering
+  bootloader mode.
+
+Verification:
+- `scripts/seeed-zephyr build xiao_samd21`: passed.
+- Generated `.config` contains `CONFIG_USB_DEVICE_STACK=y`,
+  `CONFIG_USB_CDC_ACM=y`, `CONFIG_CDC_ACM_DTE_RATE_CALLBACK_SUPPORT=y`,
+  `CONFIG_BOOTLOADER_BOSSA_DEVICE_NAME="CDC_ACM_0"`, and no
+  `CONFIG_USB_DEVICE_STACK_NEXT`.
+- Generated `zephyr.dts` contains `label = "CDC_ACM_0"` under
+  `cdc_acm_uart0`.
+- First `seeed-zephyr flash xiao_samd21 --monitor`: build passed, BOSSA flash
+  write and verify passed, pyserial miniterm opened `/dev/cu.usbmodem1101`, and
+  Zephyr boot plus LED state toggles were observed.
+- Second consecutive `seeed-zephyr flash xiao_samd21 --monitor` without manual
+  reset: build passed, BOSSA flash write and verify passed, pyserial miniterm
+  opened `/dev/cu.usbmodem1101`, and Zephyr boot plus LED state toggles were
+  observed.
+
+Remaining:
+- None for the repeated XIAO SAMD21 flash and monitor issue.
+
 ## 2026-06-20 - Add BOSSA bossac checks for SAMD21 flashing
 
 Scope:

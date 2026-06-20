@@ -3,6 +3,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
+#include <zephyr/usb/usb_device.h>
 
 #define SLEEP_TIME_MS 1000
 #define LED0_NODE DT_ALIAS(led0)
@@ -15,10 +16,16 @@ static const struct gpio_dt_spec led = GPIO_DT_SPEC_GET(LED0_NODE, gpios);
 
 int main(void)
 {
-	printk("*** Seeed XIAO Zephyr Base | board: %s | demo: %s ***\n", CONFIG_BOARD, "blinky");
-
 	int ret;
 	bool led_is_on = true;
+
+	ret = usb_enable(NULL);
+	if (ret != 0) {
+		printk("USB device initialization failed: %d\n", ret);
+		return 0;
+	}
+
+	printk("*** Seeed XIAO Zephyr Base | board: %s | demo: %s ***\n", CONFIG_BOARD, "blinky");
 
 	if (!gpio_is_ready_dt(&led)) {
 		printk("LED device is not ready.\n");

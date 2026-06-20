@@ -141,7 +141,7 @@ seeed-zephyr debug xiao_esp32c6
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
-seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem101
+seeed-zephyr flash xiao_samd21 --monitor
 ```
 
 运行完整构建矩阵：
@@ -164,7 +164,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 
 | 开发板 | board target | 仓库示例 | v4.4.0 状态 | 说明 |
 | --- | --- | --- | --- | --- |
-| XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 可构建 |
+| XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
 | XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 可构建 |
 | XIAO ESP32C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 无板载 LED |
 | XIAO ESP32C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
@@ -207,7 +207,7 @@ seeed-zephyr monitor xiao_esp32c6
 非 Espressif 开发板会使用 Zephyr venv 中的 pyserial miniterm 打开串口：
 
 ```sh
-seeed-zephyr monitor xiao_samd21 --port /dev/cu.usbmodem101 --baud 115200
+seeed-zephyr monitor xiao_samd21
 ```
 
 如果省略 `--port`，CLI 会尝试自动检测一个 USB 串口设备。
