@@ -1,386 +1,262 @@
-# Phase 1: Zephyr Base
+# Phase 1: Examples, Projects, Metadata, And Validation Base
 
 ## 1. Goal
 
-Phase 1 builds the reliable technical foundation for XIAO, Grove, expansion boards, and Zephyr.
+Phase 1 creates the trustworthy base of the repository.
 
-The goal is not to create a polished user interface. The goal is to create a trustworthy source of truth that future tools can use.
+Phase 1 proves upstream Zephyr builds and creates repository-owned examples and
+projects that users can find, build, flash, learn from, and contribute to.
 
-By the end of this phase, Seeed should know:
+By the end of Phase 1, the repository should answer:
 
-- which XIAO boards work well with Zephyr
-- which features are supported, experimental, blocked, or unknown
-- which Grove modules can be represented in a reusable way
-- which examples compile
-- which examples run on real hardware
-- which Zephyr version should be recommended
+- Which XIAO boards have minimal Zephyr examples here?
+- Which board capabilities have examples here?
+- Which Grove modules have examples here?
+- Which expansion boards have examples here?
+- Which complete projects exist here?
+- Which examples are build-only, hardware-tested, blocked, unsupported, or unknown?
+- Which Zephyr version was used as evidence?
 
-One-sentence summary: Phase 1 turns scattered Zephyr support into a structured, testable, and reusable foundation.
+One-sentence summary: Phase 1 turns scattered Zephyr support into a verified
+XIAO + Grove example and project base.
 
-## 2. Core Principle
+## 2. Non-Negotiable Product Principle
 
-The foundation should be upstream-friendly and product-focused.
+The repository's user-facing assets are examples and projects.
 
-It should not become a private fork of Zephyr. A long-running Seeed-specific Zephyr fork would create upgrade friction, split the user experience, and make security maintenance harder.
+Metadata, scripts, setup instructions, build matrices, and future generators
+exist to support examples and projects.
 
-Instead:
+Every Phase 1 task should improve at least one of these:
 
-- board and driver fixes should be contributed upstream when possible
-- temporary patches should be clearly tracked
-- Seeed-specific product metadata should live in this repository
-- examples should use normal Zephyr project structure
-- Grove integration should use Zephyr-native concepts where practical
+- an example a user can build
+- a project a user can study or modify
+- validation evidence for an example or project
+- contribution quality for future examples and projects
+- metadata that helps users discover or validate examples and projects
 
-One-sentence summary: use upstream Zephyr as the base, and add Seeed's product layer around it.
+One-sentence summary: Phase 1 priority work makes examples, projects,
+validation, or contribution clearer.
 
-### Where Metadata Stops And Devicetree Begins
+## 3. Repository Assets
 
-This is the most important boundary in Phase 1. Zephyr already owns a hardware-truth system: Devicetree, drivers, and shields. The metadata in this repository must not re-describe that truth in a second, parallel format, because two truth sources drift apart and the metadata silently starts to lie.
+### Board Examples
 
-The boundary rule:
+Board examples prove one board capability at a time.
 
-- Devicetree, drivers, and Zephyr shields own the hardware truth: which pin is which signal, which bus a module sits on, which driver binds a sensor.
-- Metadata owns the product layer only: display names, categories, photos, documentation links, default settings, recommended templates, and validation status.
+Recommended categories:
 
-A Zephyr shield is a reusable description of an add-on board. It is a real folder under `boards/shields/<name>/` that ships an `.overlay` file plus optional `Kconfig.shield` defaults, and Zephyr applies it at build time with the standard `--shield` mechanism.
+- `hello_world`
+- `blinky` when the board has an LED
+- `gpio`
+- `button`
+- `serial_log`
+- `i2c_scan`
+- `spi_loopback` or supported SPI device example
+- `uart`
+- `adc_read`
+- `pwm_fade`
+- `usb_cdc`
+- `ble_beacon`
+- `wifi_scan` or `wifi_mqtt`
+- `display_basic`
+- `storage_basic`
+- `low_power_basic`
 
-Practical consequences:
+One-sentence summary: board examples are the smallest proof that a XIAO
+capability works under Zephyr.
 
-- A Seeed expansion board should be modeled as a real Zephyr shield. Its metadata references the shield by name; it does not re-list pin-to-signal mappings.
-- A Grove module's electrical connection is expressed through Devicetree (a node on the shield's bus, or a small overlay), not through a hand-written wiring table in YAML.
-- When the wiring diagram or the generator needs pin facts, it reads them from the shield overlay, not from a second copy in metadata.
+### Grove Examples
 
-One-sentence summary: Devicetree and shields hold the hardware truth, metadata holds the product story, and the two must never describe the same fact twice.
+Grove examples show how one Grove module works with Zephyr and XIAO.
 
-## 3. Repository Responsibilities
+Recommended categories:
 
-This repository should own the following data and assets.
+- `basic_read` for sensors
+- `basic_control` for actuators
+- `display_text` for displays
+- `i2c_address_scan` or address confirmation where useful
+- `interrupt` examples when the module supports it
+- `calibration` examples when setup matters
 
-### XIAO Board Metadata
+One-sentence summary: Grove examples should let a user plug in a module and see
+the first useful result.
 
-Each board should have a machine-readable metadata file. The file is split into two clearly separated parts: authored fields written by a human or AI, and derived fields written only by tools from CI and hardware-test results. Derived fields must never be hand-edited; the "Keeping Metadata Honest" rule later in this section explains why.
+### Expansion-Board Examples
 
-Authored fields (identity and intent):
+Expansion-board examples show how a XIAO board uses a shield, display, button,
+battery feature, or Grove port layout.
 
-```yaml
-id: xiao_esp32c6
-display_name: Seeed Studio XIAO ESP32C6
-zephyr_target: seeed_xiao_esp32c6
-vendor: espressif
-# Version policy is latest-stable. See section 6. The exact validated version
-# is a derived field, established by CI evidence, not asserted here.
-version_policy: latest_stable
-```
+One-sentence summary: expansion-board examples prove the physical add-on board
+is represented correctly.
 
-Derived fields (observed reality, machine-written, read-only to authors):
+### Complete Projects
 
-```yaml
-# Generated by tools/sync_status from CI and hardware-test artifacts.
-# Each value carries provenance and falls back to unknown when evidence is stale.
-status: experimental
-validated_zephyr_version: v4.4.0
-interfaces:
-  gpio: tested
-  i2c: tested
-  spi: build-only
-  uart: tested
-  adc: unknown
-  pwm: unknown
-  wifi: experimental
-  ble: experimental
-  usb: tested
-power:
-  deep_sleep: unknown
-validation:
-  build: passed
-  hardware: partial
-known_issues:
-  - id: esp32c6_wifi_pm_unverified
-    severity: medium
-    summary: Wi-Fi power management is not yet validated against ESP-IDF behavior.
-evidence:
-  last_ci_run: ci-2026-06-09-0042
-  last_updated: 2026-06-09T00:00:00Z
-```
+Projects combine multiple parts into a real scenario.
 
-One-sentence summary: the authored half says what the board is, and the derived half reports what was actually proven about it.
+Examples:
 
-### Grove Module Metadata
+- XIAO ESP32C6 + Grove AS5600 + display knob UI
+- XIAO nRF52840 + sensor + BLE broadcaster
+- XIAO MG24 + button + low-power wake flow
+- XIAO ESP32S3 + display + Wi-Fi dashboard
 
-Each Grove module should also have a metadata file. As with boards, authored fields describe the product, and derived fields report validation results. The module's electrical wiring is not listed here; it is expressed through Devicetree on the selected shield, which stays the single source of pin truth.
+Projects should be more complete than minimal examples. They may include a
+README, wiring notes, configuration choices, expected logs, and known limits.
 
-Authored fields (identity and intent):
+One-sentence summary: projects show how building blocks become real user
+outcomes.
 
-```yaml
-id: grove_sht40
-display_name: Grove Temperature and Humidity Sensor SHT40
-category: sensor
-interface: i2c
-default_address: "0x44"
-# Pointer into Zephyr's truth source, not a re-description of it.
-zephyr_compatible: sensirion,sht4x
-zephyr_driver: sht4x
-required_configs:
-  - CONFIG_SENSOR=y
-  - CONFIG_SHT4X=y
-power_rail: 3v3
-supported_templates:
-  - sensor_to_serial
-  - sensor_to_mqtt
-```
+## 4. Metadata Boundary
 
-Derived fields (machine-written from CI and hardware tests):
+Metadata describes product-level facts:
 
-```yaml
-validation:
-  build: passed
-  hardware: tested
-evidence:
-  last_ci_run: ci-2026-06-09-0042
-  last_updated: 2026-06-09T00:00:00Z
-```
+- display names
+- categories
+- interfaces
+- supported examples/projects
+- documentation links
+- default settings
+- validation status
+- known issues
 
-The exact bus pins (SDA, SCL) are intentionally absent. They live in the shield overlay that maps the Grove I2C port to the board's I2C controller, so a single change to the shield updates wiring everywhere at once.
+Zephyr-native files describe hardware truth:
 
-One-sentence summary: Grove metadata names the module and points at its Zephyr driver, while Devicetree keeps the wiring truth.
+- Devicetree
+- overlays
+- shields
+- Kconfig
+- drivers
 
-### Expansion-Board Metadata
+Keep pin routing in the Zephyr shield or overlay when those files own the
+hardware truth.
 
-Expansion boards should be treated as first-class objects because Grove users often connect modules through a shield or expansion board. Each Seeed expansion board should be implemented as a real Zephyr shield, and its metadata should reference that shield rather than re-list pin mappings.
+One-sentence summary: metadata helps users discover and validate; Zephyr files
+own hardware description.
 
-Authored fields:
-
-```yaml
-id: xiao_grove_shield
-display_name: XIAO Grove Shield
-compatible_form_factor: xiao
-# The hardware truth lives in this shield's overlay, not below.
-zephyr_shield: seeed_xiao_grove_shield
-# Product-facing labels only: which ports a user can physically see.
-# These are labels for the UI, not the pin-routing source of truth.
-ports:
-  - id: i2c_0
-    type: i2c
-    label: Grove I2C
-  - id: d0
-    type: gpio
-    label: Grove D0
-```
-
-The corresponding shield ships the actual routing:
+## 5. Suggested Directory Structure
 
 ```text
-boards/shields/seeed_xiao_grove_shield/
-  seeed_xiao_grove_shield.overlay   # maps Grove I2C port to the XIAO I2C controller
-  Kconfig.shield
-```
+examples/
+  boards/
+    xiao_esp32c3/
+      hello_world/
+    xiao_esp32c6/
+      blinky/
+      i2c_scan/
+  grove/
+    grove_as5600/
+      basic_read/
+  expansion_boards/
+    xiao_expansion_board/
+      display_basic/
 
-Because the overlay is the only place that says "Grove I2C SDA is this controller's SDA," a wiring fix is made once, in Zephyr's own format, and every tool that reads the shield sees it.
+projects/
+  xiao_esp32c6_grove_as5600_display/
 
-One-sentence summary: expansion-board metadata names the shield and its visible ports, while the shield overlay owns the actual pin routing.
-
-### Examples and Samples
-
-Initial samples should be small and diagnostic.
-
-Recommended baseline samples:
-
-- blinky
-- button
-- serial_log
-- i2c_scan
-- adc_read
-- pwm_fade
-- sensor_basic
-- ble_beacon
-- wifi_mqtt
-
-The first set should focus on the shortest useful path:
-
-```text
-build -> flash -> boot -> log -> peripheral -> Grove module
-```
-
-One-sentence summary: baseline samples are health checks for boards and modules.
-
-### Compatibility Matrix
-
-The compatibility matrix should be generated or validated from metadata and CI results.
-
-Status terms should be explicit:
-
-- `tested`: verified on real hardware
-- `build-only`: compile validation passed, but hardware is not tested
-- `experimental`: expected to work, but not stable enough to recommend
-- `blocked`: known issue prevents normal use
-- `unsupported`: not supported by design or hardware limitations
-- `unknown`: not yet evaluated
-
-One-sentence summary: the matrix should tell the truth, not just advertise support.
-
-### Keeping Metadata Honest: Status Is Derived, Not Declared
-
-A status word like `tested` is only trustworthy if it cannot be set by hand and left to rot. The core rule of this whole system is therefore:
-
-```text
-Status fields are outputs of testing, never inputs typed by a person.
-```
-
-This separates two kinds of fields, already shown in the board and Grove examples:
-
-- Authored fields describe identity and intent. A human or AI writes them: ids, names, drivers, required configs, templates.
-- Derived fields describe observed reality. Only tools write them: build status, hardware status, validated Zephyr version, per-interface status, known issues, evidence.
-
-How the sync works:
-
-1. CI runs the build matrix and the hardware-in-loop matrix. Each board, sample, and module combination produces a machine-readable result (pass, fail, or skipped) plus the Zephyr version and commit used.
-2. `tools/sync_status` reads those result artifacts and writes the derived fields into `metadata/status/`, kept physically separate from the authored files so no one edits them by hand.
-3. `tools/render_docs` builds the compatibility matrix from the derived files. The matrix shows evidence, not claims.
-
-Three rules make the status hard to fake:
-
-- Provenance. Every derived value records which CI run, which Zephyr version, which commit, and when it was produced. A `tested` with no evidence record is invalid.
-- Staleness downgrade. A green status is only valid while it has fresh passing evidence. If the latest run failed, was skipped, or is older than a defined window, the status automatically falls back to `unknown` or `blocked`. Green can never coast on old data.
-- Drift check. A CI step compares authored intent against derived evidence. If an authored file implies support that the evidence does not back, or an `id` or driver no longer resolves in the pinned Zephyr tree, the check fails the build. This is what stops the metadata from silently lying.
-
-One-sentence summary: testing writes the status, freshness keeps it honest, and a drift check fails the build when the story and the evidence disagree.
-
-## 4. Suggested Directory Structure
-
-```text
 metadata/
-  boards/                 # authored board fields
-  grove_modules/          # authored Grove fields
-  expansion_boards/       # authored expansion-board fields
-  templates/
-  status/                 # derived fields, machine-written, read-only to authors
-  compatibility/          # generated matrix output
+  boards/
+  grove_modules/
+  expansion_boards/
+  examples/
+  projects/
+  status/
 
 boards/
-  shields/                # Seeed expansion boards as real Zephyr shields (overlay + Kconfig)
-
-samples/
-  blinky/
-  serial_log/
-  i2c_scan/
-  sensor_basic/
-
-templates/
-  west-basic/
-  west-sensor/
-  platformio-basic/
-  platformio-sensor/
+  shields/
 
 tools/
-  validate_metadata/      # schema + authored/derived separation checks
-  build_matrix/           # runs the CI build sweep
-  sync_status/            # writes derived status from CI/HIL artifacts
-  render_docs/
+  validate_metadata/
+  build_matrix/
+  sync_status/
 
-tests/
-  compile_matrix/
-  hardware_matrix/
+scripts/
+  setup-macos.sh
+  build-example.sh
+  flash-example.sh
 
 docs/
-  board-matrix.md
-  grove-matrix.md
   getting-started.md
+  examples.md
+  contributing-examples.md
 ```
 
-Note: the standalone `overlays/` drawer is gone on purpose. Per-board and per-port wiring now lives inside each Zephyr shield under `boards/shields/`, so there is one home for pin truth instead of two.
+One-sentence summary: `examples/` and `projects/` are user-facing assets;
+metadata and tools keep them discoverable and honest.
 
-One-sentence summary: keep authored facts, derived status, shields, samples, templates, tools, tests, and documentation in separate drawers.
+## 6. Validation Strategy
 
-## 5. Validation Strategy
+Validation must be evidence-based.
 
-### Build Validation
+Statuses:
 
-Every supported board and sample combination should be compiled by CI where practical.
+- `hardware-tested`: built, flashed, and observed on real hardware
+- `build-only`: compiled successfully, no hardware test yet
+- `experimental`: expected to work but not stable enough to recommend
+- `blocked`: known issue prevents normal use
+- `unsupported`: not supported by the selected Zephyr baseline or by hardware
+- `unknown`: not evaluated yet
 
-Build validation answers:
+Rules:
 
-```text
-Does this project compile with the recommended Zephyr version?
-Did a metadata or template change break any generated project?
-Which board, module, or template caused the failure?
-```
+- Status fields are derived from evidence.
+- Each example and project should have a build target and expected result.
+- Hardware-tested examples must record board, module, Zephyr version, date, and
+  observed output.
+- Community examples can be accepted as build-only first, then promoted when
+  hardware evidence exists.
 
-One-sentence summary: build validation catches broken examples before users find them.
+One-sentence summary: support claims are test outputs backed by evidence.
 
-### Hardware-in-Loop Validation
+## 7. Community Contributions
 
-Hardware-in-loop means the system tests real boards and real Grove modules instead of only compiling code.
+The repository should be ready for outside examples and projects.
 
-The first hardware tests should be simple:
+Every contributed example should include:
 
-- flash success
-- boot success
-- serial output contains expected text
-- I2C scan finds expected address
-- sensor value is present and within a reasonable range
+- supported board(s)
+- required module(s) or expansion board(s)
+- build command through project tooling
+- expected serial output or visible behavior
+- wiring notes when hardware is required
+- validation status
+- known limitations
 
-Hardware-in-loop should start with a small number of high-value combinations.
+One-sentence summary: community examples are welcome only when they are
+structured enough to build, review, and validate.
 
-One-sentence summary: real hardware tests prove that examples work beyond the compiler.
+## 8. Phase 1 Success Criteria
 
-### Power and Performance Validation
+Phase 1 succeeds when:
 
-Zephyr should not be assumed to match vendor SDK performance automatically.
+- at least five representative XIAO boards have repository-owned examples
+- at least ten high-frequency Grove modules have example plans or initial examples
+- at least one expansion board has a working example
+- at least three complete projects exist or are specified with clear acceptance criteria
+- examples can be built from the repository root
+- metadata validation passes
+- the build matrix covers the first examples
+- selected examples run on real hardware
+- contribution rules are clear enough for an external author
 
-For selected boards, compare:
+One-sentence summary: Phase 1 succeeds when the repository is already useful as
+an example and project hub before any polished UI exists.
 
-- boot time
-- firmware size
-- RAM usage
-- active current
-- sleep current
-- wake-up time
-- Wi-Fi or BLE stability
+## 9. Phase 1 Delivery Boundary
 
-The goal is not always to beat vendor SDKs. The goal is to know where Zephyr is good enough and where vendor SDKs remain the better recommendation.
+Phase 1 work is accepted through concrete repository assets:
 
-One-sentence summary: performance data prevents Zephyr from becoming a blind strategic bet.
+- a board example under `examples/boards/`
+- a Grove example under `examples/grove/`
+- an expansion-board example under `examples/expansion_boards/`
+- a complete project under `projects/`
+- metadata that describes one of those assets
+- validation evidence for one of those assets
+- documentation that helps users build, flash, verify, or contribute those assets
 
-## 6. Version Strategy
+Future product work enters Phase 1 as data contracts, template requirements,
+validation records, or contribution rules that directly support examples and
+projects.
 
-Zephyr changes frequently. Users need reproducible builds. The baseline for this project is the latest stable Zephyr release. A stable release is well-tested and carries the newest board and driver support, which matters because the XIAO lineup includes recent silicon.
-
-Zephyr ships a stable release about every six months, and each stable release is maintained for a limited window before the next one. The baseline is therefore expected to move forward on that cadence rather than stay fixed for years.
-
-The policy:
-
-- The baseline is the current latest stable release (Zephyr 4.4 at the time of writing).
-- Lock sample and template validation to that release.
-- When a new stable release ships, test the upgrade on a schedule and move the baseline forward.
-- A board whose upstream support has not yet reached the current stable release is marked pending and validated once it lands in a stable release. Using the development branch for such a board is a temporary exception, not the baseline.
-- The version is recorded per board. The `version_policy` authored field declares the intent (`latest_stable`); the `validated_zephyr_version` derived field records the exact release CI proved.
-
-One-sentence summary: track the latest stable Zephyr release, move forward on its roughly six-month cadence, and let CI evidence record the exact version each board was validated on.
-
-## 7. Phase 1 Success Criteria
-
-Phase 1 should be considered successful when:
-
-- at least five representative XIAO boards have metadata
-- at least ten high-frequency Grove modules have metadata
-- at least one expansion board is represented
-- baseline samples compile in CI
-- selected combinations pass hardware validation
-- compatibility status is visible and reproducible
-- Zephyr limitations are documented honestly
-
-One-sentence summary: Phase 1 succeeds when Seeed can prove what works, what does not, and what is still unknown.
-
-## 8. Phase 1 Non-Goals
-
-Phase 1 should not include:
-
-- a full online IDE
-- a full VS Code plugin
-- a full Wokwi-style simulator
-- a large Seeed-specific SDK abstraction
-- all XIAO boards
-- all Grove modules
-- complex Matter, AI, or camera projects
-
-One-sentence summary: Phase 1 should stay focused on evidence and foundation.
+One-sentence summary: Phase 1 work is finished when it leaves behind a concrete
+example, project, metadata record, validation record, or contribution path.

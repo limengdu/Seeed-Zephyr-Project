@@ -1,284 +1,130 @@
-# 阶段 2: CLI Generator
+# 阶段 2: 用于发现、构建、验证和生成的 CLI
 
 ## 1. 目标
 
-阶段 2 把 Zephyr 基础变成一个确定性的项目生成器。
+阶段 2 把示例/项目基础变成实用的命令行工具。
 
-命令行界面应让用户和工具能够从经过验证的元数据和模板生成完整的 XIAO + Grove Zephyr 项目。
+CLI 是共享引擎，帮助用户、CI、维护者、AI 和未来 UI 工具从仓库资产中发现、构建、验证、
+复制和生成项目。
 
-CLI 不是 AI 代码编写器。它是一个基于规则的生成器。
+一句话总结: 阶段 2 让示例和项目目录可以被一套可重复命令操作。
 
-一句话总结: 阶段 2 把基础从“存在的数据”变成“可以生成的项目”。
+## 2. 必备能力
 
-## 2. 为什么 CLI 先于插件
+CLI 应支持五类工作流。
 
-CLI 是未来界面的最佳共享引擎。
-
-同一个生成器可以被以下内容使用:
-
-- VS Code 插件
-- 网页项目构建器
-- 文档生成器
-- CI 验证
-- AI 助手
-- 内部工程脚本
-
-如果生成逻辑只写在 VS Code 插件内部，它会更难测试和复用。
-
-一句话总结: CLI 是引擎；图形工具是方向盘。
-
-## 3. 用户体验
-
-示例命令:
-
-```bash
-seeed-zephyr generate \
-  --board xiao_esp32c6 \
-  --expansion xiao_grove_shield \
-  --grove grove_sht40 \
-  --template sensor_to_serial \
-  --toolchain west \
-  --output ./xiao-sht40-demo
-```
-
-预期输出:
-
-```text
-xiao-sht40-demo/
-  CMakeLists.txt
-  prj.conf
-  app.overlay
-  README.md
-  wiring.svg
-  seeed-project.json
-  src/
-    main.c
-```
-
-一句话总结: 用户描述硬件和意图，CLI 写出一个完整项目。
-
-## 4. 确定性生成
-
-生成器应使用:
-
-- 元数据
-- 模板
-- 兼容性规则
-- 验证规则
-
-它不应要求大语言模型发明源代码、drivers、overlays 或引脚分配。
-
-大语言模型之后可以解释错误，或帮助用户选择选项，但生成的项目本身必须来自经过验证的输入。
-
-一句话总结: 正确性应来自经过验证的模板，而不是概率式代码生成。
-
-## 5. 生成流程
-
-生成器应遵循一个简单流程。
-
-### 步骤 1: 验证输入
-
-检查:
-
-- 开发板存在
-- Grove 模块存在
-- 扩展板存在
-- 模板存在
-- 请求的选项被允许
-
-一句话总结: 先确认用户的选择是真实存在的。
-
-### 步骤 2: 解析兼容性
-
-检查:
-
-- 开发板暴露所需接口
-- 扩展板映射这些接口
-- Grove 模块可以连接到其中一个接口
-- 模板所需功能受到支持
-- 没有引脚或总线冲突
-
-一句话总结: 然后确认所选部件可以一起工作。
-
-### 步骤 3: 组合项目数据
-
-合并:
-
-- 开发板元数据
-- Grove 元数据
-- 扩展板元数据
-- 模板元数据
-- 用户设置
-- 推荐的 Zephyr 版本
-
-一句话总结: 这会在写入任何文件前创建一个完整项目计划。
-
-### 步骤 4: 渲染文件
-
-渲染:
-
-- 源文件
-- Devicetree overlay
-- prj.conf
-- CMakeLists.txt
-- west manifest 或 PlatformIO config
-- README
-- 接线图
-- 项目元数据快照
-
-一句话总结: 文件渲染把项目计划变成真实文件夹。
-
-### 步骤 5: 验证输出
-
-可选验证模式:
-
-```bash
-seeed-zephyr verify ./xiao-sht40-demo
-seeed-zephyr build ./xiao-sht40-demo
-```
-
-验证应检查:
-
-- 所需文件存在
-- 元数据快照有效
-- 生成的 config 可解析
-- 项目可以用所选工具链构建
-
-一句话总结: 生成器应检查自己的工作。
-
-## 6. 核心命令
-
-推荐的首批命令:
+### 发现内容
 
 ```bash
 seeed-zephyr list boards
 seeed-zephyr list grove
-seeed-zephyr list expansions
-seeed-zephyr list templates
-seeed-zephyr check --board xiao_esp32c6 --grove grove_sht40
-seeed-zephyr generate ...
-seeed-zephyr build ./project
-seeed-zephyr flash ./project
-seeed-zephyr monitor ./project
+seeed-zephyr list capabilities
+seeed-zephyr list examples
+seeed-zephyr list projects
 ```
 
-一句话总结: CLI 应支持发现、生成和常见开发任务。
+一句话总结: 用户在生成任何东西之前，应该先能找到内容。
 
-## 7. 模板类型
+### 查看详情
 
-初始模板应专注于有用但简单的场景。
+```bash
+seeed-zephyr show board xiao_esp32c6
+seeed-zephyr show example boards/xiao_esp32c6/blinky
+seeed-zephyr show project xiao_esp32c6_grove_as5600_display
+```
 
-推荐的首批模板:
+一句话总结: CLI 应解释一个资产需要什么、验证状态是什么。
 
-- `blinky`
-- `button_to_serial`
-- `sensor_to_serial`
-- `relay_control`
-- `i2c_scan`
+### 构建和烧录仓库资产
 
-第二批模板:
+```bash
+seeed-zephyr build-example boards/xiao_esp32c6/blinky
+seeed-zephyr flash-example boards/xiao_esp32c6/blinky
+seeed-zephyr build-project xiao_esp32c6_grove_as5600_display
+```
 
-- `sensor_to_mqtt`
-- `ble_sensor`
-- `low_power_sensor`
-- `home_assistant_mqtt`
+一句话总结: 用户应默认从本仓库示例开始构建。
 
-一句话总结: 从简单本地流程开始，再添加网络和低功耗场景。
+### 验证贡献
 
-## 8. 工具链输出
+```bash
+seeed-zephyr validate metadata
+seeed-zephyr validate example examples/grove/grove_as5600/basic_read
+seeed-zephyr validate project projects/xiao_esp32c6_grove_as5600_display
+```
 
-### west 输出
+一句话总结: 社区示例和项目需要自动结构检查和构建检查。
 
-west 是 Zephyr 的标准命令行流程。
+### 生成新项目
 
-生成的 west 项目应包含:
+```bash
+seeed-zephyr create \
+  --from example/grove/grove_as5600/basic_read \
+  --board xiao_esp32c6 \
+  --output ./my-as5600-project
+```
 
-- `CMakeLists.txt`
-- `prj.conf`
-- `app.overlay`
-- `src/main.c`
-- 关于 `west build`、`west flash` 和 `west debug` 的 README 说明
+生成应复制和改造已知可用资产。driver、引脚路由和源代码应来自已验证模板、示例或
+Zephyr 原生文件。
 
-一句话总结: west 支持应作为参考路径，因为它最接近上游 Zephyr。
+一句话总结: 生成基于验证过的示例、模板和证据。
 
-### PlatformIO 输出
+## 3. 确定性生成规则
 
-PlatformIO 支持应在 west 生成稳定之后添加。
+CLI 必须使用:
 
-生成的 PlatformIO 项目应包含:
+- metadata
+- 仓库示例
+- 仓库项目
+- templates
+- 验证证据
+- 兼容性规则
 
-- `platformio.ini`
-- Zephyr 特定项目结构
-- 关于已知 PlatformIO 差异的文档
+大语言模型可以帮助解释或选择选项。仓库 metadata、模板、示例和验证证据才是生成源代码、
+overlay、引脚和配置的权威。
 
-PlatformIO 对用户友好，但它可能落后于上游 Zephyr，或使用不同的板卡 ID。生成器应清楚暴露这一点。
+一句话总结: 正确性来自已检查仓库资产和证据。
 
-一句话总结: PlatformIO 有价值，但 west 应保持为主要参考路径。
+## 4. 项目快照
 
-## 9. 项目元数据快照
-
-每个生成项目都应包含一个快照文件，例如:
+每个生成或复制出的项目都应包含快照，例如:
 
 ```json
 {
   "generator": "seeed-zephyr",
-  "generator_version": "0.1.0",
+  "source_asset": "examples/grove/grove_as5600/basic_read",
   "board": "xiao_esp32c6",
-  "expansion": "xiao_grove_shield",
-  "grove": ["grove_sht40"],
-  "template": "sensor_to_serial",
-  "toolchain": "west",
   "zephyr_version": "v4.4.0",
-  "generated_at": "2026-06-10T00:00:00Z"
+  "validation_status": "build-only"
 }
 ```
 
-这有助于支持团队复现用户问题。
+一句话总结: 生成项目需要收据，方便支持团队和 AI 复现。
 
-一句话总结: 每个生成项目都应携带一张说明它如何创建的收据。
+## 5. 阶段 2 成功标准
 
-## 10. 错误设计
+阶段 2 成功条件:
 
-CLI 错误应具体且可操作。
+- 用户可以列出并查看示例/项目
+- 用户可以从仓库根目录构建首批开发板示例
+- 贡献者可以在提交前验证示例结构
+- CI 可以调用同一套 CLI 命令
+- 生成项目来自已知示例/模板
+- 错误消息具体且可操作
+- CLI 可被未来 VS Code 插件复用
 
-不好:
+一句话总结: 阶段 2 成功时，仓库内容变得容易操作和验证。
 
-```text
-Generation failed.
-```
+## 6. 阶段 2 交付边界
 
-好:
+阶段 2 工作通过能操作仓库资产的命令行流程验收:
 
-```text
-Grove SHT40 requires I2C, but the selected expansion board does not expose an I2C Grove port.
-Choose XIAO Grove Shield or use custom wiring.
-```
+- 发现开发板、模块、示例、项目和状态的命令
+- 查看接线、构建目标、预期输出和证据的命令
+- 验证 metadata、示例结构和项目结构的命令
+- 调用所选 Zephyr workspace 的构建编排命令
+- 从已知模板或示例创建项目的命令
+- 为生成或验证结果输出机器可读收据
+- 供未来编辑器工具使用的稳定输出契约
 
-一句话总结: 错误消息应告诉用户发生了什么，以及下一步该做什么。
-
-## 11. 阶段 2 成功标准
-
-当满足以下条件时，阶段 2 应视为成功:
-
-- CLI 可以列出受支持的开发板、模块、扩展板和模板
-- CLI 可以生成完整的 west 项目
-- 生成的项目在 CI 中可构建
-- 生成的 README 文件可理解
-- 生成的接线图对受支持组合来说是准确的
-- 至少若干项目被烧录并在真实硬件上测试
-- 生成器可被未来的 VS Code 插件复用
-
-一句话总结: 当生成可重复、可测试，并且在单一界面之外也有用时，阶段 2 就成功了。
-
-## 12. 阶段 2 非目标
-
-阶段 2 不应包括:
-
-- 完整图形界面
-- 基于浏览器的 IDE
-- 完整 AI 代码生成
-- 完整硬件仿真
-- 所有 Grove 模块
-- 所有高级 Zephyr 场景
-
-一句话总结: 阶段 2 应在添加精致座舱前先打磨好引擎。
+一句话总结: 阶段 2 完成时，仓库资产可以通过稳定 CLI 命令被发现、检查、构建、生成和记录。

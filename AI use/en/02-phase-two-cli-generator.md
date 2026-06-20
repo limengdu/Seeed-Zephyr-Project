@@ -1,284 +1,144 @@
-# Phase 2: CLI Generator
+# Phase 2: CLI For Discovery, Build, Validation, And Generation
 
 ## 1. Goal
 
-Phase 2 turns the Zephyr base into a deterministic project generator.
+Phase 2 turns the example/project base into a practical command-line tool.
 
-The command-line interface should let users and tools generate complete XIAO + Grove Zephyr projects from validated metadata and templates.
+The CLI is the shared engine that helps users, CI, maintainers, AI agents, and
+future UI tools discover, build, validate, copy, and generate projects from
+repository assets.
 
-The CLI is not an AI code writer. It is a rules-based generator.
+One-sentence summary: Phase 2 makes the example and project catalog usable from
+one repeatable command interface.
 
-One-sentence summary: Phase 2 changes the foundation from "data that exists" into "projects that can be generated."
+## 2. Required Capabilities
 
-## 2. Why A CLI Comes Before A Plugin
+The CLI should support five workflows.
 
-A CLI is the best shared engine for future interfaces.
-
-The same generator can be used by:
-
-- VS Code plugin
-- web project builder
-- documentation generator
-- CI validation
-- AI assistant
-- internal engineering scripts
-
-If generation logic is written only inside a VS Code plugin, it becomes harder to test and reuse.
-
-One-sentence summary: the CLI is the engine; graphical tools are steering wheels.
-
-## 3. User Experience
-
-Example command:
-
-```bash
-seeed-zephyr generate \
-  --board xiao_esp32c6 \
-  --expansion xiao_grove_shield \
-  --grove grove_sht40 \
-  --template sensor_to_serial \
-  --toolchain west \
-  --output ./xiao-sht40-demo
-```
-
-Expected output:
-
-```text
-xiao-sht40-demo/
-  CMakeLists.txt
-  prj.conf
-  app.overlay
-  README.md
-  wiring.svg
-  seeed-project.json
-  src/
-    main.c
-```
-
-One-sentence summary: the user describes hardware and intent, and the CLI writes a complete project.
-
-## 4. Deterministic Generation
-
-The generator should use:
-
-- metadata
-- templates
-- compatibility rules
-- validation rules
-
-It should not ask a large language model to invent source code, drivers, overlays, or pin assignments.
-
-Large language models may later explain errors or help users choose options, but the generated project itself must come from verified inputs.
-
-One-sentence summary: correctness should come from verified templates, not from probabilistic code generation.
-
-## 5. Generation Pipeline
-
-The generator should follow a simple pipeline.
-
-### Step 1: Validate Input
-
-Check that:
-
-- the board exists
-- the Grove modules exist
-- the expansion board exists
-- the template exists
-- requested options are allowed
-
-One-sentence summary: first confirm the user's choices are real.
-
-### Step 2: Resolve Compatibility
-
-Check that:
-
-- the board exposes required interfaces
-- the expansion board maps those interfaces
-- the Grove module can connect to one of those interfaces
-- the template's required features are supported
-- there are no pin or bus conflicts
-
-One-sentence summary: then confirm the chosen parts can work together.
-
-### Step 3: Compose Project Data
-
-Combine:
-
-- board metadata
-- Grove metadata
-- expansion-board metadata
-- template metadata
-- user settings
-- recommended Zephyr version
-
-One-sentence summary: this creates one complete project plan before any files are written.
-
-### Step 4: Render Files
-
-Render:
-
-- source files
-- Devicetree overlay
-- prj.conf
-- CMakeLists.txt
-- west manifest or PlatformIO config
-- README
-- wiring diagram
-- project metadata snapshot
-
-One-sentence summary: file rendering turns the project plan into a real folder.
-
-### Step 5: Verify Output
-
-Optional verification modes:
-
-```bash
-seeed-zephyr verify ./xiao-sht40-demo
-seeed-zephyr build ./xiao-sht40-demo
-```
-
-Verification should check:
-
-- required files exist
-- metadata snapshot is valid
-- generated config is parseable
-- project can build with the selected toolchain
-
-One-sentence summary: the generator should check its own work.
-
-## 6. Core Commands
-
-Recommended first commands:
+### Discover
 
 ```bash
 seeed-zephyr list boards
 seeed-zephyr list grove
-seeed-zephyr list expansions
-seeed-zephyr list templates
-seeed-zephyr check --board xiao_esp32c6 --grove grove_sht40
-seeed-zephyr generate ...
-seeed-zephyr build ./project
-seeed-zephyr flash ./project
-seeed-zephyr monitor ./project
+seeed-zephyr list capabilities
+seeed-zephyr list examples
+seeed-zephyr list projects
 ```
 
-One-sentence summary: the CLI should support discovery, generation, and common development tasks.
+One-sentence summary: users should be able to find content before generating
+anything.
 
-## 7. Template Types
+### Inspect
 
-Initial templates should focus on useful but simple scenarios.
+```bash
+seeed-zephyr show board xiao_esp32c6
+seeed-zephyr show example boards/xiao_esp32c6/blinky
+seeed-zephyr show project xiao_esp32c6_grove_as5600_display
+```
 
-Recommended first templates:
+One-sentence summary: the CLI should explain what an asset needs and what its
+validation status is.
 
-- `blinky`
-- `button_to_serial`
-- `sensor_to_serial`
-- `relay_control`
-- `i2c_scan`
+### Build And Flash Repository Assets
 
-Second-wave templates:
+```bash
+seeed-zephyr build-example boards/xiao_esp32c6/blinky
+seeed-zephyr flash-example boards/xiao_esp32c6/blinky
+seeed-zephyr build-project xiao_esp32c6_grove_as5600_display
+```
 
-- `sensor_to_mqtt`
-- `ble_sensor`
-- `low_power_sensor`
-- `home_assistant_mqtt`
+One-sentence summary: users should build from repository examples as the normal
+path.
 
-One-sentence summary: start with simple local workflows, then add network and low-power scenarios.
+### Validate Contributions
 
-## 8. Toolchain Outputs
+```bash
+seeed-zephyr validate metadata
+seeed-zephyr validate example examples/grove/grove_as5600/basic_read
+seeed-zephyr validate project projects/xiao_esp32c6_grove_as5600_display
+```
 
-### west Output
+One-sentence summary: community examples and projects need automated structure
+and build checks.
 
-west is Zephyr's standard command-line workflow.
+### Generate New Projects
 
-Generated west projects should include:
+```bash
+seeed-zephyr create \
+  --from example/grove/grove_as5600/basic_read \
+  --board xiao_esp32c6 \
+  --output ./my-as5600-project
+```
 
-- `CMakeLists.txt`
-- `prj.conf`
-- `app.overlay`
-- `src/main.c`
-- README instructions for `west build`, `west flash`, and `west debug`
+Generation should copy and adapt known-good assets. Drivers, pin routing, and
+source code should come from verified templates, examples, or Zephyr-native
+files.
 
-One-sentence summary: west support should be the reference path because it is closest to upstream Zephyr.
+One-sentence summary: generation is based on validated examples, templates, and
+evidence.
 
-### PlatformIO Output
+## 3. Deterministic Generation Rule
 
-PlatformIO support should be added after west generation is stable.
+The CLI must use:
 
-Generated PlatformIO projects should include:
+- metadata
+- repository examples
+- repository projects
+- templates
+- validation evidence
+- compatibility rules
 
-- `platformio.ini`
-- Zephyr-specific project structure
-- documentation for known PlatformIO differences
+Large language models may help explain or choose options. Repository metadata,
+templates, examples, and validation evidence remain the authority for generated
+source, overlays, pins, and configuration.
 
-PlatformIO can be user-friendly, but it may lag behind upstream Zephyr or use different board IDs. The generator should expose that clearly.
+One-sentence summary: correctness comes from checked repository assets and
+evidence.
 
-One-sentence summary: PlatformIO is valuable, but west should remain the primary reference path.
+## 4. Project Snapshot
 
-## 9. Project Metadata Snapshot
-
-Every generated project should include a snapshot file, for example:
+Every generated or copied project should include a snapshot such as:
 
 ```json
 {
   "generator": "seeed-zephyr",
-  "generator_version": "0.1.0",
+  "source_asset": "examples/grove/grove_as5600/basic_read",
   "board": "xiao_esp32c6",
-  "expansion": "xiao_grove_shield",
-  "grove": ["grove_sht40"],
-  "template": "sensor_to_serial",
-  "toolchain": "west",
   "zephyr_version": "v4.4.0",
-  "generated_at": "2026-06-10T00:00:00Z"
+  "validation_status": "build-only"
 }
 ```
 
-This helps support teams reproduce user issues.
+One-sentence summary: generated projects need a receipt so support teams and AI
+agents can reproduce them.
 
-One-sentence summary: every generated project should carry a receipt of how it was created.
+## 5. Phase 2 Success Criteria
 
-## 10. Error Design
+Phase 2 succeeds when:
 
-CLI errors should be specific and actionable.
+- users can list and inspect examples/projects
+- users can build at least the first board examples from the repository root
+- contributors can validate example structure before submitting
+- CI can call the same CLI commands
+- generated projects come from known examples/templates
+- error messages are specific and actionable
+- the CLI is reusable by a future VS Code plugin
 
-Bad:
+One-sentence summary: Phase 2 succeeds when the repository content becomes easy
+to operate and validate.
 
-```text
-Generation failed.
-```
+## 6. Phase 2 Delivery Boundary
 
-Good:
+Phase 2 work is accepted through command-line workflows that operate repository
+assets:
 
-```text
-Grove SHT40 requires I2C, but the selected expansion board does not expose an I2C Grove port.
-Choose XIAO Grove Shield or use custom wiring.
-```
+- discovery commands for boards, modules, examples, projects, and status
+- inspection commands that show wiring, build targets, expected output, and evidence
+- validation commands for metadata, example structure, and project structure
+- build orchestration commands that call the selected Zephyr workspace
+- project creation commands that copy from known templates or examples
+- machine-readable receipts for generated or validated outputs
+- stable output contracts that future editor tools can consume
 
-One-sentence summary: error messages should tell the user what happened and what to do next.
-
-## 11. Phase 2 Success Criteria
-
-Phase 2 should be considered successful when:
-
-- the CLI can list supported boards, modules, expansions, and templates
-- the CLI can generate complete west projects
-- generated projects build in CI
-- generated README files are understandable
-- generated wiring diagrams are accurate for supported combinations
-- at least several projects are flashed and tested on real hardware
-- the generator is reusable by a future VS Code plugin
-
-One-sentence summary: Phase 2 succeeds when generation is repeatable, testable, and useful outside one interface.
-
-## 12. Phase 2 Non-Goals
-
-Phase 2 should not include:
-
-- a full graphical interface
-- a browser-based IDE
-- full AI code generation
-- full hardware simulation
-- all Grove modules
-- all advanced Zephyr scenarios
-
-One-sentence summary: Phase 2 should perfect the engine before adding a polished cockpit.
+One-sentence summary: Phase 2 is complete when repository assets can be found,
+checked, built, generated, and reported through predictable CLI commands.
