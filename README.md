@@ -41,15 +41,16 @@ seeed-zephyr list boards
 seeed-zephyr list examples
 ```
 
-Build, flash, and open the monitor after flashing:
+Build, flash, start a debug session, and open the monitor after flashing:
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
+seeed-zephyr debug xiao_esp32c6
 ```
 
 The CLI selects repository examples and board metadata. Firmware build, flash,
-and monitor execution still run through Zephyr `west` commands and Zephyr
-module tools.
+monitor, and debug execution still run through Zephyr `west` commands and
+Zephyr module tools.
 
 ## Why This Exists
 

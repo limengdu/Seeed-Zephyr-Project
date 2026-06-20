@@ -30,6 +30,39 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Add CLI debug delegation
+
+Scope:
+- Updated `tools/cli/seeed_zephyr.py` with `seeed-zephyr debug <board_id>`.
+- Updated `tools/cli/README.md` and root `README.md` CLI guidance.
+- Appended this work log entry.
+
+Reason:
+- The CLI needed a debug command while staying a thin repository knowledge
+  layer that selects the board/example and delegates execution to Zephyr.
+
+Result:
+- `seeed-zephyr debug <board_id>` resolves the same selected repository example
+  as `build` and `flash`.
+- Unsupported boards are rejected before build or debug execution.
+- Supported boards are built through the existing `west build` path, then debug
+  is delegated to `west debug`.
+- If `west debug` fails, Zephyr's command output remains visible and the CLI
+  appends a hint that debugging needs hardware debugger support.
+
+Verification:
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- `scripts/seeed-zephyr --help`: showed `{list,build,flash,debug,monitor,matrix,verify-hardware}`.
+- `scripts/seeed-zephyr debug --help`: showed `usage: seeed-zephyr debug [-h] board_id`.
+- `scripts/seeed-zephyr debug xiao_esp32c5`: returned
+  `Error: xiao_esp32c5 is unsupported in the selected Zephyr baseline.`
+- `git diff --check`: passed.
+
+Remaining:
+- A real `west debug` session was not started because it requires attached
+  hardware debugger support.
+
 ## 2026-06-20 - Add startup banners to board examples
 
 Scope:

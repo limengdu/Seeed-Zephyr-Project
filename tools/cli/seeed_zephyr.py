@@ -23,6 +23,11 @@ BOARD_DIR = REPO_ROOT / "metadata" / "boards"
 EXAMPLES_DIR = REPO_ROOT / "examples" / "boards"
 BUILD_MATRIX_SCRIPT = REPO_ROOT / "tools" / "build_matrix" / "run.sh"
 HARDWARE_LOG = REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md"
+DEBUG_HINT = (
+    "Debugging needs a hardware debugger (J-Link, CMSIS-DAP, or on-chip "
+    "USB-JTAG); most XIAO boards use printf-over-serial (`seeed-zephyr monitor`) "
+    "for everyday debugging."
+)
 
 
 class CliError(Exception):
@@ -73,6 +78,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="Open the board monitor after a successful flash.",
     )
     flash.set_defaults(func=cmd_flash)
+
+    debug = subparsers.add_parser("debug", help="Build and start a board debug session.")
+    debug.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    debug.set_defaults(func=cmd_debug)
 
     monitor = subparsers.add_parser("monitor", help="Open a board monitor.")
     monitor.add_argument("board_id", help="Board id such as xiao_esp32c6.")
@@ -332,6 +341,15 @@ def cmd_flash(args: argparse.Namespace) -> None:
     run_west(["flash"])
     if args.monitor:
         run_monitor(args.board_id)
+
+
+def cmd_debug(args: argparse.Namespace) -> None:
+    example = require_supported_example(args.board_id)
+    run_west_build(args.board_id, example)
+    try:
+        run_west(["debug"])
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {DEBUG_HINT}") from error
 
 
 def cmd_monitor(args: argparse.Namespace) -> None:
