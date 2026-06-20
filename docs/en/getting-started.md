@@ -143,6 +143,7 @@ Build, flash, and then open the monitor:
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
+seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem101
 ```
 
 Run the full build matrix:
@@ -207,6 +208,14 @@ be monitored with:
 seeed-zephyr monitor xiao_esp32c6
 ```
 
+For non-Espressif boards, the CLI opens pyserial miniterm from the Zephyr venv:
+
+```sh
+seeed-zephyr monitor xiao_samd21 --port /dev/cu.usbmodem101 --baud 115200
+```
+
+If `--port` is omitted, the CLI tries to auto-detect one USB serial device.
+
 To start a Zephyr debug session when suitable hardware debugger support is
 connected, run:
 
@@ -215,8 +224,8 @@ seeed-zephyr debug xiao_esp32c6
 ```
 
 One-sentence summary: the CLI chooses the repository example, then Zephyr's
-`west build`, `west flash`, `west debug`, and module tools do the actual device
-work.
+`west build`, `west flash`, `west debug`, module tools, and Zephyr venv serial
+tools do the actual device work.
 
 ## 7. Maintainer Commands
 

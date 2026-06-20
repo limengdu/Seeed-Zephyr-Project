@@ -76,11 +76,13 @@ Flash and then open the monitor:
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
+seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem101
 ```
 
 The CLI selects repository examples and board metadata. Firmware build, flash,
 monitor, and debug execution still run through Zephyr `west` commands and
-Zephyr module tools.
+Zephyr module tools. For non-Espressif serial monitor sessions, the CLI uses
+pyserial miniterm from the Zephyr venv.
 
 ## Why This Exists
 

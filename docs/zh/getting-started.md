@@ -141,6 +141,7 @@ seeed-zephyr debug xiao_esp32c6
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
+seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem101
 ```
 
 运行完整构建矩阵：
@@ -203,13 +204,21 @@ ESP32 系列查看串口日志可以运行：
 seeed-zephyr monitor xiao_esp32c6
 ```
 
+非 Espressif 开发板会使用 Zephyr venv 中的 pyserial miniterm 打开串口：
+
+```sh
+seeed-zephyr monitor xiao_samd21 --port /dev/cu.usbmodem101 --baud 115200
+```
+
+如果省略 `--port`，CLI 会尝试自动检测一个 USB 串口设备。
+
 如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
 
 ```sh
 seeed-zephyr debug xiao_esp32c6
 ```
 
-一句话总结：CLI 负责选择本仓库示例，真正的 `west build`、`west flash`、`west debug` 和模块工具仍由 Zephyr 执行。
+一句话总结：CLI 负责选择本仓库示例，真正的 `west build`、`west flash`、`west debug`、模块工具和 Zephyr venv 串口工具仍由 Zephyr 环境执行。
 
 ## 7. 维护者常用命令
 

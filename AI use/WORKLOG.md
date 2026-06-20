@@ -30,6 +30,59 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Fix monitor for non-Espressif boards
+
+Scope:
+- Updated `tools/cli/seeed_zephyr.py` so `monitor` and `flash --monitor`
+  support `--port` and `--baud`.
+- Removed the Espressif-only monitor preflight check that blocked
+  non-Espressif boards before build or flash.
+- Updated README, Getting Started docs, and CLI docs.
+- Removed the completed `AI use/TODO-fix-monitor.md` handoff file.
+
+Reason:
+- Hardware testing for `xiao_samd21` was blocked because
+  `seeed-zephyr flash xiao_samd21 --monitor` rejected non-Espressif boards
+  before the board was built or flashed.
+
+Result:
+- Espressif boards still use Zephyr's `west espressif monitor`.
+- Non-Espressif boards use pyserial miniterm from the Zephyr venv.
+- `seeed-zephyr monitor <board_id>` can auto-detect one USB serial device when
+  `--port` is omitted.
+- `seeed-zephyr flash <board_id> --monitor --port <device> --baud <rate>`
+  now builds and flashes first, then opens a serial monitor for the selected
+  board.
+
+Verification:
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- `scripts/seeed-zephyr monitor --help`: showed `--port` and `--baud`.
+- `scripts/seeed-zephyr flash --help`: showed `--monitor`, `--port`, and
+  `--baud`.
+- `scripts/seeed-zephyr monitor xiao_esp32c5`: returned the expected
+  unsupported board error.
+- `scripts/seeed-zephyr flash xiao_esp32c5 --monitor --port /dev/null`:
+  returned the expected unsupported board error.
+- `scripts/seeed-zephyr monitor xiao_samd21`: reached the non-Espressif serial
+  monitor path and returned the expected no-USB-device error in the current
+  no-board environment.
+- `scripts/seeed-zephyr monitor xiao_samd21 --port /dev/null`: invoked
+  pyserial miniterm from the Zephyr venv and failed on the invalid port, proving
+  the Espressif-only rejection was removed.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  29 passed, 0 failed.
+- `scripts/seeed-zephyr build xiao_samd21`: passed after clearing a stale
+  generated Zephyr build directory.
+- `git diff --check`: passed.
+- Sensitive keyword scan over README, docs, scripts, tools, metadata, examples,
+  `AI use/`, and `.github`: no matches.
+
+Remaining:
+- Resume physical-board testing for `xiao_samd21`, then continue with
+  `xiao_nrf52840`, `xiao_nrf54l15`, `xiao_rp2040`, `xiao_rp2350`, `xiao_mg24`,
+  and `xiao_ra4m1`.
+
 ## 2026-06-20 - Add CLI debug delegation
 
 Scope:

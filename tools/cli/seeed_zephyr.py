@@ -77,6 +77,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Open the board monitor after a successful flash.",
     )
+    flash.add_argument("--port", default=None, help="Serial port for --monitor.")
+    flash.add_argument(
+        "--baud",
+        type=int,
+        default=115200,
+        help="Serial baud rate for --monitor (default: 115200).",
+    )
     flash.set_defaults(func=cmd_flash)
 
     debug = subparsers.add_parser("debug", help="Build and start a board debug session.")
@@ -85,6 +92,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     monitor = subparsers.add_parser("monitor", help="Open a board monitor.")
     monitor.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    monitor.add_argument("--port", default=None, help="Serial port device path.")
+    monitor.add_argument(
+        "--baud",
+        type=int,
+        default=115200,
+        help="Serial baud rate (default: 115200).",
+    )
     monitor.set_defaults(func=cmd_monitor)
 
     matrix = subparsers.add_parser("matrix", help="Run the full board build matrix.")
@@ -217,6 +231,18 @@ def zephyr_workspace() -> Path:
     return Path(os.environ.get("ZEPHYR_WORKSPACE", str(Path.home() / "zephyrproject")))
 
 
+def zephyr_venv_python() -> Path:
+    python = west_path().parent / "python3"
+    if python.exists():
+        return python
+
+    python = west_path().parent / "python"
+    if python.exists():
+        return python
+
+    raise CliError(f"Zephyr venv python was not found in: {west_path().parent}")
+
+
 def west_command_env() -> dict[str, str]:
     env = os.environ.copy()
     venv_bin = str(west_path().parent)
@@ -298,17 +324,62 @@ def run_west_build(board_id: str, example: dict[str, str]) -> None:
     print(f"Build succeeded: {example['path']}", flush=True)
 
 
-def require_monitor_supported(board_id: str) -> dict[str, str]:
+def detect_serial_port() -> str:
+    python = zephyr_venv_python()
+    # Lists USB-like serial devices through pyserial in the Zephyr venv.
+    # 通过 Zephyr venv 中的 pyserial 列出类似 USB 的串口设备。
+    script = (
+        "import serial.tools.list_ports;"
+        "ports = [p for p in serial.tools.list_ports.comports() "
+        "if any(k in (p.device + ' ' + (p.description or '')).lower() "
+        "for k in ('usbmodem', 'ttyacm', 'ttyusb', 'cu.usbmodem', 'usb'))];"
+        "print('\\n'.join(p.device for p in ports))"
+    )
+    result = run_command_capture([str(python), "-c", script], cwd=zephyr_workspace())
+    if result.returncode != 0:
+        raise CliError(
+            "Serial port detection failed. Is pyserial installed in the Zephyr venv?\n"
+            f"Try: {zephyr_workspace()}/.venv/bin/python -m pip install pyserial"
+        )
+
+    devices = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not devices:
+        raise CliError(
+            "No USB serial device found. Check:\n"
+            "- Is the board plugged in?\n"
+            "- On WSL2: did you run 'usbipd attach --wsl --busid <BUSID>'?\n"
+            "- Try specifying the port manually with --port <device>"
+        )
+    if len(devices) > 1:
+        device_list = "\n".join(f"  {device}" for device in devices)
+        raise CliError(
+            f"Multiple USB serial devices found:\n{device_list}\n"
+            "Specify one with --port <device>."
+        )
+
+    return devices[0]
+
+
+def run_monitor(board_id: str, port: str | None = None, baud: int = 115200) -> None:
     board = require_board(board_id)
-    if board["vendor"] != "espressif":
-        raise CliError("Monitor is currently implemented for Espressif boards only.")
 
-    return board
+    if board["vendor"] == "espressif":
+        # Espressif boards use idf_monitor through the Zephyr west extension.
+        # Espressif 开发板通过 Zephyr west extension 使用 idf_monitor。
+        command = ["espressif", "monitor", "-b", str(baud)]
+        if port is not None:
+            command.extend(["-p", port])
+        run_west(command)
+        return
 
-
-def run_monitor(board_id: str) -> None:
-    require_monitor_supported(board_id)
-    run_west(["espressif", "monitor"])
+    # Non-Espressif boards use pyserial miniterm from the Zephyr venv.
+    # 非 Espressif 开发板使用 Zephyr venv 中的 pyserial miniterm。
+    if port is None:
+        port = detect_serial_port()
+    python = zephyr_venv_python()
+    print(f"Opening serial monitor: {port} @ {baud} baud", flush=True)
+    print("Press Ctrl+] to exit.", flush=True)
+    run_command([str(python), "-m", "serial.tools.miniterm", port, str(baud)])
 
 
 def cmd_list_boards(_args: argparse.Namespace) -> None:
@@ -334,13 +405,11 @@ def cmd_build(args: argparse.Namespace) -> None:
 def cmd_flash(args: argparse.Namespace) -> None:
     example = require_supported_example(args.board_id)
     require_flash_tools(args.board_id)
-    if args.monitor:
-        require_monitor_supported(args.board_id)
 
     run_west_build(args.board_id, example)
     run_west(["flash"])
     if args.monitor:
-        run_monitor(args.board_id)
+        run_monitor(args.board_id, port=args.port, baud=args.baud)
 
 
 def cmd_debug(args: argparse.Namespace) -> None:
@@ -353,7 +422,8 @@ def cmd_debug(args: argparse.Namespace) -> None:
 
 
 def cmd_monitor(args: argparse.Namespace) -> None:
-    run_monitor(args.board_id)
+    require_supported_example(args.board_id)
+    run_monitor(args.board_id, port=args.port, baud=args.baud)
 
 
 def cmd_matrix(_args: argparse.Namespace) -> None:
