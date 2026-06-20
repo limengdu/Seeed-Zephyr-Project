@@ -29,7 +29,7 @@ Zephyr 已经支持很多开发板，但它默认要求用户知道这些概念�
 
 - `examples/boards/`：每块 XIAO 开发板的最小 demo。
 - `metadata/boards/`：开发板 id、名称、vendor 和 Zephyr target。
-- `scripts/`：环境安装和单个示例构建脚本。
+- `scripts/`：环境安装、CLI 和示例构建脚本。
 - `tools/build_matrix/`：批量构建所有开发板 demo 的验证工具。
 - `docs/`：给用户看的文档。
 - `AI use/`：给 AI 和维护者看的项目纲领和工作记录。
@@ -59,7 +59,7 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 
 ```sh
 cd ~/seeed-zephyr-base
-bash scripts/build-example.sh examples/boards/xiao_esp32c6/blinky
+scripts/seeed-zephyr build xiao_esp32c6
 ```
 
 一句话总结：setup 负责装工具链，装完后把你带回本仓库示例。
@@ -70,22 +70,52 @@ bash scripts/build-example.sh examples/boards/xiao_esp32c6/blinky
 
 ```sh
 cd ~/seeed-zephyr-base
-bash scripts/build-example.sh examples/boards/xiao_esp32c6/blinky
+scripts/seeed-zephyr build xiao_esp32c6
 ```
 
 XIAO ESP32C3 没有板载 LED，所以它不用 `blinky`，而是用 `hello_world`：
 
 ```sh
 cd ~/seeed-zephyr-base
-bash scripts/build-example.sh examples/boards/xiao_esp32c3/hello_world
+scripts/seeed-zephyr build xiao_esp32c3
 ```
 
-`build-example.sh` 会读取 `example.yaml`，找到 Zephyr target，激活
-`~/zephyrproject/.venv`，按需获取 blobs，然后调用 `west build` 构建这个仓库里的示例。
+`scripts/seeed-zephyr build <board_id>` 会读取开发板 metadata，找到仓库示例，然后调用已经验证过的底层构建脚本。
 
 一句话总结：构建命令从本仓库开始，Zephyr 的复杂参数由脚本处理。
 
-## 4. 当前开发板 demo 矩阵
+## 4. 常用 CLI 命令
+
+列出开发板和示例：
+
+```sh
+scripts/seeed-zephyr list boards
+scripts/seeed-zephyr list examples
+```
+
+构建、烧录和查看日志：
+
+```sh
+scripts/seeed-zephyr build xiao_esp32c6
+scripts/seeed-zephyr flash xiao_esp32c6
+scripts/seeed-zephyr monitor xiao_esp32c6
+```
+
+运行完整构建矩阵：
+
+```sh
+scripts/seeed-zephyr matrix
+```
+
+记录一次真实硬件观察：
+
+```sh
+scripts/seeed-zephyr verify-hardware xiao_esp32c6
+```
+
+一句话总结：CLI 是操作本仓库示例的默认入口。
+
+## 5. 当前开发板 demo 矩阵
 
 这张表由 `tools/build_matrix/run.sh` 生成。
 
@@ -109,14 +139,13 @@ XIAO board target。XIAO ESP32C5 已经有仓库 demo 记录，但要等选定 Z
 
 一句话总结：当前 10 个 target 能构建本仓库 demo，XIAO ESP32C5 已记录但在当前基线下不可构建。
 
-## 5. 烧录到开发板
+## 6. 烧录到开发板
 
-构建成功后，用 Zephyr 标准命令烧录：
+构建成功后，通过 CLI 烧录：
 
 ```sh
-cd ~/zephyrproject
-source .venv/bin/activate
-west flash
+cd ~/seeed-zephyr-base
+scripts/seeed-zephyr flash xiao_esp32c6
 ```
 
 ESP32 系列有时需要手动进入 bootloader。通俗说，就是让板子进入“准备接收新程序”的状态。
@@ -124,12 +153,12 @@ ESP32 系列有时需要手动进入 bootloader。通俗说，就是让板子进
 ESP32 系列查看串口日志可以运行：
 
 ```sh
-west espressif monitor
+scripts/seeed-zephyr monitor xiao_esp32c6
 ```
 
-一句话总结：构建从本仓库开始，烧录仍使用 Zephyr 官方 `west flash`。
+一句话总结：CLI 从本仓库构建，再把烧录交给 Zephyr 官方工具。
 
-## 6. 维护者常用命令
+## 7. 维护者常用命令
 
 校验 metadata：
 
@@ -142,12 +171,12 @@ cd ~/seeed-zephyr-base
 
 ```sh
 cd ~/seeed-zephyr-base
-BUILD_MATRIX_GENERATED_ON=2026-06-20 bash tools/build_matrix/run.sh
+scripts/seeed-zephyr matrix
 ```
 
 一句话总结：维护者用 metadata 校验和构建矩阵，让示例目录保持可信。
 
-## 7. 常见错误
+## 8. 常见错误
 
 ### `west: command not found`
 
@@ -176,7 +205,7 @@ west boards | grep -i xiao
 没有板载 LED 的板子要用非 LED demo：
 
 ```sh
-bash scripts/build-example.sh examples/boards/xiao_esp32c3/hello_world
+scripts/seeed-zephyr build xiao_esp32c3
 ```
 
 一句话总结：不是每块 XIAO 都适合用 LED blink 做最小验证。

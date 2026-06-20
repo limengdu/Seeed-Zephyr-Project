@@ -12,6 +12,8 @@ Current scripts:
 
 - `setup-macos.sh`: prepares the macOS Zephyr workspace and prints the next
   repository example command.
+- `seeed-zephyr`: runs the lightweight CLI for listing boards, building,
+  flashing, monitoring, running the matrix, and recording hardware checks.
 - `build-example.sh`: builds one repository example from the project root.
 
 ## 中文
@@ -23,4 +25,5 @@ Current scripts:
 当前脚本:
 
 - `setup-macos.sh`: 准备 macOS Zephyr 工作区，并打印下一条仓库示例命令。
+- `seeed-zephyr`: 运行轻量 CLI，用于列出开发板、构建、烧录、监控、运行矩阵和记录硬件检查。
 - `build-example.sh`: 从项目根目录构建一个仓库示例。

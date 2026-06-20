@@ -25,7 +25,14 @@ The short version: this repository stores XIAO/Grove examples, project examples,
 Build a repository board demo from the project root:
 
 ```sh
-bash scripts/build-example.sh examples/boards/xiao_esp32c6/blinky
+scripts/seeed-zephyr build xiao_esp32c6
+```
+
+List supported boards and examples:
+
+```sh
+scripts/seeed-zephyr list boards
+scripts/seeed-zephyr list examples
 ```
 
 ## Why This Exists

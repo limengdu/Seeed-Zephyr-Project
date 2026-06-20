@@ -47,6 +47,7 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 10 | Board-specific baseline matrix | `BUILD_MATRIX_GENERATED_ON=2026-06-20 bash tools/build_matrix/run.sh` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
 | 11 | Repository example build matrix | `BUILD_MATRIX_GENERATED_ON=2026-06-20 bash tools/build_matrix/run.sh` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
 | 12 | Single repository example build | `bash scripts/build-example.sh examples/boards/xiao_esp32c3/hello_world` | done (2026-06-20) |
+| 13 | CLI repository example build matrix | `scripts/seeed-zephyr matrix` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
 
 Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
 ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
@@ -92,6 +93,25 @@ sample paths. The run finished with 10 passed, 0 failed, and 1 unsupported.
 Step 12 verified 2026-06-20: the user-facing single-example command built
 `examples/boards/xiao_esp32c3/hello_world` successfully through
 `scripts/build-example.sh`.
+Step 13 verified 2026-06-20: the repository CLI ran the same repository example
+build matrix through `scripts/seeed-zephyr matrix`. The run finished with 10
+passed, 0 failed, and 1 unsupported. The unsupported entry is `xiao_esp32c5`
+because the selected Zephyr baseline does not provide a `xiao_esp32c5` target.
+
+## CLI Validation Evidence
+
+Baseline CLI: `scripts/seeed-zephyr`, 2026-06-20.
+
+| Command | Result | Notes |
+| --- | --- | --- |
+| `python3 -m py_compile tools/cli/seeed_zephyr.py` | passed | CLI Python syntax check |
+| `bash -n scripts/seeed-zephyr` | passed | wrapper shell syntax check |
+| `scripts/seeed-zephyr --help` | passed | top-level command help renders |
+| `scripts/seeed-zephyr list boards` | passed | lists all 11 board metadata entries |
+| `scripts/seeed-zephyr list examples` | passed | lists selected repository examples |
+| `scripts/seeed-zephyr build xiao_esp32c5` | expected error | reports unsupported board in the selected Zephyr baseline |
+| `scripts/seeed-zephyr build xiao_esp32c3` | passed | builds the ESP32C3 `hello_world` repository demo |
+| `scripts/seeed-zephyr matrix` | passed | total=11, pass=10, fail=0, unsupported=1 |
 
 ## Repository Example Build Evidence
 

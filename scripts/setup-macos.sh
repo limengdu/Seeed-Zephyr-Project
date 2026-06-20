@@ -471,7 +471,7 @@ print_board_next_steps() {
 
   printf 'Next step:\n'
   printf '  cd %s\n' "$REPO_ROOT"
-  printf '  bash scripts/build-example.sh %s\n' "$BOARD_EXAMPLE_PATH"
+  printf '  scripts/seeed-zephyr build %s\n' "$BOARD_ID"
   printf '\nThe helper builds the repository example with target %s.\n' "$BOARD_BUILD_TARGET"
 }
 

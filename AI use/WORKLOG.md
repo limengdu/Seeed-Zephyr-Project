@@ -30,6 +30,63 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Add repository CLI for examples and hardware checks
+
+Scope:
+- Added `tools/cli/seeed_zephyr.py` as the repository command-line interface.
+- Added `scripts/seeed-zephyr` as the user-facing wrapper.
+- Added `tools/cli/README.md`.
+- Added `AI use/HARDWARE_VERIFICATION.md` as the destination for real hardware
+  observations captured through the CLI.
+- Updated README, Getting Started docs, script docs, tool docs, and the macOS
+  setup script to point users to the CLI.
+
+Reason:
+- Users need one project-root command for listing boards, listing examples,
+  building demos, flashing hardware, opening a monitor, running the build
+  matrix, and recording hardware checks.
+- The CLI should operate repository-owned examples before any project generator
+  or editor extension becomes the primary workflow.
+
+Result:
+- `scripts/seeed-zephyr list boards` shows board ids, validation status, demo
+  type, vendor, and Zephyr target.
+- `scripts/seeed-zephyr list examples` shows each board's selected repository
+  example.
+- `scripts/seeed-zephyr build <board_id>` builds the board's selected
+  repository example.
+- `scripts/seeed-zephyr flash <board_id>` builds and flashes the selected
+  example.
+- `scripts/seeed-zephyr monitor <board_id>` opens the Espressif monitor for
+  Espressif boards.
+- `scripts/seeed-zephyr matrix` runs the full repository example build matrix.
+- `scripts/seeed-zephyr verify-hardware <board_id>` builds, flashes, prompts
+  for the observed board behavior, and appends the result under `AI use/`.
+
+Verification:
+- `python3 -m py_compile tools/cli/seeed_zephyr.py`: passed.
+- `bash -n scripts/seeed-zephyr`: passed.
+- `scripts/seeed-zephyr --help`: passed.
+- `scripts/seeed-zephyr list boards`: passed.
+- `scripts/seeed-zephyr list examples`: passed.
+- `scripts/seeed-zephyr build xiao_esp32c5`: returned the expected unsupported
+  board error.
+- `scripts/seeed-zephyr build xiao_esp32c3`: passed.
+- `scripts/seeed-zephyr matrix`: total=11, pass=10, fail=0, unsupported=1.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  29 passed, 0 failed.
+- `git diff --check`: passed.
+- Directory README coverage check: no project directory missing `README.md`.
+- Sensitive keyword scan over README, docs, scripts, tools, metadata, examples,
+  `AI use/`, and `.github`: no matches.
+
+Remaining:
+- Run `scripts/seeed-zephyr verify-hardware <board_id>` on each physical board
+  as hardware becomes available.
+- Extend the CLI after Grove examples and project examples exist.
+- Add project/example generation commands only after templates and validation
+  rules are ready.
+
 ## 2026-06-20 - Add repository board demos and build scripts
 
 Scope:
