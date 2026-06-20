@@ -94,34 +94,37 @@ west blobs fetch "$MODULE"
 west boards | grep -i xiao
 ```
 
-然后为有代表性的开发板构建一个小型 `blinky` 固件:
+然后为有代表性的开发板构建一个小型基线固件。大多数开发板可以使用
+`samples/basic/blinky`；没有板载 LED 的开发板应该使用不依赖 `led0` 的样例，
+例如 `samples/hello_world`。
 
 ```sh
 cd ~/zephyrproject/zephyr
 west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky
 west build -p always -b xiao_rp2040 samples/basic/blinky
 west build -p always -b xiao_ble samples/basic/blinky
+west build -p always -b xiao_esp32c3 samples/hello_world
 ```
 
 有些开发板是多变体或多核的。使用裸名称，例如 `xiao_esp32c6`，会报错并打印有效的全限定名称，例如 `xiao_esp32c6/esp32c6/hpcore`。请使用 Zephyr 打印出的完整名称。
 
-下表记录了 2026-06-19 基于 Zephyr v4.4.0 对 `samples/basic/blinky` 的构建矩阵。PASS 表示这个基线示例在当前环境中编译通过。FAIL 表示该 target 还需要后续排查，暂时不能视为已验证。
+下表记录了 2026-06-20 基于 Zephyr v4.4.0 的基线构建矩阵。PASS 表示所选基线样例在当前环境中编译通过。UNSUPPORTED 表示当前 stable checkout 没有提供这块 XIAO 开发板的专属 target。
 
 权威开发板 targets:
 
-| 开发板显示名称 | Zephyr 构建 target | v4.4.0 blinky 结果 | 备注 |
-| --- | --- | --- | --- |
-| XIAO SAMD21 | `seeeduino_xiao` | PASS | 构建成功。 |
-| XIAO nRF52840 | `xiao_ble` | PASS | 构建成功。 |
-| XIAO ESP32C3 | `xiao_esp32c3` | FAIL | target 存在，但 `samples/basic/blinky` 在当前环境中无法从开发板 Devicetree 解析出可用的 `led0` GPIO 设备。 |
-| XIAO ESP32C5 | `xiao_esp32c5` | FAIL | Zephyr v4.4.0 中还没有这个 target；需要检查 Zephyr `main` 或下一个 stable release。 |
-| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
-| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
-| XIAO MG24 | `xiao_mg24` | PASS | 构建成功。 |
-| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
-| XIAO RA4M1 | `xiao_ra4m1` | PASS | 构建成功。 |
-| XIAO RP2040 | `xiao_rp2040` | PASS | 构建成功。 |
-| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | PASS | 裸 target 会重试到带 CPU 名称的全限定 target。 |
+| 开发板显示名称 | Zephyr 构建 target | 基线样例 | v4.4.0 结果 | 备注 |
+| --- | --- | --- | --- | --- |
+| XIAO SAMD21 | `seeeduino_xiao` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO nRF52840 | `xiao_ble` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO ESP32C3 | `xiao_esp32c3` | `samples/hello_world` | PASS | XIAO ESP32C3 没有板载 LED，所以 `blinky` 不能作为这块板子的有效基线样例。 |
+| XIAO ESP32C5 | `xiao_esp32c5` | `samples/basic/blinky` | UNSUPPORTED | Zephyr v4.4.0 没有提供这个 XIAO target。Zephyr `main` 有 `esp32c5_devkitc`，但它不是 XIAO ESP32C5 这个板级 target。 |
+| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO MG24 | `xiao_mg24` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO RA4M1 | `xiao_ra4m1` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO RP2040 | `xiao_rp2040` | `samples/basic/blinky` | PASS | 构建成功。 |
+| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | `samples/basic/blinky` | PASS | 构建成功。 |
 
 一句话总结: 用准确的 Zephyr target 名称构建一个小型上游 sample，来验证每块 XIAO 开发板。
 
@@ -168,8 +171,8 @@ ESP32 开发板可能需要手动进入 bootloader，例如双击 RESET。ESP32 
 Zephyr checkout: main or pinned version
 Host: macOS Apple Silicon
 Board target: xiao_esp32c6
-Sample: samples/basic/blinky
-Result: passed or failed
+Sample: samples/basic/blinky or samples/hello_world
+Result: passed, failed, or unsupported
 Error head: first useful error lines
 Error tail: last useful error lines
 Notes: manual bootloader, fully-qualified target, or shield behavior

@@ -1,0 +1,2 @@
+# board_id	support_status	sample_path	notes
+xiao_esp32c3	supported	samples/hello_world	XIAO ESP32C3 has no on-board LED; hello_world validates the board/toolchain baseline without LED hardware.

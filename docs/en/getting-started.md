@@ -94,34 +94,40 @@ First, list the authoritative XIAO board names known to the Zephyr checkout:
 west boards | grep -i xiao
 ```
 
-Then build a small `blinky` firmware for representative boards:
+Then build a small baseline firmware for representative boards. Most boards can
+use `samples/basic/blinky`; boards with no on-board LED should use a sample that
+does not require `led0`, such as `samples/hello_world`.
 
 ```sh
 cd ~/zephyrproject/zephyr
 west build -p always -b xiao_esp32c6/esp32c6/hpcore samples/basic/blinky
 west build -p always -b xiao_rp2040 samples/basic/blinky
 west build -p always -b xiao_ble samples/basic/blinky
+west build -p always -b xiao_esp32c3 samples/hello_world
 ```
 
 Some boards are multi-variant or multi-core. Using the bare name, such as `xiao_esp32c6`, will error and print the valid fully-qualified names, such as `xiao_esp32c6/esp32c6/hpcore`. Use the full name printed by Zephyr.
 
-The table below records the `samples/basic/blinky` build matrix from 2026-06-19 against Zephyr v4.4.0. PASS means that baseline sample compiled in this environment. FAIL means the target needs follow-up before it can be treated as validated.
+The table below records the baseline build matrix from 2026-06-20 against
+Zephyr v4.4.0. PASS means that the selected baseline sample compiled in this
+environment. UNSUPPORTED means the current stable checkout does not provide that
+specific XIAO board target.
 
 Authoritative board targets:
 
-| Board display name | Zephyr build target | v4.4.0 blinky result | Notes |
-| --- | --- | --- | --- |
-| XIAO SAMD21 | `seeeduino_xiao` | PASS | Build succeeded. |
-| XIAO nRF52840 | `xiao_ble` | PASS | Build succeeded. |
-| XIAO ESP32C3 | `xiao_esp32c3` | FAIL | Target exists, but `samples/basic/blinky` fails because the sample cannot resolve a usable `led0` GPIO device from the board Devicetree in this environment. |
-| XIAO ESP32C5 | `xiao_esp32c5` | FAIL | Target is not present in Zephyr v4.4.0; check Zephyr `main` or the next stable release for validation. |
-| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | PASS | Bare target retries to the fully-qualified CPU target. |
-| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | PASS | Bare target retries to the fully-qualified CPU target. |
-| XIAO MG24 | `xiao_mg24` | PASS | Build succeeded. |
-| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | PASS | Bare target retries to the fully-qualified CPU target. |
-| XIAO RA4M1 | `xiao_ra4m1` | PASS | Build succeeded. |
-| XIAO RP2040 | `xiao_rp2040` | PASS | Build succeeded. |
-| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | PASS | Bare target retries to the fully-qualified CPU target. |
+| Board display name | Zephyr build target | Baseline sample | v4.4.0 result | Notes |
+| --- | --- | --- | --- | --- |
+| XIAO SAMD21 | `seeeduino_xiao` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO nRF52840 | `xiao_ble` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO ESP32C3 | `xiao_esp32c3` | `samples/hello_world` | PASS | XIAO ESP32C3 has no on-board LED, so `blinky` is not a valid baseline for this board. |
+| XIAO ESP32C5 | `xiao_esp32c5` | `samples/basic/blinky` | UNSUPPORTED | Zephyr v4.4.0 does not provide this XIAO target. Zephyr `main` has `esp32c5_devkitc`, but that is not the same board target as XIAO ESP32C5. |
+| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO MG24 | `xiao_mg24` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO RA4M1 | `xiao_ra4m1` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO RP2040 | `xiao_rp2040` | `samples/basic/blinky` | PASS | Build succeeded. |
+| XIAO RP2350 | `xiao_rp2350/rp2350a/hazard3` | `samples/basic/blinky` | PASS | Build succeeded. |
 
 One-sentence summary: validate each XIAO board by building a small upstream sample with the exact Zephyr target name.
 
@@ -168,8 +174,8 @@ Recommended evidence format:
 Zephyr checkout: main or pinned version
 Host: macOS Apple Silicon
 Board target: xiao_esp32c6
-Sample: samples/basic/blinky
-Result: passed or failed
+Sample: samples/basic/blinky or samples/hello_world
+Result: passed, failed, or unsupported
 Error head: first useful error lines
 Error tail: last useful error lines
 Notes: manual bootloader, fully-qualified target, or shield behavior
