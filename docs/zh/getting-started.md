@@ -52,7 +52,31 @@ cd ~/seeed-zephyr-base
 bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
-这个脚本会准备 `~/zephyrproject`，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
+### 其他平台
+
+非 macOS setup 入口已经写好，但还在等待真实平台验证。不要把它们当成已经验证完成的安装路径。
+
+Linux，尚未在真实 Linux 验证：
+
+```sh
+cd ~/seeed-zephyr-base
+bash scripts/setup-linux.sh
+```
+
+Windows，尚未在真实 Windows 验证，先准备 WSL2：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+```
+
+然后在 WSL2 内运行 Linux setup：
+
+```sh
+cd ~/seeed-zephyr-base
+bash scripts/setup-linux.sh
+```
+
+setup 流程会准备 `~/zephyrproject`，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
 安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。当你通过 `--board` 选择 Espressif
 开发板时，setup 还会检查 Zephyr 自带的 `hal_espressif` 烧录和 monitor 工具是否可用。
 
@@ -104,12 +128,13 @@ seeed-zephyr list boards
 seeed-zephyr list examples
 ```
 
-构建、烧录和查看日志：
+构建、烧录、查看日志和启动调试：
 
 ```sh
 seeed-zephyr build xiao_esp32c6
 seeed-zephyr flash xiao_esp32c6
 seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr debug xiao_esp32c6
 ```
 
 构建、烧录，然后自动打开 monitor：
@@ -178,7 +203,13 @@ ESP32 系列查看串口日志可以运行：
 seeed-zephyr monitor xiao_esp32c6
 ```
 
-一句话总结：CLI 负责选择本仓库示例，真正的 `west build`、`west flash` 和模块工具仍由 Zephyr 执行。
+如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
+
+```sh
+seeed-zephyr debug xiao_esp32c6
+```
+
+一句话总结：CLI 负责选择本仓库示例，真正的 `west build`、`west flash`、`west debug` 和模块工具仍由 Zephyr 执行。
 
 ## 7. 维护者常用命令
 

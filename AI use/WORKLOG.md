@@ -491,3 +491,18 @@ Remaining:
   real Windows 10 2004+ or Windows 11 machine.
 - Validate `wsl --status`, `wsl -l -v`, `winget install --exact --id dorssel.usbipd-win`,
   and the usbipd XIAO attach flow on real hardware.
+
+## 2026-06-20 - Sync cross-platform setup and debug docs
+
+Scope:
+- Updated `README.md`, `docs/en/getting-started.md`, and `docs/zh/getting-started.md`.
+- Appended this work log entry.
+
+Result:
+- Added macOS, Linux, and Windows setup entry points to the user-facing setup docs.
+- Marked Linux and Windows setup as written but pending real-platform validation.
+- Listed `build`, `flash`, `monitor`, and `debug` together in the CLI usage docs.
+
+Verification:
+- Grep checks confirmed `setup-linux.sh`, `setup-windows.ps1`, and `seeed-zephyr debug`
+  appear in `README.md`, `docs/en/getting-started.md`, and `docs/zh/getting-started.md`.

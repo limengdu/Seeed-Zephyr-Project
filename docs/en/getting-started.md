@@ -47,7 +47,32 @@ cd ~/seeed-zephyr-base
 bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
-The setup script prepares the Zephyr workspace at `~/zephyrproject`, installs
+### Other platforms
+
+The non-macOS setup entrypoints are written but still pending real-platform
+validation. Do not treat them as verified install paths yet.
+
+Linux, pending real-Linux validation:
+
+```sh
+cd ~/seeed-zephyr-base
+bash scripts/setup-linux.sh
+```
+
+Windows, pending real-Windows validation, prepares WSL2 first:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+```
+
+Then run Linux setup inside WSL2:
+
+```sh
+cd ~/seeed-zephyr-base
+bash scripts/setup-linux.sh
+```
+
+The setup flow prepares the Zephyr workspace at `~/zephyrproject`, installs
 the Python venv and `west`, downloads Zephyr v4.4.0, installs Zephyr packages
 and the SDK, and fetches board-specific blobs when needed. When an Espressif
 board is selected with `--board`, setup also checks that Zephyr's
@@ -105,12 +130,13 @@ seeed-zephyr list boards
 seeed-zephyr list examples
 ```
 
-Build, flash, and monitor:
+Build, flash, monitor, and debug:
 
 ```sh
 seeed-zephyr build xiao_esp32c6
 seeed-zephyr flash xiao_esp32c6
 seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr debug xiao_esp32c6
 ```
 
 Build, flash, and then open the monitor:
@@ -181,8 +207,16 @@ be monitored with:
 seeed-zephyr monitor xiao_esp32c6
 ```
 
+To start a Zephyr debug session when suitable hardware debugger support is
+connected, run:
+
+```sh
+seeed-zephyr debug xiao_esp32c6
+```
+
 One-sentence summary: the CLI chooses the repository example, then Zephyr's
-`west build`, `west flash`, and module tools do the actual device work.
+`west build`, `west flash`, `west debug`, and module tools do the actual device
+work.
 
 ## 7. Maintainer Commands
 

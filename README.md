@@ -22,10 +22,32 @@ If you are an AI agent, maintainer, or contributor preparing project work, start
 
 The short version: this repository stores XIAO/Grove examples, project examples, metadata, scripts, docs, and validation results. The actual Zephyr source tree and firmware builds live in a separate workspace, normally `~/zephyrproject`.
 
-Run setup from the repository root. When setup asks `Install seeed-zephyr CLI? [Y/n]`, press Enter to install the command:
+Run setup from the repository root. Choose the entry point for your host OS.
+When setup asks `Install seeed-zephyr CLI? [Y/n]`, press Enter to install the
+command.
+
+macOS:
 
 ```sh
 bash scripts/setup-macos.sh
+```
+
+Linux, written but pending real-Linux validation:
+
+```sh
+bash scripts/setup-linux.sh
+```
+
+Windows, written but pending real-Windows validation, prepares WSL2 first:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+```
+
+Then run Linux setup inside WSL2:
+
+```sh
+bash scripts/setup-linux.sh
 ```
 
 After setup installs the CLI, build a repository board demo from any directory:
@@ -41,11 +63,19 @@ seeed-zephyr list boards
 seeed-zephyr list examples
 ```
 
-Build, flash, start a debug session, and open the monitor after flashing:
+Build, flash, monitor, and start a debug session:
+
+```sh
+seeed-zephyr build xiao_esp32c6
+seeed-zephyr flash xiao_esp32c6
+seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr debug xiao_esp32c6
+```
+
+Flash and then open the monitor:
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --monitor
-seeed-zephyr debug xiao_esp32c6
 ```
 
 The CLI selects repository examples and board metadata. Firmware build, flash,
