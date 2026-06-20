@@ -216,6 +216,9 @@ seeed-zephyr monitor xiao_samd21
 
 If `--port` is omitted, the CLI tries to auto-detect one USB serial device.
 
+For XIAO SAMD21 repeated flashing and BOSSA auto-reset behavior, see
+[XIAO SAMD21 Board Notes](boards/xiao-samd21.md).
+
 To start a Zephyr debug session when suitable hardware debugger support is
 connected, run:
 

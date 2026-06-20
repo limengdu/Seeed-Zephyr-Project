@@ -212,6 +212,9 @@ seeed-zephyr monitor xiao_samd21
 
 如果省略 `--port`，CLI 会尝试自动检测一个 USB 串口设备。
 
+关于 XIAO SAMD21 连续烧录和 BOSSA 自动重启行为，见
+[XIAO SAMD21 开发板说明](boards/xiao-samd21.md)。
+
 如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
 
 ```sh

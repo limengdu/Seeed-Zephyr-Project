@@ -30,6 +30,36 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Document SAMD21 BOSSA auto-reset behavior
+
+Scope:
+- Added `docs/en/boards/README.md` and `docs/zh/boards/README.md` as the
+  board-specific documentation indexes.
+- Added `docs/en/boards/xiao-samd21.md` and
+  `docs/zh/boards/xiao-samd21.md`.
+- Linked the new board notes from the root README, `docs/README.md`, language
+  README files, and Getting Started guides.
+
+Reason:
+- The XIAO SAMD21 verified example has meaningful board-specific flashing
+  behavior. Users need to know when repeated flashing should not require manual
+  bootloader entry, and when manual bootloader entry is still a valid recovery
+  path.
+
+Result:
+- User-facing docs now explain the XIAO SAMD21 BOSSA-compatible bootloader,
+  1200-baud reset flow, USB CDC ACM requirement, expected repeated flashing
+  behavior, USB replug behavior, and recovery cases.
+- The docs point to the existing hardware verification evidence.
+
+Verification:
+- Documentation links were checked for local file existence.
+- `git diff --check`: passed.
+
+Remaining:
+- Add similar board-specific pages when other XIAO boards gain hardware-tested
+  flashing or monitor behavior.
+
 ## 2026-06-20 - Fix SAMD21 repeated flash reset
 
 Scope:

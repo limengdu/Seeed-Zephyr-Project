@@ -13,7 +13,9 @@ This project answers: "What can a XIAO + Grove user build with Zephyr, which exa
 If you are new to this repository, start with the Getting Started guide before reading the phase documents:
 
 - [English Getting Started](docs/en/getting-started.md)
+- [English Board Notes](docs/en/boards/README.md)
 - [中文入门指南](docs/zh/getting-started.md)
+- [中文开发板说明](docs/zh/boards/README.md)
 
 If you are an AI agent, maintainer, or contributor preparing project work, start with the AI project charter:
 
@@ -188,6 +190,7 @@ The system should let users start from hardware and intent:
 - [Phase 3: VS Code Product Experience](AI%20use/en/03-phase-three-vscode-plugin.md)
 - [Onboarding and Distribution Design](AI%20use/en/onboarding-design.md)
 - [Getting Started](docs/en/getting-started.md)
+- [XIAO SAMD21 Board Notes](docs/en/boards/xiao-samd21.md)
 - [Validation Log](AI%20use/en/validation-log.md)
 - [Roadmap and Quality Controls](AI%20use/en/04-roadmap-and-risks.md)
 - [Glossary](AI%20use/en/05-glossary.md)
@@ -201,5 +204,6 @@ The system should let users start from hardware and intent:
 - [第二阶段: 发现、构建、验证与生成 CLI](AI%20use/zh/02-phase-two-cli-generator.md)
 - [第三阶段: VS Code 产品体验](AI%20use/zh/03-phase-three-vscode-plugin.md)
 - [入门指南](docs/zh/getting-started.md)
+- [XIAO SAMD21 开发板说明](docs/zh/boards/xiao-samd21.md)
 - [路线图与质量控制](AI%20use/zh/04-roadmap-and-risks.md)
 - [术语表](AI%20use/zh/05-glossary.md)
