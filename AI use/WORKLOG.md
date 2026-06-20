@@ -30,6 +30,31 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Add startup banners to board examples
+
+Scope:
+- Added a one-line startup banner to every `examples/boards/*/*/src/main.c`.
+
+Reason:
+- During batch hardware testing across XIAO boards, serial output should identify
+  which board and demo is running. blinky printed only "LED state" and hello_world
+  only "demo is running", with no board/demo identity in the output.
+
+Result:
+- Each example now prints, as the first line of `main()`:
+  `*** Seeed XIAO Zephyr Base | board: <CONFIG_BOARD> | demo: <blinky|hello_world> ***`
+- The banner line is identical across all 11 examples; only the demo name differs.
+- Existing logic is unchanged (blinky LED loop, hello_world loop).
+
+Verification:
+- grep confirmed 11 identical banner lines (9 blinky, 2 hello_world).
+- `scripts/seeed-zephyr build xiao_esp32c6`: build succeeded, ESP32-C6 image created;
+  FLASH usage 133180 B (about 160 B more than before). The banner did not break the build.
+
+Remaining:
+- Confirm the banner appears on the serial monitor during real hardware testing of
+  each board.
+
 ## 2026-06-20 - Delegate CLI execution to Zephyr tools
 
 Scope:
