@@ -13,15 +13,36 @@ seeed-zephyr flash xiao_nrf52840 --monitor
 
 本仓库 CLI 会调用 Zephyr 的 `uf2` runner，不走默认的 `nrfutil` runner。
 
+如果开发板已经运行本仓库示例，CLI 会先通过 USB CDC 1200 baud 请求开发板进入
+UF2 下载模式，再调用 Zephyr 的 UF2 runner。
+
 如果直接使用 Zephyr 命令，先双击 `RESET` 进入 UF2 下载模式，再运行：
 
 ```sh
 west flash --runner uf2
 ```
 
+## 免双击 RESET 重复烧录
+
+目标：程序已经运行后，下次烧录可以由电脑通过 USB CDC 串口请求开发板进入 UF2 模式。
+
+自建示例要保留这些点：
+
+- `prj.conf`：启用 reboot、UART line control、USB CDC 串口和 console。
+- `src/main.c`：监听 `UART_LINE_CTRL_BAUD_RATE`。
+- 当 baud rate 变成 `1200` 时，写入 `GPREGRET` 值 `0x57`，再调用 `sys_reboot(SYS_REBOOT_COLD)`。
+- 如果主循环里有长时间 `k_msleep()`，拆成短间隔并在间隔中检查 1200 baud 请求。
+
+可参考本仓库示例：
+
+```text
+examples/boards/xiao_nrf52840/blinky/prj.conf
+examples/boards/xiao_nrf52840/blinky/src/main.c
+```
+
 ## 手动进入 UF2 下载模式
 
-当 CLI 无法自动请求 UF2 时，使用这个恢复方式：
+当当前固件还不支持自动请求 UF2，或 USB CDC 串口不可见时，使用这个恢复方式：
 
 1. 快速双击 `RESET`。
 2. 等待电脑出现 UF2 存储盘。

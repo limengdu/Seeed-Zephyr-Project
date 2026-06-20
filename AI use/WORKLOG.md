@@ -1007,3 +1007,36 @@ Remaining:
 - Implement the above in `tools/cli/seeed_zephyr.py`.
 - Update CLI docs, README, getting-started guides.
 - Resume per-board hardware testing after implementation.
+
+## 2026-06-20 - Fix XIAO nRF52840 UF2 repeat flashing and monitor readiness
+
+Scope:
+- Updated `examples/boards/xiao_nrf52840/blinky` so the running firmware can
+  respond to USB CDC 1200 baud bootloader requests.
+- Updated `tools/cli/seeed_zephyr.py` so non-Espressif monitor startup waits
+  until the serial port can actually be opened.
+- Updated nRF52840 board docs and getting-started guides.
+
+Result:
+- nRF52840 repository firmware now checks `UART_LINE_CTRL_BAUD_RATE`; when it
+  sees 1200 baud, it writes Adafruit nRF52 bootloader magic `0x57` to GPREGRET
+  and reboots.
+- `seeed-zephyr flash xiao_nrf52840 --monitor` still uses Zephyr's UF2 runner.
+- The monitor path now retries while a newly re-enumerated serial port is still
+  temporarily busy, which avoids opening miniterm too early after UF2 copy.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py`
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py tools/cli/test_seeed_zephyr.py`
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`
+- `bash scripts/build-example.sh examples/boards/xiao_nrf52840/blinky`
+- `seeed-zephyr flash xiao_nrf52840 --monitor` built successfully, then timed
+  out waiting for the UF2 volume because the board was still running firmware
+  without the 1200 baud bootloader request handler.
+
+Remaining:
+- Flash once on real XIAO nRF52840 hardware. If the currently running firmware
+  does not support 1200 baud UF2 entry yet, the first update may still require
+  double-tapping RESET.
+- After that first update, rerun `seeed-zephyr flash xiao_nrf52840 --monitor`
+  without double-tapping RESET to confirm repeated flashing works.

@@ -36,6 +36,8 @@ RP2_BOOTLOADER_SNIPPET = "rp2-boot-mode-retention"
 RP2_BOOTLOADER_BAUD = 1200
 RP2_BOOTLOADER_TOUCH_SECONDS = 1.5
 RP2_BOOTLOADER_WAIT_SECONDS = 10
+SERIAL_READY_WAIT_SECONDS = 10
+SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
 
 
@@ -321,8 +323,11 @@ def uf2_bootloader_hint(board_id: str) -> str:
     if board_id == "xiao_nrf52840":
         return (
             "XIAO nRF52840 flashing uses Zephyr's UF2 runner with the Adafruit "
-            "nRF52 Bootloader. Double-tap RESET, wait for the UF2 mass storage "
-            "volume to appear, then rerun the flash command."
+            "nRF52 Bootloader. If the current firmware does not support USB CDC "
+            "1200 baud bootloader requests yet, double-tap RESET once, wait for "
+            "the UF2 mass storage volume to appear, then rerun the flash command. "
+            "After repository firmware is installed, later flashes should enter "
+            "UF2 automatically."
         )
 
     return (
@@ -603,6 +608,61 @@ def wait_for_serial_port(timeout_seconds: int = 10) -> str:
     )
 
 
+def serial_port_is_openable(port: str, baud: int) -> tuple[bool, str]:
+    python = zephyr_venv_python()
+    # Checks whether pyserial can open and close the selected port.
+    # 检查 pyserial 是否可以打开并关闭选中的串口。
+    script = (
+        "import sys;"
+        "import serial;"
+        "port = sys.argv[1];"
+        "baud = int(sys.argv[2]);"
+        "try:\n"
+        "    ser = serial.Serial(port=port, baudrate=baud, timeout=0.1)\n"
+        "    ser.close()\n"
+        "except Exception as error:\n"
+        "    print(error)\n"
+        "    raise SystemExit(1)\n"
+    )
+    result = run_command_capture(
+        [str(python), "-c", script, port, str(baud)],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+    return result.returncode == 0, result.stdout.strip()
+
+
+def wait_for_serial_port_ready(
+    port: str | None = None,
+    baud: int = 115200,
+    timeout_seconds: int = SERIAL_READY_WAIT_SECONDS,
+) -> str:
+    # Waits until a USB serial device exists and can be opened by pyserial.
+    # 等待 USB 串口出现，并确认 pyserial 已经可以实际打开它。
+    deadline = time.monotonic() + timeout_seconds
+    last_error = ""
+
+    while time.monotonic() < deadline:
+        try:
+            selected_port = port or wait_for_serial_port(timeout_seconds=1)
+        except CliError as error:
+            last_error = str(error)
+            time.sleep(SERIAL_READY_POLL_SECONDS)
+            continue
+
+        openable, details = serial_port_is_openable(selected_port, baud)
+        if openable:
+            return selected_port
+
+        last_error = details or f"{selected_port} is not ready."
+        time.sleep(SERIAL_READY_POLL_SECONDS)
+
+    message = "USB serial device is present but not ready for monitor after waiting."
+    if last_error:
+        message = f"{message}\nLast error: {last_error}"
+    raise CliError(message)
+
+
 def run_monitor(board_id: str, port: str | None = None, baud: int = 115200) -> None:
     board = require_board(board_id)
 
@@ -617,8 +677,7 @@ def run_monitor(board_id: str, port: str | None = None, baud: int = 115200) -> N
 
     # Non-Espressif boards use pyserial miniterm from the Zephyr venv.
     # 非 Espressif 开发板使用 Zephyr venv 中的 pyserial miniterm。
-    if port is None:
-        port = wait_for_serial_port()
+    port = wait_for_serial_port_ready(port, baud)
     python = zephyr_venv_python()
     print(f"Opening serial monitor: {port} @ {baud} baud", flush=True)
     print("Press Ctrl+] to exit.", flush=True)

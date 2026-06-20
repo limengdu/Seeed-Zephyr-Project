@@ -106,6 +106,48 @@ class FlashHintTests(unittest.TestCase):
         self.assertGreaterEqual(seeed_zephyr.RP2_BOOTLOADER_TOUCH_SECONDS, 1.5)
 
 
+class MonitorCommandTests(unittest.TestCase):
+    def test_monitor_waits_until_serial_port_is_openable(self) -> None:
+        with mock.patch.object(seeed_zephyr, "require_board", return_value={"vendor": "nordic"}):
+            with mock.patch.object(
+                seeed_zephyr, "wait_for_serial_port_ready", return_value="/dev/cu.usbmodem1101"
+            ) as wait_ready:
+                with mock.patch.object(
+                    seeed_zephyr,
+                    "zephyr_venv_python",
+                    return_value=seeed_zephyr.Path("/tmp/venv/bin/python"),
+                ):
+                    with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                        seeed_zephyr.run_monitor("xiao_nrf52840", baud=115200)
+
+        wait_ready.assert_called_once_with(None, 115200)
+        run_command.assert_called_once_with(
+            [
+                "/tmp/venv/bin/python",
+                "-m",
+                "serial.tools.miniterm",
+                "/dev/cu.usbmodem1101",
+                "115200",
+            ]
+        )
+
+    def test_serial_ready_check_retries_resource_busy_port(self) -> None:
+        busy = seeed_zephyr.subprocess.CompletedProcess([], 1, "Resource busy")
+        ready = seeed_zephyr.subprocess.CompletedProcess([], 0, "")
+
+        with mock.patch.object(seeed_zephyr, "usb_serial_devices", return_value=["/dev/cu.usbmodem1101"]):
+            with mock.patch.object(seeed_zephyr, "run_command_capture", side_effect=[busy, ready]):
+                with mock.patch.object(
+                    seeed_zephyr,
+                    "zephyr_venv_python",
+                    return_value=seeed_zephyr.Path("/tmp/venv/bin/python"),
+                ):
+                    with mock.patch.object(seeed_zephyr.time, "sleep"):
+                        port = seeed_zephyr.wait_for_serial_port_ready(timeout_seconds=1)
+
+        self.assertEqual(port, "/dev/cu.usbmodem1101")
+
+
 class BuildCommandTests(unittest.TestCase):
     def test_raspberrypi_build_uses_bootmode_retention_snippet(self) -> None:
         example = {"path": "examples/boards/xiao_rp2040/blinky", "zephyr_target": "xiao_rp2040"}
@@ -174,6 +216,27 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertIn("compatible = \"zephyr,cdc-acm-uart\"", overlay)
         self.assertIn("UART_LINE_CTRL_BAUD_RATE", main_c)
         self.assertIn("BOOT_MODE_TYPE_BOOTLOADER", main_c)
+        self.assertIn("sys_reboot(SYS_REBOOT_COLD)", main_c)
+
+    def test_nrf52840_example_enables_usb_cdc_monitor_and_bootloader_request(self) -> None:
+        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_nrf52840/blinky"
+        prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
+        main_c = (example_dir / "src/main.c").read_text(encoding="utf-8")
+
+        for symbol in (
+            "CONFIG_REBOOT=y",
+            "CONFIG_SERIAL=y",
+            "CONFIG_CONSOLE=y",
+            "CONFIG_UART_CONSOLE=y",
+            "CONFIG_UART_LINE_CTRL=y",
+            "CONFIG_BOOT_DELAY=500",
+        ):
+            self.assertIn(symbol, prj_conf)
+
+        self.assertIn("DT_NODELABEL(board_cdc_acm_uart)", main_c)
+        self.assertIn("UART_LINE_CTRL_BAUD_RATE", main_c)
+        self.assertIn("NRF52_BOOTLOADER_MAGIC", main_c)
+        self.assertIn("nrf_power_gpregret_set(NRF_POWER, 0, NRF52_BOOTLOADER_MAGIC)", main_c)
         self.assertIn("sys_reboot(SYS_REBOOT_COLD)", main_c)
 
 

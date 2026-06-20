@@ -166,7 +166,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | 开发板 | board target | 仓库示例 | v4.4.0 状态 | 说明 |
 | --- | --- | --- | --- | --- |
 | XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
-| XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 可构建；CLI 使用 UF2 runner |
+| XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 可构建；重复烧录会自动请求 UF2 |
 | XIAO ESP32C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 无板载 LED |
 | XIAO ESP32C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
 | XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 可构建 |
@@ -218,6 +218,9 @@ seeed-zephyr monitor xiao_samd21
 
 关于 XIAO RP2040 UF2 烧录和 USB CDC monitor 行为，见
 [XIAO RP2040 开发板说明](boards/xiao-rp2040.md)。
+
+关于 XIAO nRF52840 UF2 烧录和 1200 baud 自动进 bootloader 行为，见
+[XIAO nRF52840 开发板说明](boards/xiao-nrf52840.md)。
 
 如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
 
@@ -297,12 +300,14 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 seeed-zephyr flash xiao_nrf52840 --monitor
 ```
 
-如果 XIAO RP2040 或 XIAO RP2350 已经运行支持自动进入 UF2 的本仓库示例，CLI 通常会通过
-USB CDC 1200 baud 自动请求进入 UF2 模式。若当前程序不支持这个请求，或者看不到 USB CDC
-串口，就按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。运行 `west flash` 的环境必须能看到 UF2 存储卷。
+如果 XIAO RP2040、XIAO RP2350 或 XIAO nRF52840 已经运行支持自动进入 UF2 的本仓库示例，
+CLI 通常会通过 USB CDC 1200 baud 自动请求进入 UF2 模式。
 
-XIAO nRF52840 使用 Adafruit nRF52 Bootloader。若没有出现 UF2 存储盘，快速双击 `RESET`，
-看到存储盘后重新运行命令。本仓库 CLI 会使用 Zephyr 的 `uf2` runner，不需要为普通 UF2 烧录安装
-`nrfutil`。
+如果当前程序不支持这个请求，或者看不到 USB CDC 串口：
 
-一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；nRF52840 要双击 RESET 进入这个模式。
+- XIAO RP2040 / XIAO RP2350：按住 BOOTSEL 再插入 USB，或者按住 BOOTSEL 再按 RESET。
+- XIAO nRF52840：快速双击 `RESET`，等待 UF2 存储盘出现。
+
+本仓库 CLI 会使用 Zephyr 的 `uf2` runner，不需要为普通 nRF52840 UF2 烧录安装 `nrfutil`。
+
+一句话总结：UF2 开发板仍然是复制固件到 bootloader 存储盘；运行本仓库示例后，CLI 会优先用 1200 baud 自动请求进入这个模式。
