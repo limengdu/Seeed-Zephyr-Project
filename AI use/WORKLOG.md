@@ -30,6 +30,81 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Add BOSSA bossac checks for SAMD21 flashing
+
+Scope:
+- Added board-specific BOSSA installation to macOS setup: `bossa` is installed
+  when `--board xiao_samd21` is selected, or when no board is selected for a
+  full host dependency install.
+- Added board-specific BOSSA installation to Linux setup: Debian/Ubuntu uses
+  `bossa-cli`, Fedora uses `bossa`, and the packages are installed only for
+  `xiao_samd21` or no-board full setup.
+- Added shared setup checks for the `bossac` command when the selected board
+  target is `seeeduino_xiao`.
+- Added CLI preflight checking for `bossac` before `west flash` on
+  `xiao_samd21`.
+- Added `--delay 3` to the SAMD21 `west flash` call so Zephyr's bossac runner
+  waits for bootloader re-enumeration.
+- Updated the `xiao_samd21` blinky example to expose printk output through USB
+  CDC ACM, so the repository demo can be monitored over the board USB port
+  after the new firmware is flashed.
+- Added CLI waiting for USB serial re-enumeration before opening the
+  non-Espressif monitor path.
+- Updated the Windows setup preparer to state that Linux flash tools are
+  installed and checked inside WSL2 by `scripts/setup-linux.sh`.
+
+Reason:
+- `seeed-zephyr flash xiao_samd21 --monitor` reached Zephyr's `bossac` runner
+  after a successful build, then failed because `bossac` was not installed or
+  available in `PATH`.
+
+Result:
+- macOS setup installs the Homebrew `bossa` package only for SAMD21-specific or
+  no-board full dependency setup.
+- Linux setup installs the distro BOSSA package only for SAMD21-specific or
+  no-board full dependency setup.
+- `scripts/setup-*.sh --board xiao_samd21` checks for `bossac` after Zephyr
+  setup.
+- `seeed-zephyr flash xiao_samd21` fails early with a platform-specific install
+  hint if `bossac` is missing.
+- `seeed-zephyr flash xiao_samd21 --monitor` builds the repository USB CDC
+  blinky example and uses Zephyr's bossac runner arguments for flashing.
+- If no SAMD21 bootloader or USB CDC serial port is visible, the CLI reports a
+  board-specific bootloader hint.
+
+Verification:
+- `brew install bossa`: passed on the active macOS host.
+- `command -v bossac`: returned `/opt/homebrew/bin/bossac`.
+- `bash -n scripts/setup-macos.sh`: passed.
+- `bash -n scripts/setup-linux.sh`: passed.
+- `bash -n scripts/lib/common.sh`: passed.
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- Stubbed macOS setup check: `xiao_samd21` installs `bossa`, `xiao_esp32c6`
+  installs no board-specific Homebrew package, and no-board setup installs
+  `bossa`.
+- Stubbed Linux setup check: `xiao_samd21` installs `bossa-cli` on apt-get and
+  `bossa` on dnf, `xiao_esp32c6` installs no board-specific package, and
+  no-board setup installs the SAMD21 BOSSA package.
+- `scripts/seeed-zephyr flash --help`: passed.
+- Missing-tool preflight with `bossac` hidden from `PATH`: returned the expected
+  `bossac was not found` install hint.
+- CLI command-construction check: `xiao_samd21` produces
+  `west flash --bossac-port <port> --delay 3`.
+- CLI serial-wait check: waits until a single USB serial device appears.
+- Direct Zephyr runner check:
+  `/Users/mengdu/zephyrproject/.venv/bin/west flash --bossac-port /dev/cu.usbmodem1101 --delay 3`
+  passed on the attached XIAO SAMD21 before the USB CDC example update.
+- `scripts/seeed-zephyr build xiao_samd21`: passed with the repository USB CDC
+  blinky example.
+- `seeed-zephyr flash xiao_samd21 --monitor`: currently builds successfully,
+  then reports no visible USB serial device with the SAMD21 bootloader hint.
+
+Remaining:
+- Put the attached XIAO SAMD21 into bootloader mode once, then rerun
+  `seeed-zephyr flash xiao_samd21 --monitor` to flash the new USB CDC example
+  and verify monitor output from the flashed firmware.
+
 ## 2026-06-20 - Fix monitor for non-Espressif boards
 
 Scope:
@@ -50,9 +125,9 @@ Result:
 - Non-Espressif boards use pyserial miniterm from the Zephyr venv.
 - `seeed-zephyr monitor <board_id>` can auto-detect one USB serial device when
   `--port` is omitted.
-- `seeed-zephyr flash <board_id> --monitor --port <device> --baud <rate>`
+- `seeed-zephyr flash <board_id> --monitor [--port <device>] [--baud <rate>]`
   now builds and flashes first, then opens a serial monitor for the selected
-  board.
+  board. `--port` is optional when auto-detection finds one USB serial device.
 
 Verification:
 - `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:

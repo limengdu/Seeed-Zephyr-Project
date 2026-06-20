@@ -5,8 +5,11 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import os
+import platform
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -28,6 +31,7 @@ DEBUG_HINT = (
     "USB-JTAG); most XIAO boards use printf-over-serial (`seeed-zephyr monitor`) "
     "for everyday debugging."
 )
+SAMD21_BOSSAC_DELAY_SECONDS = "3"
 
 
 class CliError(Exception):
@@ -77,7 +81,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Open the board monitor after a successful flash.",
     )
-    flash.add_argument("--port", default=None, help="Serial port for --monitor.")
+    flash.add_argument(
+        "--port",
+        default=None,
+        help="Serial port for flashing and --monitor when supported.",
+    )
     flash.add_argument(
         "--baud",
         type=int,
@@ -275,6 +283,40 @@ def require_west_venv_tool(tool_name: str, install_hint: str) -> None:
         raise CliError(f"{tool_name} was not found: {tool_path}. {install_hint}")
 
 
+def bossac_install_hint() -> str:
+    system = platform.system().lower()
+    release = platform.release().lower()
+
+    if system == "darwin":
+        return "Install it with: brew install bossa"
+    if system == "linux":
+        if "microsoft" in release:
+            return (
+                "Install it inside WSL2 with: sudo apt-get install bossa-cli, "
+                "or sudo dnf install bossa"
+            )
+        return "Install it with: sudo apt-get install bossa-cli, or sudo dnf install bossa"
+    if system == "windows":
+        return "Use the WSL2 setup path, then install it inside WSL2 with scripts/setup-linux.sh"
+
+    return "Install BOSSA/bossac for this platform"
+
+
+def samd21_bootloader_hint(port: str | None) -> str:
+    port_hint = f" Current port: {port}." if port else ""
+    return (
+        "XIAO SAMD21 flashing uses the SAMD bootloader through bossac."
+        f"{port_hint} Double-tap RESET, wait for the bootloader serial port "
+        "to appear, then rerun the flash command. If more than one USB serial "
+        "device is attached, pass the bootloader port with --port <device>."
+    )
+
+
+def require_host_tool(tool_name: str, install_hint: str) -> None:
+    if shutil.which(tool_name, path=west_command_env().get("PATH")) is None:
+        raise CliError(f"{tool_name} was not found. {install_hint}.")
+
+
 def require_flash_tools(board_id: str) -> None:
     board = require_board(board_id)
     if board["vendor"] == "espressif":
@@ -283,6 +325,39 @@ def require_flash_tools(board_id: str) -> None:
             "Run setup again, or install it with: "
             f"{zephyr_workspace()}/.venv/bin/python -m pip install esptool",
         )
+    if board["target"] == "seeeduino_xiao":
+        require_host_tool("bossac", bossac_install_hint())
+
+
+def resolve_flash_port(board: dict[str, str], port: str | None) -> str | None:
+    # Resolves the serial port only for runners that require it before flashing.
+    # 仅为烧录前需要串口的 runner 解析串口。
+    if board["target"] != "seeeduino_xiao":
+        return port
+
+    try:
+        return port or detect_serial_port()
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {samd21_bootloader_hint(port)}") from error
+
+
+def run_west_flash(board_id: str, port: str | None = None) -> str | None:
+    # Runs Zephyr flash and returns the serial port selected for later monitor use.
+    # 执行 Zephyr 烧录，并返回后续 monitor 可复用的串口。
+    board = require_board(board_id)
+    port = resolve_flash_port(board, port)
+    command = ["flash"]
+    if board["target"] == "seeeduino_xiao" and port is not None:
+        command.extend(["--bossac-port", port, "--delay", SAMD21_BOSSAC_DELAY_SECONDS])
+
+    try:
+        run_west(command)
+    except CliError as error:
+        if board["target"] == "seeeduino_xiao":
+            raise CliError(f"{error}\nHint: {samd21_bootloader_hint(port)}") from error
+        raise
+
+    return port
 
 
 def vendor_to_hal_module(vendor: str) -> str | None:
@@ -324,7 +399,7 @@ def run_west_build(board_id: str, example: dict[str, str]) -> None:
     print(f"Build succeeded: {example['path']}", flush=True)
 
 
-def detect_serial_port() -> str:
+def usb_serial_devices() -> list[str]:
     python = zephyr_venv_python()
     # Lists USB-like serial devices through pyserial in the Zephyr venv.
     # 通过 Zephyr venv 中的 pyserial 列出类似 USB 的串口设备。
@@ -342,7 +417,11 @@ def detect_serial_port() -> str:
             f"Try: {zephyr_workspace()}/.venv/bin/python -m pip install pyserial"
         )
 
-    devices = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def detect_serial_port() -> str:
+    devices = usb_serial_devices()
     if not devices:
         raise CliError(
             "No USB serial device found. Check:\n"
@@ -360,6 +439,31 @@ def detect_serial_port() -> str:
     return devices[0]
 
 
+def wait_for_serial_port(timeout_seconds: int = 10) -> str:
+    # Waits for a single USB serial device after boards reset and re-enumerate.
+    # 等待开发板复位并重新枚举后出现唯一的 USB 串口设备。
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        devices = usb_serial_devices()
+        if len(devices) == 1:
+            return devices[0]
+        if len(devices) > 1:
+            device_list = "\n".join(f"  {device}" for device in devices)
+            raise CliError(
+                f"Multiple USB serial devices found:\n{device_list}\n"
+                "Specify one with --port <device>."
+            )
+        time.sleep(0.5)
+
+    raise CliError(
+        "No USB serial device appeared after waiting. Check:\n"
+        "- Is the board running firmware with USB CDC serial enabled?\n"
+        "- Is the board plugged in and fully reset?\n"
+        "- Try specifying the port manually with --port <device>"
+    )
+
+
 def run_monitor(board_id: str, port: str | None = None, baud: int = 115200) -> None:
     board = require_board(board_id)
 
@@ -375,7 +479,7 @@ def run_monitor(board_id: str, port: str | None = None, baud: int = 115200) -> N
     # Non-Espressif boards use pyserial miniterm from the Zephyr venv.
     # 非 Espressif 开发板使用 Zephyr venv 中的 pyserial miniterm。
     if port is None:
-        port = detect_serial_port()
+        port = wait_for_serial_port()
     python = zephyr_venv_python()
     print(f"Opening serial monitor: {port} @ {baud} baud", flush=True)
     print("Press Ctrl+] to exit.", flush=True)
@@ -407,9 +511,13 @@ def cmd_flash(args: argparse.Namespace) -> None:
     require_flash_tools(args.board_id)
 
     run_west_build(args.board_id, example)
-    run_west(["flash"])
+    port = run_west_flash(args.board_id, port=args.port)
     if args.monitor:
-        run_monitor(args.board_id, port=args.port, baud=args.baud)
+        board = require_board(args.board_id)
+        monitor_port = port
+        if board["target"] == "seeeduino_xiao" and args.port is None:
+            monitor_port = None
+        run_monitor(args.board_id, port=monitor_port, baud=args.baud)
 
 
 def cmd_debug(args: argparse.Namespace) -> None:
@@ -440,7 +548,7 @@ def cmd_verify_hardware(args: argparse.Namespace) -> None:
     example = require_supported_example(args.board_id)
     require_flash_tools(args.board_id)
     run_west_build(args.board_id, example)
-    run_west(["flash"])
+    run_west_flash(args.board_id)
 
     print("\nHardware observation")
     print("Answer the prompts after checking the physical board.")

@@ -54,13 +54,17 @@ BREW_PACKAGES=(
   openocd
 )
 
-# Installs the Homebrew packages required by Zephyr builds.
-# 安装 Zephyr 构建所需的 Homebrew 软件包。
+# Installs the requested Homebrew packages if they are missing.
+# 安装缺失的指定 Homebrew 软件包。
 install_brew_packages() {
   local missing_packages=()
   local package
 
-  for package in "${BREW_PACKAGES[@]}"; do
+  if (($# == 0)); then
+    return
+  fi
+
+  for package in "$@"; do
     if brew list --formula "$package" >/dev/null 2>&1; then
       printf '  - %s is already installed.\n' "$package"
     else
@@ -77,11 +81,30 @@ install_brew_packages() {
   brew install "${missing_packages[@]}"
 }
 
+# Installs Homebrew packages required by the selected board.
+# 安装所选开发板需要的 Homebrew 软件包。
+install_board_brew_packages() {
+  case "$BOARD_BUILD_TARGET" in
+    seeeduino_xiao)
+      install_brew_packages bossa
+      ;;
+    "")
+      # No board selection means a full host dependency install.
+      # 未选择开发板时执行完整主机依赖安装。
+      install_brew_packages bossa
+      ;;
+    *)
+      printf 'No board-specific Homebrew packages required for %s.\n' "$BOARD_ID"
+      ;;
+  esac
+}
+
 # Installs macOS system dependencies before the shared Zephyr setup flow.
 # 在共享 Zephyr 安装流程前，安装 macOS 系统依赖。
 install_system_dependencies() {
   command_exists brew || fail "Homebrew was not found. Install Homebrew from https://brew.sh/, then rerun this script."
-  install_brew_packages
+  install_brew_packages "${BREW_PACKAGES[@]}"
+  install_board_brew_packages
 }
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then

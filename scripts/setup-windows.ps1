@@ -332,6 +332,7 @@ function Write-FinalGuidance {
     Write-Host "  1. Open your WSL2 distro."
     Write-Host "  2. From the cloned Seeed Zephyr Base repo, run:"
     Write-Host "     bash scripts/setup-linux.sh [--board <board_id>]"
+    Write-Host "     This WSL2 Linux setup installs and checks Linux flash tools such as bossac for SAMD21 boards."
     Write-Host ""
     Write-Host "Forward the XIAO USB device into WSL2 with usbipd:"
     Write-Host "  1. In Windows PowerShell, list USB devices and find the XIAO BUSID:"

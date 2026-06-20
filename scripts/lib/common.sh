@@ -544,11 +544,38 @@ check_espressif_zephyr_tools() {
   printf 'Zephyr Espressif flash and monitor tools are available.\n'
 }
 
+# Prints the platform-specific BOSSA install hint.
+# 打印当前平台对应的 BOSSA 安装提示。
+bossac_install_hint() {
+  case "$SETUP_PLATFORM_LABEL" in
+    macOS)
+      printf 'Install it with: brew install bossa'
+      ;;
+    Linux)
+      printf 'Install it with: sudo apt-get install bossa-cli, or sudo dnf install bossa'
+      ;;
+    *)
+      printf 'Install BOSSA/bossac for this platform, or run scripts/setup-linux.sh inside WSL2'
+      ;;
+  esac
+}
+
+# Confirms the BOSSA command used by the Seeeduino XIAO SAMD21 runner is available.
+# 确认 Seeeduino XIAO SAMD21 runner 使用的 BOSSA 命令可用。
+check_bossac_tool() {
+  command_exists bossac || fail "bossac was not found. $(bossac_install_hint)."
+  printf 'BOSSA bossac flash tool is available.\n'
+}
+
 # Checks board-specific host tools after the Zephyr workspace is ready.
 # 在 Zephyr 工作区准备好后，检查开发板专属主机工具。
 check_board_host_tools() {
   if [[ "$BOARD_VENDOR" == "espressif" ]]; then
     check_espressif_zephyr_tools
+  fi
+
+  if [[ "$BOARD_BUILD_TARGET" == "seeeduino_xiao" ]]; then
+    check_bossac_tool
   fi
 }
 

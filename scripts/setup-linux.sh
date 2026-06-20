@@ -143,6 +143,42 @@ install_dnf_packages() {
   sudo dnf install -y "${DNF_PACKAGES[@]}"
 }
 
+# Installs Linux packages required by the selected board.
+# 安装所选开发板需要的 Linux 软件包。
+install_board_linux_packages() {
+  local package_manager=$1
+  local packages=()
+
+  case "$package_manager" in
+    apt-get)
+      if [[ -z "$BOARD_ID" || "$BOARD_BUILD_TARGET" == "seeeduino_xiao" ]]; then
+        packages=(bossa-cli)
+      fi
+      ;;
+    dnf)
+      if [[ -z "$BOARD_ID" || "$BOARD_BUILD_TARGET" == "seeeduino_xiao" ]]; then
+        packages=(bossa)
+      fi
+      ;;
+  esac
+
+  if ((${#packages[@]} == 0)); then
+    printf 'No board-specific Linux packages required for %s.\n' "${BOARD_ID:-full setup}"
+    return
+  fi
+
+  case "$package_manager" in
+    apt-get)
+      print_shell_command sudo apt-get install -y "${packages[@]}"
+      sudo apt-get install -y "${packages[@]}"
+      ;;
+    dnf)
+      print_shell_command sudo dnf install -y "${packages[@]}"
+      sudo dnf install -y "${packages[@]}"
+      ;;
+  esac
+}
+
 # Installs Zephyr Linux host dependencies with the detected package manager.
 # 使用检测到的包管理器安装 Zephyr Linux 主机依赖。
 install_linux_packages() {
@@ -166,6 +202,8 @@ install_linux_packages() {
       fail "Unsupported package manager: $package_manager"
       ;;
   esac
+
+  install_board_linux_packages "$package_manager"
 }
 
 # Returns success when the current user already belongs to a group.
