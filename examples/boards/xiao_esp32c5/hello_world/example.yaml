@@ -1,0 +1,7 @@
+id: xiao_esp32c5_hello_world
+board_id: xiao_esp32c5
+demo: hello_world
+zephyr_target: xiao_esp32c5
+validation_status: unsupported
+expected_behavior: Prints a heartbeat message on the Zephyr console when a XIAO ESP32C5 target is available.
+unsupported_reason: Zephyr v4.4.0 does not provide a xiao_esp32c5 board target.

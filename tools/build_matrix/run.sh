@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Purpose:
-#   Build the baseline sample for every board in metadata/boards and record
+#   Build the baseline repository example for every board in metadata/boards and record
 #   a pass/fail/unsupported matrix for Seeed Zephyr Base.
 #
 # Usage:
@@ -18,15 +18,15 @@
 set -uo pipefail
 
 ZEPHYR_WORKSPACE="${ZEPHYR_WORKSPACE:-$HOME/zephyrproject}"
-ZEPHYR_DIR="$ZEPHYR_WORKSPACE/zephyr"
 VENV_DIR="$ZEPHYR_WORKSPACE/.venv"
 WEST="$VENV_DIR/bin/west"
-DEFAULT_SAMPLE_PATH="samples/basic/blinky"
+DEFAULT_EXAMPLE_NAME="blinky"
 BUILD_MATRIX_GENERATED_ON="${BUILD_MATRIX_GENERATED_ON:-YYYY-MM-DD}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BOARD_METADATA_DIR="$REPO_ROOT/metadata/boards"
+BOARD_EXAMPLES_DIR="$REPO_ROOT/examples/boards"
 RESULTS_FILE="$SCRIPT_DIR/results.md"
 BOARD_OVERRIDES_FILE="$SCRIPT_DIR/board-overrides.tsv"
 
@@ -217,8 +217,9 @@ parse_retry_target() {
 # 确认配置的 Zephyr 工作区和虚拟环境 west 命令可用。
 ensure_prerequisites() {
   [[ -d "$BOARD_METADATA_DIR" ]] || fail "Board metadata directory was not found: $BOARD_METADATA_DIR"
+  [[ -d "$BOARD_EXAMPLES_DIR" ]] || fail "Board examples directory was not found: $BOARD_EXAMPLES_DIR"
   [[ -x "$WEST" ]] || fail "west was not found or is not executable: $WEST"
-  [[ -d "$ZEPHYR_DIR" ]] || fail "Zephyr source directory was not found: $ZEPHYR_DIR"
+  [[ -d "$ZEPHYR_WORKSPACE" ]] || fail "Zephyr workspace directory was not found: $ZEPHYR_WORKSPACE"
 }
 
 # Fetches binary blobs for the board vendor when Zephyr reports any blobs.
@@ -273,17 +274,27 @@ ensure_chip_blobs() {
   return 0
 }
 
-# Runs one west build for the selected sample and stores combined output.
-# 为选定样例执行一次 west build，并把标准输出和错误输出一起保存。
+# Runs one west build for the selected repository example and stores combined output.
+# 为选定仓库示例执行一次 west build，并把标准输出和错误输出一起保存。
 run_build() {
   local target=$1
-  local sample_path=$2
+  local example_path=$2
+  local example_abs_path
   local build_status
+
+  case "$example_path" in
+    /*)
+      example_abs_path="$example_path"
+      ;;
+    *)
+      example_abs_path="$REPO_ROOT/$example_path"
+      ;;
+  esac
 
   BUILD_OUTPUT="$(
     (
-      cd "$ZEPHYR_DIR" &&
-        "$WEST" build -p always -b "$target" "$sample_path"
+      cd "$ZEPHYR_WORKSPACE" &&
+        "$WEST" build -p always -b "$target" "$example_abs_path"
     ) 2>&1
   )"
   build_status=$?
@@ -297,8 +308,8 @@ write_results_header() {
   {
     printf '# Board Build Matrix Results\n\n'
     printf 'Generated on: %s\n\n' "$BUILD_MATRIX_GENERATED_ON"
-    printf 'Values below come from real per-board baseline builds. The default sample is `%s`; board-specific overrides are listed in `%s`. Replace the placeholder date when recording a formal validation pass.\n\n' "$DEFAULT_SAMPLE_PATH" "$(basename "$BOARD_OVERRIDES_FILE")"
-    printf '| board id | vendor | sample | final target | result (PASS/FAIL/UNSUPPORTED) | notes |\n'
+    printf 'Values below come from real per-board repository example builds. The default example is `examples/boards/<board_id>/%s`; board-specific overrides are listed in `%s`. Replace the placeholder date when recording a formal validation pass.\n\n' "$DEFAULT_EXAMPLE_NAME" "$(basename "$BOARD_OVERRIDES_FILE")"
+    printf '| board id | vendor | example | final target | result (PASS/FAIL/UNSUPPORTED) | notes |\n'
     printf '| --- | --- | --- | --- | --- | --- |\n'
   } >"$RESULTS_FILE"
 }
@@ -308,7 +319,7 @@ write_results_header() {
 append_result_row() {
   local board_id=$1
   local vendor=$2
-  local sample_path=$3
+  local example_path=$3
   local final_target=$4
   local result=$5
   local notes=$6
@@ -316,7 +327,7 @@ append_result_row() {
   printf '| %s | %s | `%s` | `%s` | %s | %s |\n' \
     "$(markdown_cell "$board_id")" \
     "$(markdown_cell "$vendor")" \
-    "$(markdown_cell "$sample_path")" \
+    "$(markdown_cell "$example_path")" \
     "$(markdown_cell "$final_target")" \
     "$(markdown_cell "$result")" \
     "$(markdown_cell "$notes")" >>"$RESULTS_FILE"
@@ -327,7 +338,7 @@ append_result_row() {
 record_board_result() {
   local board_id=$1
   local vendor=$2
-  local sample_path=$3
+  local example_path=$3
   local final_target=$4
   local result=$5
   local notes=$6
@@ -349,8 +360,8 @@ record_board_result() {
       ;;
   esac
 
-  append_result_row "$board_id" "$vendor" "$sample_path" "$final_target" "$result" "$notes"
-  SUMMARY_LINES="${SUMMARY_LINES}${board_id}: ${result} (${final_target}, ${sample_path})${summary_note}"$'\n'
+  append_result_row "$board_id" "$vendor" "$example_path" "$final_target" "$result" "$notes"
+  SUMMARY_LINES="${SUMMARY_LINES}${board_id}: ${result} (${final_target}, ${example_path})${summary_note}"$'\n'
 }
 
 # Builds one board, retrying once with a fully-qualified target when suggested.
@@ -361,11 +372,11 @@ process_board() {
   local vendor
   local metadata_target
   local final_target
-  local sample_path
+  local example_path
   local support_status
   local override_row
   local override_status
-  local override_sample_path
+  local override_example_path
   local override_note
   local result
   local notes
@@ -377,49 +388,54 @@ process_board() {
   vendor="$(read_board_metadata_value "$board_file" "vendor")"
   metadata_target="$(read_board_metadata_value "$board_file" "zephyr_target")"
   final_target="$metadata_target"
-  sample_path="$DEFAULT_SAMPLE_PATH"
+  example_path="examples/boards/$board_id/$DEFAULT_EXAMPLE_NAME"
   support_status="supported"
   override_note=""
 
   if override_row="$(read_board_override_row "$board_id")"; then
-    IFS=$'\t' read -r _ override_status override_sample_path override_note <<<"$override_row"
+    IFS=$'\t' read -r _ override_status override_example_path override_note <<<"$override_row"
 
     [[ -n "$override_status" ]] && support_status="$override_status"
-    [[ -n "$override_sample_path" ]] && sample_path="$override_sample_path"
+    [[ -n "$override_example_path" ]] && example_path="$override_example_path"
   fi
 
   printf 'Building %s...\n' "$board_id"
 
   if [[ -z "$vendor" || -z "$metadata_target" ]]; then
-    record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "FAIL" "Missing vendor or zephyr_target metadata."
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "FAIL" "Missing vendor or zephyr_target metadata."
     return
   fi
 
   if [[ "$support_status" == "unsupported" ]]; then
     notes="${override_note:-Board target is not supported by this Zephyr baseline.}"
-    record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "UNSUPPORTED" "$notes"
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "UNSUPPORTED" "$notes"
     return
   fi
 
   if [[ "$support_status" != "supported" ]]; then
-    record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "FAIL" "Unknown build matrix support status: $support_status."
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "FAIL" "Unknown build matrix support status: $support_status."
+    return
+  fi
+
+  if [[ ! -f "$REPO_ROOT/$example_path/CMakeLists.txt" ]]; then
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "FAIL" "Repository example is missing CMakeLists.txt."
     return
   fi
 
   if ! ensure_chip_blobs "$vendor"; then
     notes="$(error_excerpt "$BLOB_OUTPUT")"
-    record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "FAIL" "$notes"
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "FAIL" "$notes"
     return
   fi
 
-  run_build "$metadata_target" "$sample_path"
+  run_build "$metadata_target" "$example_path"
   build_status=$?
   if ((build_status == 0)); then
     notes="Build succeeded."
-    if [[ "$sample_path" != "$DEFAULT_SAMPLE_PATH" && -n "$override_note" ]]; then
+    if [[ -n "$override_note" ]]; then
       notes="Build succeeded. $override_note"
     fi
-    record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "PASS" "$notes"
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "PASS" "$notes"
     return
   fi
 
@@ -431,27 +447,27 @@ process_board() {
     if [[ -n "$retry_target" && "$retry_target" != "$metadata_target" ]]; then
       final_target="$retry_target"
 
-      if run_build "$retry_target" "$sample_path"; then
+      if run_build "$retry_target" "$example_path"; then
         notes="Retried from $metadata_target after Zephyr board qualifier suggestion."
-        record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "PASS" "$notes"
+        record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "PASS" "$notes"
         return
       fi
 
       notes="$(printf 'Retried from %s after Zephyr board qualifier suggestion.\n%s' "$metadata_target" "$(error_excerpt "$BUILD_OUTPUT")")"
-      record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "FAIL" "$notes"
+      record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "FAIL" "$notes"
       return
     fi
   fi
 
   if is_missing_board_target_error "$first_output"; then
     notes="$(printf 'Zephyr baseline does not provide this board target.\n%s' "$(error_excerpt "$first_output")")"
-    record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "UNSUPPORTED" "$notes"
+    record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "UNSUPPORTED" "$notes"
     return
   fi
 
   notes="$(printf 'west build exited with status %s.\n%s' "$build_status" "$(error_excerpt "$first_output")")"
   result="FAIL"
-  record_board_result "$board_id" "$vendor" "$sample_path" "$final_target" "$result" "$notes"
+  record_board_result "$board_id" "$vendor" "$example_path" "$final_target" "$result" "$notes"
 }
 
 # Runs the full board build matrix and prints a concise summary.

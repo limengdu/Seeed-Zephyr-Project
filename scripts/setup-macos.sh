@@ -56,7 +56,7 @@ BOARD_ID=""
 BOARD_VENDOR=""
 BOARD_HAL_MODULE=""
 BOARD_BUILD_TARGET=""
-BOARD_SAMPLE_PATH=""
+BOARD_EXAMPLE_PATH=""
 BOARD_BUILD_STATUS=""
 
 # Prints an error message and exits the script.
@@ -221,15 +221,15 @@ resolve_build_target_hint() {
   fi
 }
 
-# Returns the baseline sample path for the selected board.
-# 返回所选开发板的基线样例路径。
-resolve_sample_path_hint() {
+# Returns the baseline repository example path for the selected board.
+# 返回所选开发板的基线仓库示例路径。
+resolve_example_path_hint() {
   local board_id=$1
-  local fallback_sample="samples/basic/blinky"
-  local override_sample
+  local fallback_example="examples/boards/$board_id/blinky"
+  local override_example
 
   if [[ -f "$BOARD_OVERRIDES_FILE" ]]; then
-    if override_sample="$(
+    if override_example="$(
       awk -F '\t' -v board_id="$board_id" '
         $0 ~ /^[[:space:]]*#/ || $0 ~ /^[[:space:]]*$/ {
           next
@@ -245,13 +245,13 @@ resolve_sample_path_hint() {
           }
         }
       ' "$BOARD_OVERRIDES_FILE"
-    )" && [[ -n "$override_sample" ]]; then
-      printf '%s\n' "$override_sample"
+    )" && [[ -n "$override_example" ]]; then
+      printf '%s\n' "$override_example"
       return
     fi
   fi
 
-  printf '%s\n' "$fallback_sample"
+  printf '%s\n' "$fallback_example"
 }
 
 # Returns the latest build status for the selected board when available.
@@ -286,7 +286,7 @@ resolve_board_metadata() {
   metadata_target="$(read_board_metadata_value "$board_file" "zephyr_target")"
   [[ -n "$metadata_target" ]] || fail "Board $board_id does not define a zephyr_target."
   BOARD_BUILD_TARGET="$(resolve_build_target_hint "$board_id" "$metadata_target")"
-  BOARD_SAMPLE_PATH="$(resolve_sample_path_hint "$board_id")"
+  BOARD_EXAMPLE_PATH="$(resolve_example_path_hint "$board_id")"
   BOARD_BUILD_STATUS="$(resolve_build_status_hint "$board_id")"
 
   if BOARD_HAL_MODULE="$(vendor_to_hal_module "$BOARD_VENDOR")"; then
@@ -470,9 +470,9 @@ print_board_next_steps() {
   fi
 
   printf 'Next step:\n'
-  printf '  cd %s\n' "$ZEPHYR_WORKSPACE/zephyr"
-  printf '  west build -p always -b %s %s\n' "$BOARD_BUILD_TARGET" "$BOARD_SAMPLE_PATH"
-  printf '\nMulti-core boards require the fully-qualified target, such as xiao_esp32c6/esp32c6/hpcore.\n'
+  printf '  cd %s\n' "$REPO_ROOT"
+  printf '  bash scripts/build-example.sh %s\n' "$BOARD_EXAMPLE_PATH"
+  printf '\nThe helper builds the repository example with target %s.\n' "$BOARD_BUILD_TARGET"
 }
 
 # Runs the full macOS setup flow in the required common-step order.

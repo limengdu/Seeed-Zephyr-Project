@@ -1,2 +1,3 @@
-# board_id	support_status	sample_path	notes
-xiao_esp32c3	supported	samples/hello_world	XIAO ESP32C3 has no on-board LED; hello_world validates the board/toolchain baseline without LED hardware.
+# board_id	support_status	example_path	notes
+xiao_esp32c3	supported	examples/boards/xiao_esp32c3/hello_world	XIAO ESP32C3 has no on-board LED; hello_world validates the board/toolchain baseline without LED hardware.
+xiao_esp32c5	unsupported	examples/boards/xiao_esp32c5/hello_world	Zephyr v4.4.0 does not provide a xiao_esp32c5 board target; the repository keeps the demo record until the selected baseline supports the board.

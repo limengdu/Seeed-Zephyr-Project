@@ -22,6 +22,12 @@ If you are an AI agent, maintainer, or contributor preparing project work, start
 
 The short version: this repository stores XIAO/Grove examples, project examples, metadata, scripts, docs, and validation results. The actual Zephyr source tree and firmware builds live in a separate workspace, normally `~/zephyrproject`.
 
+Build a repository board demo from the project root:
+
+```sh
+bash scripts/build-example.sh examples/boards/xiao_esp32c6/blinky
+```
+
 ## Why This Exists
 
 XIAO is becoming a multi-chip ecosystem. Different XIAO boards use different silicon vendors, wireless stacks, SDKs, flashing tools, and development workflows. Arduino remains important for beginner-friendly workflows, but new chips often support vendor SDKs or Zephyr before Arduino support is complete.

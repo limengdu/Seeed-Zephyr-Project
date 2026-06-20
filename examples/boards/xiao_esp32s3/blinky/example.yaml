@@ -1,0 +1,6 @@
+id: xiao_esp32s3_blinky
+board_id: xiao_esp32s3
+demo: blinky
+zephyr_target: xiao_esp32s3/esp32s3/procpu
+validation_status: build-only
+expected_behavior: Toggles the board LED once per second and prints the LED state.

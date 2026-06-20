@@ -49,6 +49,16 @@ EXPANSION_BOARD_REQUIRED_KEYS = {
     "onboard",
 }
 
+EXAMPLE_REQUIRED_KEYS = {
+    "id",
+    "board_id",
+    "demo",
+    "zephyr_target",
+    "validation_status",
+    "expected_behavior",
+}
+EXAMPLE_OPTIONAL_KEYS = {"unsupported_reason"}
+
 DERIVED_KEYS = {
     "status",
     "validation",
@@ -67,6 +77,15 @@ VALID_ZEPHYR_SUPPORT = {"sensor_driver", "gnss_driver", "adc", "custom"}
 DRIVER_BACKED_SUPPORT = {"sensor_driver", "gnss_driver"}
 DRIVERLESS_SUPPORT = {"adc", "custom"}
 EXPANSION_BOARD_PORT_KEYS = {"id", "type", "label"}
+VALID_EXAMPLE_DEMOS = {"blinky", "hello_world"}
+VALID_EXAMPLE_STATUSES = {
+    "build-only",
+    "hardware-tested",
+    "experimental",
+    "blocked",
+    "unsupported",
+    "unknown",
+}
 
 
 class ValidationResult:
@@ -111,6 +130,7 @@ def collect_results(repo_root: Path) -> list[ValidationResult]:
     expansion_board_paths = sorted(
         (repo_root / "metadata" / "expansion_boards").glob("*.yaml")
     )
+    example_paths = sorted((repo_root / "examples").glob("**/example.yaml"))
 
     results: list[ValidationResult] = []
     for path in board_paths:
@@ -122,11 +142,17 @@ def collect_results(repo_root: Path) -> list[ValidationResult]:
     for path in expansion_board_paths:
         result = validate_file(path, validate_expansion_board_metadata)
         results.append(result)
+    for path in example_paths:
+        result = validate_file(path, validate_example_metadata, id_matches_filename=False)
+        results.append(result)
     return results
 
 
 def validate_file(
-    path: Path, schema_validator: Callable[[ValidationResult, dict[str, Any]], None]
+    path: Path,
+    schema_validator: Callable[[ValidationResult, dict[str, Any]], None],
+    *,
+    id_matches_filename: bool = True,
 ) -> ValidationResult:
     result = ValidationResult(path)
 
@@ -149,7 +175,8 @@ def validate_file(
         result.metadata_id = metadata_id
 
     validate_no_derived_keys(result, document)
-    validate_id_matches_filename(result, document)
+    if id_matches_filename:
+        validate_id_matches_filename(result, document)
     schema_validator(result, document)
     return result
 
@@ -219,6 +246,34 @@ def validate_expansion_board_metadata(
     validate_string_list(result, document, "onboard")
 
 
+def validate_example_metadata(result: ValidationResult, document: dict[str, Any]) -> None:
+    validate_allowed_keys(result, document, EXAMPLE_REQUIRED_KEYS, EXAMPLE_OPTIONAL_KEYS)
+
+    for key in ("id", "board_id", "zephyr_target", "expected_behavior"):
+        validate_non_empty_string(result, document, key)
+
+    validate_allowed_value(result, document, "demo", VALID_EXAMPLE_DEMOS)
+    validate_allowed_value(result, document, "validation_status", VALID_EXAMPLE_STATUSES)
+    validate_example_path_consistency(result, document)
+
+    if document.get("validation_status") == "unsupported":
+        validate_non_empty_string(result, document, "unsupported_reason")
+    elif "unsupported_reason" in document:
+        result.fail("unsupported_reason is only allowed when validation_status is unsupported")
+
+
+def validate_example_path_consistency(
+    result: ValidationResult, document: dict[str, Any]
+) -> None:
+    expected_demo = result.path.parent.name
+    expected_board_id = result.path.parent.parent.name
+
+    if document.get("demo") != expected_demo:
+        result.fail(f"demo must match parent directory '{expected_demo}'")
+    if document.get("board_id") != expected_board_id:
+        result.fail(f"board_id must match board directory '{expected_board_id}'")
+
+
 def validate_expansion_board_ports(
     result: ValidationResult, document: dict[str, Any]
 ) -> None:
@@ -244,6 +299,23 @@ def validate_exact_keys(
     actual_keys = set(document)
     missing = sorted(required_keys - actual_keys)
     extra = sorted(actual_keys - required_keys)
+
+    if missing:
+        result.fail(f"missing required keys: {', '.join(missing)}")
+    if extra:
+        result.fail(f"extra keys are not allowed: {', '.join(extra)}")
+
+
+def validate_allowed_keys(
+    result: ValidationResult,
+    document: dict[str, Any],
+    required_keys: set[str],
+    optional_keys: set[str],
+) -> None:
+    actual_keys = set(document)
+    missing = sorted(required_keys - actual_keys)
+    allowed = required_keys | optional_keys
+    extra = sorted(actual_keys - allowed)
 
     if missing:
         result.fail(f"missing required keys: {', '.join(missing)}")

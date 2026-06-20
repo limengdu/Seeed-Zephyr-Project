@@ -1,12 +1,12 @@
 # Validation Log
 
 This log records build and hardware validation evidence for the XIAO boards,
-Grove modules, and expansion boards described under `metadata/`. It follows the
-evidence format defined in `docs/en/getting-started.md` section 9.
+Grove modules, expansion boards, and repository examples described under
+`metadata/` and `examples/`.
 
 Derived metadata fields under `metadata/status/` must be populated only from
 evidence recorded here, never hand-authored. See `AI use/en/01-phase-one-zephyr-base.md`,
-section "Keeping Metadata Honest: Status Is Derived, Not Declared".
+section "Validation Strategy".
 
 ## Host Environment
 
@@ -29,6 +29,7 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | --- | --- | --- |
 | 2026-06-19 | 18 passed, 0 failed, 18 total | 11 boards, 4 Grove modules, 3 expansion boards |
 | 2026-06-20 | 18 passed, 0 failed, 18 total | Re-run through `~/zephyrproject/.venv/bin/python`; host `python3` lacks `pyyaml` |
+| 2026-06-20 | 29 passed, 0 failed, 29 total | 18 metadata files plus 11 repository example descriptors |
 
 ## Toolchain Setup
 
@@ -44,6 +45,8 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 8 | Flash sample on hardware | `west flash` | done (2026-06-19, xiao_esp32c6 LED blink verified) |
 | 9 | Batch board build matrix | `bash tools/build_matrix/run.sh` | done (2026-06-19, 9 passed, 2 failed) |
 | 10 | Board-specific baseline matrix | `BUILD_MATRIX_GENERATED_ON=2026-06-20 bash tools/build_matrix/run.sh` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
+| 11 | Repository example build matrix | `BUILD_MATRIX_GENERATED_ON=2026-06-20 bash tools/build_matrix/run.sh` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
+| 12 | Single repository example build | `bash scripts/build-example.sh examples/boards/xiao_esp32c3/hello_world` | done (2026-06-20) |
 
 Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
 ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
@@ -81,8 +84,39 @@ a valid baseline. The run finished with 10 passed, 0 failed, and 1 unsupported.
 that specific XIAO target is absent. Upstream Zephyr `main` has
 `boards/espressif/esp32c5_devkitc`, but that is an ESP32-C5 DevKitC target, not
 evidence that XIAO ESP32C5 has a validated board target.
+Step 11 verified 2026-06-20: `tools/build_matrix/run.sh` now builds
+repository-owned examples under `examples/boards/` instead of upstream Zephyr
+sample paths. The run finished with 10 passed, 0 failed, and 1 unsupported.
+`xiao_esp32c5` remains unsupported because Zephyr v4.4.0 does not provide a
+`xiao_esp32c5` target.
+Step 12 verified 2026-06-20: the user-facing single-example command built
+`examples/boards/xiao_esp32c3/hello_world` successfully through
+`scripts/build-example.sh`.
 
-## Board Build Evidence
+## Repository Example Build Evidence
+
+Baseline matrix: 2026-06-20, Zephyr v4.4.0, macOS Apple Silicon.
+Default repository example: `examples/boards/<board_id>/blinky`; board-specific
+overrides are recorded in `tools/build_matrix/board-overrides.tsv`.
+
+| Board metadata id | Zephyr target | Repository example | ESP32 blob | Build result | Validated version | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| xiao_samd21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_nrf52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_esp32c3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | yes | passed | v4.4.0 | no on-board LED; uses console heartbeat |
+| xiao_esp32c5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | yes | unsupported | n/a | Zephyr v4.4.0 has no `xiao_esp32c5` target |
+| xiao_esp32c6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | yes | passed | v4.4.0 | build succeeded |
+| xiao_esp32s3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | yes | passed | v4.4.0 | build succeeded |
+| xiao_mg24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_nrf54l15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_ra4m1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_rp2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | no | passed | v4.4.0 | build succeeded |
+| xiao_rp2350 | `xiao_rp2350/rp2350a/hazard3` | `examples/boards/xiao_rp2350/blinky` | no | passed | v4.4.0 | build succeeded |
+
+## Historical Upstream Sample Build Evidence
+
+This section records the earlier upstream Zephyr sample baseline before
+repository-owned examples existed.
 
 Baseline matrix: 2026-06-20, Zephyr v4.4.0, macOS Apple Silicon.
 Default sample: `samples/basic/blinky`; board-specific overrides are recorded in
