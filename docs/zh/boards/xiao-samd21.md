@@ -1,79 +1,90 @@
-# XIAO SAMD21 开发板说明
+# XIAO SAMD21 Zephyr 开发指南
 
-这页记录 Seeed Studio XIAO SAMD21 在 Zephyr 下已经验证过的行为。
+本页只记录 Seeed Studio XIAO SAMD21 在 Zephyr 示例开发里的板级要点。
+完整安装、构建、烧录命令见 [入门指南](../getting-started.md)。
 
-一句话总结：只要板子里已经烧录了本仓库验证过的 `blinky` 固件，后续重复烧录通常不需要手动进入 bootloader。
+## BOSSA 烧录
 
-## 已验证的仓库示例
+XIAO SAMD21 使用兼容 BOSSA 的 bootloader。烧录时，Zephyr 的 `bossac`
+runner 会把固件写入开发板。
 
-仓库示例：
-
-```sh
-examples/boards/xiao_samd21/blinky
-```
-
-构建、烧录，并打开串口监视器：
+常用命令：
 
 ```sh
 seeed-zephyr flash xiao_samd21 --monitor
 ```
 
-如果电脑上只出现一个 USB 串口，CLI 可以自动检测端口。如果同时插着多个 USB 串口设备，
-就显式传入端口：
+如果系统提示缺少 `bossac`，先安装这块板子需要的烧录工具，再重新运行烧录命令。
 
-```sh
-seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem1101
+## 免双击 RESET 重复烧录
+
+目标：程序已经运行后，下次烧录可以由电脑通过 USB CDC 串口请求开发板重启进入
+bootloader。
+
+开发自己的 XIAO SAMD21 示例时，需要处理这些文件：
+
+- `prj.conf`：启用旧版 USB device stack、UART line control、USB CDC 串口和 console。
+- `app.overlay`：声明 `cdc_acm_uart0`，并设置 `label = "CDC_ACM_0"`。
+- `src/main.c`：启动时调用 `usb_enable(NULL)`，让 USB CDC 串口出现。
+
+关键配置：
+
+```conf
+CONFIG_UART_LINE_CTRL=y
+CONFIG_USB_DEVICE_STACK=y
+CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=n
+CONFIG_USB_DEVICE_STACK_NEXT=n
+CONFIG_SERIAL=y
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y
 ```
 
-一句话总结：先用默认命令；只有自动检测不知道选哪个串口时，才手动加 `--port`。
+关键 `app.overlay` 结构：
 
-## 为什么正常情况下不需要手动 reset
+```dts
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
 
-XIAO SAMD21 使用兼容 BOSSA 的 bootloader。通俗说，bootloader 就像“收快递的人”，
-它负责先接收新固件，然后再让主程序运行。
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_0";
+	};
+};
+```
 
-SAMD21 开发板通常支持 1200 baud touch reset。大白话说，就是电脑先用 1200 这个特殊串口速度
-碰一下开发板的 USB 串口。正在运行的固件识别到这个动作后，会自动重启进入 bootloader。
-接下来 Zephyr 的 BOSSA runner 会调用 `bossac`，把新固件写进去。
+参考实现：`examples/boards/xiao_samd21/blinky`。
 
-本仓库的 `xiao_samd21/blinky` 示例启用了 USB CDC ACM 串口输出，并且把 CDC ACM 设备命名成
-Zephyr 的 SAMD21 BOSSA reset 钩子能找到的名字。所以烧录过这版固件以后，可以连续自动烧录。
+## USB CDC 串口输出
 
-一句话总结：正在运行的固件必须暴露正确的 USB 串口，Zephyr 才能让板子自动重启进 bootloader。
+目标：`printk()` 输出可以通过 USB 串口被 monitor 看到。
 
-## 预期烧录行为
+需要处理这些文件：
 
-烧录过本仓库验证固件以后：
+- `prj.conf`：启用 `CONFIG_PRINTK`、`CONFIG_SERIAL`、`CONFIG_CONSOLE`、
+  `CONFIG_UART_CONSOLE` 和 USB device stack。
+- `app.overlay`：把 `zephyr,console` 指向 `cdc_acm_uart0`。
+- `src/main.c`：在输出日志前调用 `usb_enable(NULL)`。
 
-- 第二次、第三次以及后续继续运行 `seeed-zephyr flash xiao_samd21 --monitor`，通常不需要双击 reset。
-- 拔掉 USB 再插回来以后，只要还是这个验证固件正常启动，并且 USB 串口重新出现，通常也不需要手动进 bootloader。
-- 如果板子之前烧录的是不带正确 USB CDC ACM 行为的固件，第一次可能仍然需要手动进一次 bootloader，用来装入这版验证固件。
+查看串口：
 
-一句话总结：正确固件已经在板子上运行后，后续上传应该接近 Arduino 那种自动上传体验。
+```sh
+seeed-zephyr monitor xiao_samd21
+```
 
-## 哪些情况仍可能需要手动进 bootloader
+退出 monitor：
 
-以下情况仍可能需要手动进入 bootloader：
+```text
+Ctrl+]
+```
 
-- 当前固件没有启用 USB CDC ACM 串口；
-- 当前固件在 USB 串口准备好之前就崩溃；
-- 其他固件覆盖了本仓库验证示例；
-- USB 串口因为数据线、Hub、操作系统问题或其他程序占用而不可见；
-- 同时连接了多个串口设备，并且选错了端口。
+## 手动进入 Bootloader 模式
 
-XIAO SAMD21 手动进入 bootloader 的方式是双击 reset 按钮，然后重新运行烧录命令。
+这是自动烧录不可用时的恢复方式：
 
-一句话总结：手动进 bootloader 是恢复手段，不是本仓库验证示例的正常日常流程。
-
-## 验证证据
-
-本仓库已经为 `xiao_samd21` 记录了真实硬件证据：
-
-- `seeed-zephyr flash xiao_samd21 --monitor` 完成了构建、烧录、校验，并打开串口监视器。
-- 串口输出里看到了 Zephyr 启动信息和持续出现的 LED 状态。
-- 连续第二次运行 `seeed-zephyr flash xiao_samd21 --monitor`，没有手动 reset，也通过了。
-
-详细硬件记录在
-[`AI use/HARDWARE_VERIFICATION.md`](../../../AI%20use/HARDWARE_VERIFICATION.md)。
-
-一句话总结：这里写的不是只靠构建推测出来的，而是来自真实硬件验证。
+1. 双击 `RESET`。
+2. 等待 bootloader 串口出现。
+3. 重新运行烧录命令。

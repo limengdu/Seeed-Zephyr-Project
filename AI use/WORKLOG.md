@@ -30,6 +30,35 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Clarify documentation scope
+
+Scope:
+- Updated `docs/README.md`.
+- Updated `docs/zh/README.md` and `docs/en/README.md`.
+- Updated `docs/zh/boards/README.md` and `docs/en/boards/README.md`.
+- Reworked `docs/zh/boards/xiao-rp2040.md` and `docs/en/boards/xiao-rp2040.md`.
+- Reworked `docs/zh/boards/xiao-samd21.md` and `docs/en/boards/xiao-samd21.md`.
+
+Reason:
+- User-facing documentation needs clear separation between complete process
+  tutorials and board-specific development notes.
+
+Result:
+- Top-level docs now describe complete setup, CLI, build, flash, monitor, and
+  validation flows.
+- Board docs now focus on board-specific pitfalls and development tasks such as
+  UF2, BOSSA, USB CDC serial, and bootloader entry.
+- AI-facing work records remain under `AI use/`.
+
+Verification:
+- Checked that board pages no longer contain FAQ/checklist/validation-log
+  headings.
+- Checked local Markdown links.
+- `git diff --check`: passed.
+
+Remaining:
+- None for this documentation scope update.
+
 ## 2026-06-20 - Refine RP2040 board guide
 
 Scope:

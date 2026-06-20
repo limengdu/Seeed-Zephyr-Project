@@ -1,98 +1,95 @@
-# XIAO SAMD21 Board Notes
+# XIAO SAMD21 Zephyr Development Guide
 
-This page records the verified Zephyr behavior for Seeed Studio XIAO SAMD21.
+This page records only board-level Zephyr development notes for Seeed Studio
+XIAO SAMD21. For full setup, build, and flashing commands, see
+[Getting Started](../getting-started.md).
 
-One-sentence summary: after the verified repository `blinky` firmware is on the
-board, repeated flashing should not require manually entering bootloader mode.
+## BOSSA Flashing
 
-## Verified Repository Example
+XIAO SAMD21 uses a BOSSA-compatible bootloader. During flashing, Zephyr's
+`bossac` runner writes firmware to the board.
 
-Repository example:
-
-```sh
-examples/boards/xiao_samd21/blinky
-```
-
-Build, flash, and open the serial monitor:
+Common command:
 
 ```sh
 seeed-zephyr flash xiao_samd21 --monitor
 ```
 
-When one USB serial device is visible, the CLI can auto-detect the port. If
-multiple USB serial devices are connected, pass the port explicitly:
+If the system reports that `bossac` is missing, install the flashing tool needed
+by this board, then rerun the flash command.
 
-```sh
-seeed-zephyr flash xiao_samd21 --monitor --port /dev/cu.usbmodem1101
+## Repeated Flashing Without Double-Clicking RESET
+
+Goal: after firmware is already running, the host can ask the board to reboot
+into bootloader mode through USB CDC serial before the next flash.
+
+For a custom XIAO SAMD21 example, handle these files:
+
+- `prj.conf`: enable the legacy USB device stack, UART line control, USB CDC
+  serial, and console.
+- `app.overlay`: define `cdc_acm_uart0` and set `label = "CDC_ACM_0"`.
+- `src/main.c`: call `usb_enable(NULL)` during startup so the USB CDC serial
+  port appears.
+
+Key configuration:
+
+```conf
+CONFIG_UART_LINE_CTRL=y
+CONFIG_USB_DEVICE_STACK=y
+CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=n
+CONFIG_USB_DEVICE_STACK_NEXT=n
+CONFIG_SERIAL=y
+CONFIG_CONSOLE=y
+CONFIG_UART_CONSOLE=y
 ```
 
-One-sentence summary: use the normal CLI command first, and add `--port` only
-when auto-detection cannot choose one serial device.
+Key `app.overlay` structure:
 
-## Why Manual Reset Is Normally Not Needed
+```dts
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
 
-XIAO SAMD21 uses a BOSSA-compatible bootloader. In practical terms, the
-bootloader is the small program that receives a new firmware image before the
-main application starts.
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_0";
+	};
+};
+```
 
-SAMD21 boards commonly support a 1200-baud touch reset. This means the host
-computer briefly opens the board's USB serial port at 1200 baud. The running
-firmware sees that request and reboots into the bootloader. Zephyr's BOSSA
-runner then uses `bossac` to write the new firmware.
+Reference implementation: `examples/boards/xiao_samd21/blinky`.
 
-The repository `xiao_samd21/blinky` example enables USB CDC ACM serial output
-and gives the CDC ACM device the name expected by Zephyr's SAMD21 BOSSA reset
-hook. That is why repeated flashing works after the verified firmware is
-installed.
+## USB CDC Serial Output
 
-One-sentence summary: the running firmware must expose the right USB serial
-device so Zephyr can ask the board to reboot into its bootloader.
+Goal: make `printk()` output visible through the USB serial monitor.
 
-## Expected Flashing Behavior
+Handle these files:
 
-After the verified firmware is installed:
+- `prj.conf`: enable `CONFIG_PRINTK`, `CONFIG_SERIAL`, `CONFIG_CONSOLE`,
+  `CONFIG_UART_CONSOLE`, and the USB device stack.
+- `app.overlay`: route `zephyr,console` to `cdc_acm_uart0`.
+- `src/main.c`: call `usb_enable(NULL)` before printing runtime logs.
 
-- The second, third, and later `seeed-zephyr flash xiao_samd21 --monitor` runs
-  should not require double-clicking reset.
-- Unplugging and plugging USB back in should not require manual bootloader
-  entry, as long as the same verified firmware starts normally and the USB
-  serial port appears again.
-- If the board was previously flashed with firmware that does not expose the
-  required USB CDC ACM behavior, one manual bootloader entry may be needed to
-  install the verified firmware once.
+Open the monitor:
 
-One-sentence summary: once the correct firmware is running, repeated upload
-should behave like a normal automatic upload flow.
+```sh
+seeed-zephyr monitor xiao_samd21
+```
 
-## When Manual Bootloader Entry May Still Be Needed
+Exit the monitor:
 
-Manual bootloader entry can still be needed if:
+```text
+Ctrl+]
+```
 
-- the current firmware does not enable USB CDC ACM serial;
-- the current firmware crashes before USB serial is ready;
-- another firmware overwrote the verified repository example;
-- the USB serial port is hidden by a bad cable, hub, operating-system issue, or
-  another program holding the port;
-- multiple serial devices are connected and the wrong port is selected.
+## Manual Bootloader Mode
 
-To manually enter bootloader mode on XIAO SAMD21, double-click the reset button,
-then rerun the flash command.
+Use this only as the recovery path when automatic flashing cannot enter
+bootloader mode:
 
-One-sentence summary: manual bootloader entry is a recovery path, not the
-normal path for the verified repository example.
-
-## Verified Evidence
-
-The repository has hardware evidence for `xiao_samd21`:
-
-- `seeed-zephyr flash xiao_samd21 --monitor` built, flashed, verified, and
-  opened the serial monitor.
-- Serial output showed Zephyr boot output and repeated LED state lines.
-- A second consecutive `seeed-zephyr flash xiao_samd21 --monitor` run passed
-  without manual reset.
-
-The detailed hardware record lives in
-[`AI use/HARDWARE_VERIFICATION.md`](../../../AI%20use/HARDWARE_VERIFICATION.md).
-
-One-sentence summary: this behavior is based on real hardware validation, not
-only on a successful build.
+1. Double-click `RESET`.
+2. Wait for the bootloader serial port to appear.
+3. Rerun the flash command.

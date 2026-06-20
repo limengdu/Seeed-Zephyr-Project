@@ -2,11 +2,18 @@
 
 ## English
 
-This directory contains user-facing documentation.
+This directory contains user-facing documentation for this repository.
 
-Docs should help users understand the repository, find examples, build and flash
-firmware, and contribute examples or projects. AI-facing strategy and work logs
-belong under `AI use/`, not here.
+Documentation in this tree is split by scope:
+
+- Top-level tutorials under `docs/en/` and `docs/zh/` record complete user
+  flows for each stage, such as setup, CLI installation, building, flashing,
+  monitoring, validation, and contribution.
+- Board documents under `docs/*/boards/` record board-specific development
+  notes only: real board pitfalls, flashing behavior, serial behavior,
+  bootloader entry, pin or peripheral notes, and board-specific feature guides.
+- AI-facing strategy, constraints, work logs, and handoff notes belong under
+  `AI use/`, not under `docs/`.
 
 Start with:
 
@@ -19,8 +26,14 @@ Start with:
 
 这个目录保存面向用户的文档。
 
-文档应帮助用户理解仓库、查找示例、构建和烧录固件，以及贡献示例或项目。面向 AI
-的战略和工作日志应放在 `AI use/`，不要放在这里。
+这里的文档按范围分层：
+
+- `docs/en/` 和 `docs/zh/` 下的总览教程，记录不同阶段的完整使用流程，例如安装环境、
+  安装 CLI、构建、烧录、查看串口、验证和贡献。
+- `docs/*/boards/` 下的开发板文档，只记录具体开发板相关的开发说明：真实开发中遇到的
+  板级坑点、烧录行为、串口行为、bootloader 进入方式、引脚或外设注意事项，以及板级子功能
+  的开发方法。
+- 面向 AI 的项目纲领、约束、工作日志和交接记录放在 `AI use/`，不要放进 `docs/`。
 
 推荐入口：
 
