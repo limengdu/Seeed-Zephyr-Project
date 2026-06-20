@@ -30,6 +30,30 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Refine RP2040 board guide
+
+Scope:
+- Rewrote `docs/zh/boards/xiao-rp2040.md`.
+- Rewrote `docs/en/boards/xiao-rp2040.md`.
+
+Reason:
+- Board documentation should guide users through development tasks, not read
+  like a validation log.
+
+Result:
+- The RP2040 board pages now focus on quick start, daily development, BOOTSEL
+  usage, custom example requirements, and common issues.
+- Hardware validation details remain in `AI use/HARDWARE_VERIFICATION.md`.
+
+Verification:
+- Checked that the RP2040 board pages no longer contain log-style validation
+  wording.
+- Checked local Markdown links.
+- `git diff --check`: passed.
+
+Remaining:
+- None for the RP2040 board guide rewrite.
+
 ## 2026-06-20 - Fix RP2040 automatic UF2 repeated flashing
 
 Scope:
