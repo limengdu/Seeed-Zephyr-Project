@@ -30,6 +30,44 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Add flash monitor option
+
+Scope:
+- Added `--monitor` to `seeed-zephyr flash <board_id>`.
+- Reused the same monitor support check for `monitor` and `flash --monitor`.
+- Updated README, Getting Started docs, CLI docs, and validation evidence.
+
+Reason:
+- Users need one command that performs build, flash, and monitor for supported
+  boards.
+
+Result:
+- `seeed-zephyr flash <board_id>` still performs build and flash.
+- `seeed-zephyr flash <board_id> --monitor` performs build, flash, and then
+  opens the monitor after a successful flash.
+- Non-Espressif boards are rejected before build or flash when `--monitor` is
+  requested, because monitor support is currently Espressif-only.
+
+Verification:
+- `bash -n scripts/seeed-zephyr`: passed.
+- `PYTHONPYCACHEPREFIX=/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- `scripts/seeed-zephyr flash --help`: showed `--monitor`.
+- `scripts/seeed-zephyr flash xiao_esp32c5 --monitor`: returned the expected
+  unsupported board error.
+- `scripts/seeed-zephyr flash xiao_nrf52840 --monitor`: returned the expected
+  Espressif-only monitor error before build or flash.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  29 passed, 0 failed.
+- `git diff --check`: passed.
+- Directory README coverage check: no project directory missing `README.md`.
+- Sensitive keyword scan over README, docs, scripts, tools, metadata, examples,
+  `AI use/`, and `.github`: no matches.
+
+Remaining:
+- `seeed-zephyr flash <board_id> --monitor` still needs real hardware validation
+  for each board because it requires flashing and opening a live monitor.
+
 ## 2026-06-20 - Install CLI as a global user command
 
 Scope:

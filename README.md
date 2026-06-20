@@ -41,6 +41,12 @@ seeed-zephyr list boards
 seeed-zephyr list examples
 ```
 
+Build, flash, and open the monitor after flashing:
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --monitor
+```
+
 ## Why This Exists
 
 XIAO is becoming a multi-chip ecosystem. Different XIAO boards use different silicon vendors, wireless stacks, SDKs, flashing tools, and development workflows. Arduino remains important for beginner-friendly workflows, but new chips often support vendor SDKs or Zephyr before Arduino support is complete.

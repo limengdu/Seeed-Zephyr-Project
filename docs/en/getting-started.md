@@ -110,6 +110,12 @@ seeed-zephyr flash xiao_esp32c6
 seeed-zephyr monitor xiao_esp32c6
 ```
 
+Build, flash, and then open the monitor:
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --monitor
+```
+
 Run the full build matrix:
 
 ```sh
@@ -156,6 +162,13 @@ After a successful build, flash through the CLI:
 
 ```sh
 seeed-zephyr flash xiao_esp32c6
+```
+
+`flash` always builds before flashing. To open the monitor after a successful
+flash, use:
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --monitor
 ```
 
 ESP32 boards may require manual bootloader entry before flashing. ESP32 logs can

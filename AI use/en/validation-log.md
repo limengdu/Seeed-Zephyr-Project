@@ -49,6 +49,7 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 12 | Single repository example build | `bash scripts/build-example.sh examples/boards/xiao_esp32c3/hello_world` | done (2026-06-20) |
 | 13 | CLI repository example build matrix | `scripts/seeed-zephyr matrix` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
 | 14 | Installed CLI smoke test | `seeed-zephyr build xiao_esp32c3` from `/tmp` through a temporary PATH install | done (2026-06-20) |
+| 15 | CLI flash monitor option check | `scripts/seeed-zephyr flash --help` plus validation error checks | done (2026-06-20, CLI behavior only) |
 
 Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
 ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
@@ -102,6 +103,9 @@ Step 14 verified 2026-06-20: the setup install function created a temporary
 `seeed-zephyr` command under `/tmp/seeed-zephyr-cli-test-bin`. From `/tmp`, the
 installed command rendered help, listed boards, listed examples, reported
 `xiao_esp32c5` as unsupported, and built `xiao_esp32c3` successfully.
+Step 15 verified 2026-06-20: the CLI exposes `--monitor` on `flash`. The
+unsupported-board path and non-Espressif monitor path were validated without
+flashing hardware.
 
 ## CLI Validation Evidence
 
@@ -123,6 +127,9 @@ Baseline CLI: `scripts/seeed-zephyr`, 2026-06-20.
 | temporary `seeed-zephyr build xiao_esp32c5` from `/tmp` | expected error | reports unsupported board |
 | temporary `seeed-zephyr build xiao_esp32c3` from `/tmp` | passed | installed command builds a real repository demo outside the repository |
 | non-interactive `install_cli_if_requested` | passed | defaults to installing the CLI |
+| `scripts/seeed-zephyr flash --help` | passed | help includes `--monitor` |
+| `scripts/seeed-zephyr flash xiao_esp32c5 --monitor` | expected error | unsupported board is rejected |
+| `scripts/seeed-zephyr flash xiao_nrf52840 --monitor` | expected error | non-Espressif monitor request is rejected before build or flash |
 
 ## Repository Example Build Evidence
 

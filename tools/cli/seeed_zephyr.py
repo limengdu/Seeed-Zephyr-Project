@@ -68,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     flash = subparsers.add_parser("flash", help="Build and flash a board example.")
     flash.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    flash.add_argument(
+        "--monitor",
+        action="store_true",
+        help="Open the board monitor after a successful flash.",
+    )
     flash.set_defaults(func=cmd_flash)
 
     monitor = subparsers.add_parser("monitor", help="Open a board monitor.")
@@ -193,6 +198,19 @@ def run_west(command: list[str]) -> None:
     run_command([str(west), *command], cwd=zephyr_workspace())
 
 
+def require_monitor_supported(board_id: str) -> dict[str, str]:
+    board = require_board(board_id)
+    if board["vendor"] != "espressif":
+        raise CliError("Monitor is currently implemented for Espressif boards only.")
+
+    return board
+
+
+def run_monitor(board_id: str) -> None:
+    require_monitor_supported(board_id)
+    run_west(["espressif", "monitor"])
+
+
 def cmd_list_boards(_args: argparse.Namespace) -> None:
     print("board_id\tstatus\tdemo\tvendor\ttarget")
     for record in board_records():
@@ -215,16 +233,17 @@ def cmd_build(args: argparse.Namespace) -> None:
 
 def cmd_flash(args: argparse.Namespace) -> None:
     example_path = require_supported_example(args.board_id)
+    if args.monitor:
+        require_monitor_supported(args.board_id)
+
     run_command(["bash", str(BUILD_SCRIPT), example_path])
     run_west(["flash"])
+    if args.monitor:
+        run_monitor(args.board_id)
 
 
 def cmd_monitor(args: argparse.Namespace) -> None:
-    board = require_board(args.board_id)
-    if board["vendor"] != "espressif":
-        raise CliError("Monitor is currently implemented for Espressif boards only.")
-
-    run_west(["espressif", "monitor"])
+    run_monitor(args.board_id)
 
 
 def cmd_matrix(_args: argparse.Namespace) -> None:

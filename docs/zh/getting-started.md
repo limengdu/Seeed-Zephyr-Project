@@ -110,6 +110,12 @@ seeed-zephyr flash xiao_esp32c6
 seeed-zephyr monitor xiao_esp32c6
 ```
 
+构建、烧录，然后自动打开 monitor：
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --monitor
+```
+
 运行完整构建矩阵：
 
 ```sh
@@ -154,6 +160,12 @@ XIAO board target。XIAO ESP32C5 已经有仓库 demo 记录，但要等选定 Z
 
 ```sh
 seeed-zephyr flash xiao_esp32c6
+```
+
+`flash` 每次都会先 build 再 flash。如果要在烧录成功后自动打开 monitor，可以运行：
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --monitor
 ```
 
 ESP32 系列有时需要手动进入 bootloader。通俗说，就是让板子进入“准备接收新程序”的状态。
