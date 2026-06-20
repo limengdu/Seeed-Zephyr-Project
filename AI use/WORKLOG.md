@@ -30,6 +30,63 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-06-20 - Fix Espressif flash environment
+
+Scope:
+- Updated `tools/cli/seeed_zephyr.py` so all `west` calls run with the Zephyr
+  venv `bin` directory prepended to `PATH`.
+- Added an Espressif flash dependency check for `esptool` before `west flash`.
+- Updated `scripts/setup-macos.sh` to check Zephyr's `hal_espressif` flash and
+  monitor tools when an Espressif board is selected.
+- Added hardware validation evidence for `xiao_esp32c6` flash and monitor.
+
+Reason:
+- Espressif's Zephyr runner launches `esptool` by command name. The Espressif
+  monitor is a `hal_espressif` west extension that launches ESP-IDF's
+  `idf_monitor.py`. Calling `/Users/mengdu/zephyrproject/.venv/bin/west`
+  directly is not enough if the venv `bin` directory is absent from `PATH`.
+
+Result:
+- `seeed-zephyr flash xiao_esp32c6 --monitor` no longer fails with
+  `FileNotFoundError: esptool`.
+- The command builds, flashes, verifies written data, opens the monitor, and
+  shows Zephyr boot output plus `LED state` toggles on the physical XIAO
+  ESP32C6.
+
+Verification:
+- `/Users/mengdu/zephyrproject/.venv/bin/python -m pip show esptool`: found
+  esptool 5.3.0 in the Zephyr venv.
+- `/Users/mengdu/zephyrproject/.venv/bin/esptool version`: returned 5.3.0.
+- `bash -n scripts/setup-macos.sh`: passed.
+- `bash -n scripts/seeed-zephyr`: passed.
+- `PYTHONPYCACHEPREFIX=/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py`:
+  passed.
+- `scripts/seeed-zephyr flash --help`: passed.
+- `scripts/seeed-zephyr flash xiao_esp32c5 --monitor`: returned the expected
+  unsupported board error.
+- `scripts/seeed-zephyr flash xiao_nrf52840 --monitor`: returned the expected
+  Espressif-only monitor error before build or flash.
+- `source scripts/setup-macos.sh; check_espressif_zephyr_tools`: confirmed
+  Zephyr's `hal_espressif` monitor file and venv `esptool` are available.
+- `source scripts/setup-macos.sh; BOARD_VENDOR=espressif; check_board_host_tools`:
+  confirmed Zephyr's Espressif tools are available.
+- `source scripts/setup-macos.sh; BOARD_VENDOR=nordic; check_board_host_tools`:
+  returned without checking Espressif tools.
+- `seeed-zephyr flash xiao_esp32c6 --monitor` in a TTY session: build passed,
+  flash wrote 144300 bytes, hash verification passed, monitor opened on
+  `/dev/cu.usbmodem101`, Zephyr booted, and `LED state` toggles were observed
+  in serial output.
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`:
+  29 passed, 0 failed.
+- `git diff --check`: passed.
+- Directory README coverage check: no project directory missing `README.md`.
+- Sensitive keyword scan over README, docs, scripts, tools, metadata, examples,
+  `AI use/`, and `.github`: no matches.
+
+Remaining:
+- Add equivalent real hardware flash/monitor evidence for other Espressif
+  boards when hardware is available.
+
 ## 2026-06-20 - Add flash monitor option
 
 Scope:

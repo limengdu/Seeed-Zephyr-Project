@@ -175,8 +175,10 @@ def require_supported_example(board_id: str) -> str:
     return board["example_path"]
 
 
-def run_command(command: list[str], *, cwd: Path = REPO_ROOT) -> None:
-    result = subprocess.run(command, cwd=cwd, check=False)
+def run_command(
+    command: list[str], *, cwd: Path = REPO_ROOT, env: dict[str, str] | None = None
+) -> None:
+    result = subprocess.run(command, cwd=cwd, env=env, check=False)
     if result.returncode != 0:
         raise CliError(f"Command failed with status {result.returncode}: {' '.join(command)}")
 
@@ -190,12 +192,38 @@ def zephyr_workspace() -> Path:
     return Path(os.environ.get("ZEPHYR_WORKSPACE", str(Path.home() / "zephyrproject")))
 
 
+def west_command_env() -> dict[str, str]:
+    env = os.environ.copy()
+    venv_bin = str(west_path().parent)
+    current_path = env.get("PATH", "")
+    # Zephyr runners spawn tools such as esptool by name, so expose the venv bin.
+    # Zephyr runner 会按命令名启动 esptool 等工具，因此要把 venv bin 放进 PATH。
+    env["PATH"] = f"{venv_bin}{os.pathsep}{current_path}" if current_path else venv_bin
+    return env
+
+
 def run_west(command: list[str]) -> None:
     west = west_path()
     if not west.exists():
         raise CliError(f"west was not found: {west}")
 
-    run_command([str(west), *command], cwd=zephyr_workspace())
+    run_command([str(west), *command], cwd=zephyr_workspace(), env=west_command_env())
+
+
+def require_west_venv_tool(tool_name: str, install_hint: str) -> None:
+    tool_path = west_path().parent / tool_name
+    if not tool_path.exists():
+        raise CliError(f"{tool_name} was not found: {tool_path}. {install_hint}")
+
+
+def require_flash_tools(board_id: str) -> None:
+    board = require_board(board_id)
+    if board["vendor"] == "espressif":
+        require_west_venv_tool(
+            "esptool",
+            "Run setup again, or install it with: "
+            f"{zephyr_workspace()}/.venv/bin/python -m pip install esptool",
+        )
 
 
 def require_monitor_supported(board_id: str) -> dict[str, str]:
@@ -233,6 +261,7 @@ def cmd_build(args: argparse.Namespace) -> None:
 
 def cmd_flash(args: argparse.Namespace) -> None:
     example_path = require_supported_example(args.board_id)
+    require_flash_tools(args.board_id)
     if args.monitor:
         require_monitor_supported(args.board_id)
 

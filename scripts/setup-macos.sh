@@ -574,6 +574,25 @@ install_zephyr_tools() {
   )
 }
 
+# Confirms Zephyr's Espressif flash and monitor tools are available.
+# 确认 Zephyr 自带的 Espressif 烧录和 monitor 工具可用。
+check_espressif_zephyr_tools() {
+  local monitor_file="$ZEPHYR_WORKSPACE/modules/hal/espressif/tools/idf_monitor/idf_monitor.py"
+
+  [[ -f "$monitor_file" ]] || fail "Zephyr hal_espressif monitor was not found: $monitor_file"
+  [[ -x "$VENV_DIR/bin/esptool" ]] || fail "esptool was not found in the Zephyr venv. Rerun this setup script so Zephyr Python packages are installed."
+
+  printf 'Zephyr Espressif flash and monitor tools are available.\n'
+}
+
+# Checks board-specific host tools after the Zephyr workspace is ready.
+# 在 Zephyr 工作区准备好后，检查开发板专属主机工具。
+check_board_host_tools() {
+  if [[ "$BOARD_VENDOR" == "espressif" ]]; then
+    check_espressif_zephyr_tools
+  fi
+}
+
 # Prints board ids and the next command to fetch chip-specific blobs later.
 # 打印开发板 id，并提示之后如何获取芯片专属 blobs。
 print_no_board_next_steps() {
@@ -649,6 +668,7 @@ main() {
 
   if [[ -n "$BOARD_ID" ]]; then
     step "6/$total_steps" "Resolving and fetching board-specific blobs..."
+    check_board_host_tools
     fetch_board_blobs
     print_board_next_steps
   else

@@ -53,7 +53,8 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
 这个脚本会准备 `~/zephyrproject`，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
-安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。
+安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。当你通过 `--board` 选择 Espressif
+开发板时，setup 还会检查 Zephyr 自带的 `hal_espressif` 烧录和 monitor 工具是否可用。
 
 执行到 CLI 安装步骤时，脚本会询问：
 
@@ -228,3 +229,14 @@ seeed-zephyr build xiao_esp32c3
 ```
 
 一句话总结：不是每块 XIAO 都适合用 LED blink 做最小验证。
+
+### ESP32 烧录时找不到 `esptool`
+
+重新运行 setup，让 Zephyr venv 和 CLI 环境刷新：
+
+```sh
+cd ~/seeed-zephyr-base
+bash scripts/setup-macos.sh --board xiao_esp32c6
+```
+
+一句话总结：ESP32 烧录和 monitor 使用 Zephyr 的 `hal_espressif` 工具，CLI 会把 Zephyr venv 暴露给这些工具。

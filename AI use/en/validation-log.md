@@ -50,6 +50,7 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 13 | CLI repository example build matrix | `scripts/seeed-zephyr matrix` | done (2026-06-20, 10 passed, 0 failed, 1 unsupported) |
 | 14 | Installed CLI smoke test | `seeed-zephyr build xiao_esp32c3` from `/tmp` through a temporary PATH install | done (2026-06-20) |
 | 15 | CLI flash monitor option check | `scripts/seeed-zephyr flash --help` plus validation error checks | done (2026-06-20, CLI behavior only) |
+| 16 | Installed CLI flash and monitor on hardware | `seeed-zephyr flash xiao_esp32c6 --monitor` | done (2026-06-20, build passed, flash passed, monitor opened) |
 
 Step 1 verified 2026-06-19: cmake 4.3.3, ninja 1.13.2, dtc 1.8.1, gperf 3.3,
 ccache 4.13.6, openocd 0.12.0, qemu (all targets incl. xtensa and riscv32).
@@ -106,6 +107,11 @@ installed command rendered help, listed boards, listed examples, reported
 Step 15 verified 2026-06-20: the CLI exposes `--monitor` on `flash`. The
 unsupported-board path and non-Espressif monitor path were validated without
 flashing hardware.
+Step 16 verified 2026-06-20: the installed CLI command
+`seeed-zephyr flash xiao_esp32c6 --monitor` completed build and flash on the
+physical XIAO ESP32C6. `esptool` ran from the Zephyr venv, detected the board
+on `/dev/cu.usbmodem101`, wrote 144300 bytes, verified the hash, reset the
+board, opened `idf_monitor`, and showed Zephyr boot plus `LED state` toggles.
 
 ## CLI Validation Evidence
 
@@ -130,6 +136,11 @@ Baseline CLI: `scripts/seeed-zephyr`, 2026-06-20.
 | `scripts/seeed-zephyr flash --help` | passed | help includes `--monitor` |
 | `scripts/seeed-zephyr flash xiao_esp32c5 --monitor` | expected error | unsupported board is rejected |
 | `scripts/seeed-zephyr flash xiao_nrf52840 --monitor` | expected error | non-Espressif monitor request is rejected before build or flash |
+| `/Users/mengdu/zephyrproject/.venv/bin/esptool version` | passed | esptool 5.3.0 is installed in the Zephyr venv |
+| `source scripts/setup-macos.sh; check_espressif_zephyr_tools` | passed | setup confirms Zephyr's `hal_espressif` monitor and venv esptool availability |
+| `source scripts/setup-macos.sh; BOARD_VENDOR=espressif; check_board_host_tools` | passed | board-specific setup checks Zephyr's Espressif tools |
+| `source scripts/setup-macos.sh; BOARD_VENDOR=nordic; check_board_host_tools` | passed | non-Espressif board-specific setup does not check Espressif tools |
+| `seeed-zephyr flash xiao_esp32c6 --monitor` in a TTY session | passed | build, flash, hash verification, monitor startup, and serial LED state output observed |
 
 ## Repository Example Build Evidence
 

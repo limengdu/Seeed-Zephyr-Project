@@ -33,3 +33,11 @@ Entry format:
 - Serial output: ...
 - Notes: ...
 ```
+
+## 2026-06-20T11:23:51+08:00 - xiao_esp32c6 - PASS
+
+- Board: `xiao_esp32c6`
+- Example: `examples/boards/xiao_esp32c6/blinky`
+- Result: `PASS`
+- Serial output: `*** Booting Zephyr OS build v4.4.0 ***`; repeated `LED state: OFF` and `LED state: ON`
+- Notes: `seeed-zephyr flash xiao_esp32c6 --monitor` built the repository example, flashed `/dev/cu.usbmodem101`, verified the written hash, opened `idf_monitor`, and observed Zephyr boot plus LED state toggles in serial output.

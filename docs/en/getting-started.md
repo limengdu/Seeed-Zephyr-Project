@@ -49,7 +49,9 @@ bash scripts/setup-macos.sh --board xiao_esp32c6
 
 The setup script prepares the Zephyr workspace at `~/zephyrproject`, installs
 the Python venv and `west`, downloads Zephyr v4.4.0, installs Zephyr packages
-and the SDK, and fetches board-specific blobs when needed.
+and the SDK, and fetches board-specific blobs when needed. When an Espressif
+board is selected with `--board`, setup also checks that Zephyr's
+`hal_espressif` flash and monitor tools are available.
 
 During setup, the script asks:
 
@@ -234,3 +236,15 @@ seeed-zephyr build xiao_esp32c3
 ```
 
 One-sentence summary: not every XIAO board is a valid LED blink board.
+
+### `esptool` cannot be found during ESP32 flashing
+
+Rerun setup so the Zephyr venv and CLI environment are refreshed:
+
+```sh
+cd ~/seeed-zephyr-base
+bash scripts/setup-macos.sh --board xiao_esp32c6
+```
+
+One-sentence summary: ESP32 flashing and monitor use Zephyr's `hal_espressif`
+tools, and the CLI exposes the Zephyr venv to those tools.
