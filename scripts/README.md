@@ -14,6 +14,10 @@ Current scripts:
 - `setup-macos.sh`: prepares the macOS Zephyr workspace and prints the next
   repository example command. It also asks whether to install the global
   `seeed-zephyr` command, defaulting to installation.
+- `lib/common.sh`: contains the shared setup flow used by platform setup
+  entrypoints. Platform scripts install system dependencies, then reuse this
+  file for Zephyr workspace, SDK, Python package, blob, CLI, and next-step
+  behavior.
 - `seeed-zephyr`: runs the lightweight CLI implementation. It can be symlinked
   into a user PATH directory by `setup-macos.sh`. The CLI selects repository
   metadata and examples, then calls Zephyr tooling for build, flash, and
@@ -31,6 +35,8 @@ Current scripts:
 当前脚本:
 
 - `setup-macos.sh`: 准备 macOS Zephyr 工作区，并打印下一条仓库示例命令。它也会询问是否安装全局 `seeed-zephyr` 命令，默认安装。
+- `lib/common.sh`: 保存平台 setup 入口共用的安装流程。平台脚本先安装系统依赖，然后复用这里的
+  Zephyr 工作区、SDK、Python 包、blob、CLI 和下一步提示逻辑。
 - `seeed-zephyr`: 运行轻量 CLI 实现。`setup-macos.sh` 可以把它符号链接到用户 PATH 目录。
   CLI 选择仓库 metadata 和示例，然后调用 Zephyr 工具执行构建、烧录和 monitor。
 - `build-example.sh`: 从项目根目录调用 `west build` 构建一个仓库示例。
