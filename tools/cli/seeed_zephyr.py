@@ -39,6 +39,14 @@ RP2_BOOTLOADER_WAIT_SECONDS = 10
 SERIAL_READY_WAIT_SECONDS = 10
 SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
+MG24_BOARD_ID = "xiao_mg24"
+MG24_OPENOCD_ENV = "SEEED_ZEPHYR_MG24_OPENOCD"
+MG24_OPENOCD_TARGET_CFG = "efm32s2_g23.cfg"
+MG24_OPENOCD_INTERFACE_CFG = "cmsis-dap.cfg"
+MG24_OPENOCD_PACKAGE_NAMES = (
+    "XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0",
+    "XIAO_MG24_Win_OpenOCD-v0.12.0",
+)
 
 
 class CliError(Exception):
@@ -343,6 +351,134 @@ def require_host_tool(tool_name: str, install_hint: str) -> None:
         raise CliError(f"{tool_name} was not found. {install_hint}.")
 
 
+def mg24_openocd_install_hint() -> str:
+    return (
+        "XIAO MG24 flashing requires the Seeed Debug Mate OpenOCD package. "
+        "The Zephyr SDK OpenOCD package can miss target/efm32s2_g23.cfg. "
+        "Download and extract XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0 from the "
+        "Seeed XIAO Debug Mate guide, then set "
+        f"{MG24_OPENOCD_ENV}=/path/to/XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0."
+    )
+
+
+def mg24_openocd_candidate_roots() -> list[Path]:
+    # Lists package roots that can contain Seeed's MG24 OpenOCD bundle.
+    # 列出可能包含 Seeed MG24 OpenOCD 包的根目录。
+    roots: list[Path] = []
+    env_root = os.environ.get(MG24_OPENOCD_ENV)
+    if env_root:
+        roots.append(Path(env_root).expanduser())
+
+    search_bases = (
+        REPO_ROOT / "tools" / "openocd",
+        Path.home(),
+        Path.home() / "Downloads",
+        Path.home() / "Tools",
+        Path("/opt"),
+    )
+    for base in search_bases:
+        for package_name in MG24_OPENOCD_PACKAGE_NAMES:
+            roots.append(base / package_name)
+
+    return roots
+
+
+def mg24_openocd_executable_candidates(root: Path) -> list[Path]:
+    if root.is_file():
+        return [root]
+
+    return [
+        root / "bin" / "openocd",
+        root / "bin" / "openocd.exe",
+        root / "openocd" / "bin" / "openocd",
+        root / "openocd" / "bin" / "openocd.exe",
+        root / "OpenOCD" / "bin" / "openocd",
+        root / "OpenOCD" / "bin" / "openocd.exe",
+    ]
+
+
+def is_openocd_executable(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    if path.suffix.lower() == ".exe":
+        return True
+    return os.access(path, os.X_OK)
+
+
+def mg24_openocd_script_candidates(root: Path) -> list[Path]:
+    search_root = root.parent if root.is_file() else root
+    candidates = [
+        search_root / "scripts",
+        search_root / "openocd" / "scripts",
+        search_root / "OpenOCD" / "scripts",
+        search_root / "share" / "openocd" / "scripts",
+        search_root / "openocd" / "share" / "openocd" / "scripts",
+        search_root / "OpenOCD" / "share" / "openocd" / "scripts",
+    ]
+
+    if search_root.exists() and search_root.is_dir():
+        for target_cfg in search_root.rglob(MG24_OPENOCD_TARGET_CFG):
+            if target_cfg.parent.name == "target":
+                candidates.append(target_cfg.parent.parent)
+
+    return candidates
+
+
+def has_mg24_openocd_scripts(path: Path) -> bool:
+    return (
+        (path / "target" / MG24_OPENOCD_TARGET_CFG).is_file()
+        and (path / "interface" / MG24_OPENOCD_INTERFACE_CFG).is_file()
+    )
+
+
+def find_mg24_openocd_tools(root: Path) -> tuple[Path, Path] | None:
+    # Returns the OpenOCD executable and scripts directory from one package root.
+    # 从一个包根目录中返回 OpenOCD 可执行文件和 scripts 目录。
+    openocd = next(
+        (
+            candidate
+            for candidate in mg24_openocd_executable_candidates(root)
+            if is_openocd_executable(candidate)
+        ),
+        None,
+    )
+    if openocd is None:
+        return None
+
+    scripts = next(
+        (
+            candidate
+            for candidate in mg24_openocd_script_candidates(root)
+            if has_mg24_openocd_scripts(candidate)
+        ),
+        None,
+    )
+    if scripts is None:
+        return None
+
+    return openocd, scripts
+
+
+def resolve_mg24_openocd_tools() -> tuple[Path, Path] | None:
+    # Searches all known MG24 OpenOCD package roots.
+    # 搜索所有已知 MG24 OpenOCD 包目录。
+    for root in mg24_openocd_candidate_roots():
+        tools = find_mg24_openocd_tools(root)
+        if tools is not None:
+            return tools
+
+    return None
+
+
+def require_mg24_openocd_tools() -> tuple[Path, Path]:
+    tools = resolve_mg24_openocd_tools()
+    if tools is None:
+        searched = "\n".join(f"  {root}" for root in mg24_openocd_candidate_roots())
+        raise CliError(f"{mg24_openocd_install_hint()}\nSearched paths:\n{searched}")
+
+    return tools
+
+
 def require_flash_tools(board_id: str) -> None:
     board = require_board(board_id)
     if board["vendor"] == "espressif":
@@ -353,6 +489,8 @@ def require_flash_tools(board_id: str) -> None:
         )
     if board["target"] == "seeeduino_xiao":
         require_host_tool("bossac", bossac_install_hint())
+    if board["id"] == MG24_BOARD_ID:
+        require_mg24_openocd_tools()
 
 
 def uses_uf2_runner(board: dict[str, str]) -> bool:
@@ -501,6 +639,18 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     command = ["flash"]
     if board["id"] in UF2_RUNNER_BOARD_IDS:
         command.extend(["--runner", "uf2"])
+    if board["id"] == MG24_BOARD_ID:
+        openocd, scripts = require_mg24_openocd_tools()
+        command.extend(
+            [
+                "--runner",
+                "openocd",
+                "--openocd",
+                str(openocd),
+                "--openocd-search",
+                str(scripts),
+            ]
+        )
     if board["target"] == "seeeduino_xiao" and port is not None:
         command.extend(["--bossac-port", port, "--delay", SAMD21_BOSSAC_DELAY_SECONDS])
 

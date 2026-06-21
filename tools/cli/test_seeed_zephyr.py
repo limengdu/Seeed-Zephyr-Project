@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import mock
 
 import seeed_zephyr
@@ -71,6 +73,62 @@ class FlashHintTests(unittest.TestCase):
 
         self.assertIsNone(selected_port)
         run_west.assert_called_once_with(["flash", "--runner", "uf2"])
+
+    def test_xiao_mg24_flash_requires_debug_mate_openocd_package(self) -> None:
+        board = {"id": "xiao_mg24", "vendor": "silabs", "target": "xiao_mg24"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "resolve_mg24_openocd_tools", return_value=None):
+                with self.assertRaises(seeed_zephyr.CliError) as context:
+                    seeed_zephyr.run_west_flash("xiao_mg24")
+
+        message = str(context.exception)
+        self.assertIn("Seeed Debug Mate OpenOCD package", message)
+        self.assertIn("SEEED_ZEPHYR_MG24_OPENOCD", message)
+        self.assertIn("XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0", message)
+
+    def test_xiao_mg24_flash_uses_debug_mate_openocd_package(self) -> None:
+        board = {"id": "xiao_mg24", "vendor": "silabs", "target": "xiao_mg24"}
+        openocd = Path("/tmp/XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0/bin/openocd")
+        scripts = Path("/tmp/XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0/scripts")
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(
+                seeed_zephyr, "require_mg24_openocd_tools", return_value=(openocd, scripts)
+            ):
+                with mock.patch.object(seeed_zephyr, "run_west") as run_west:
+                    selected_port = seeed_zephyr.run_west_flash("xiao_mg24")
+
+        self.assertIsNone(selected_port)
+        run_west.assert_called_once_with(
+            [
+                "flash",
+                "--runner",
+                "openocd",
+                "--openocd",
+                str(openocd),
+                "--openocd-search",
+                str(scripts),
+            ]
+        )
+
+    def test_xiao_mg24_detects_debug_mate_openocd_package_layout(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "XIAO_MG24_Mac_Linux_OpenOCD-v0.12.0"
+            openocd = root / "bin" / "openocd"
+            target_cfg = root / "scripts" / "target" / "efm32s2_g23.cfg"
+            interface_cfg = root / "scripts" / "interface" / "cmsis-dap.cfg"
+            target_cfg.parent.mkdir(parents=True)
+            interface_cfg.parent.mkdir(parents=True)
+            openocd.parent.mkdir(parents=True)
+            openocd.write_text("", encoding="utf-8")
+            openocd.chmod(0o755)
+            target_cfg.write_text("", encoding="utf-8")
+            interface_cfg.write_text("", encoding="utf-8")
+
+            tools = seeed_zephyr.find_mg24_openocd_tools(root)
+
+        self.assertEqual(tools, (openocd, root / "scripts"))
 
     def test_raspberrypi_flash_timeout_keeps_manual_bootsel_hint(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[]):
