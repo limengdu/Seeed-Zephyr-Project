@@ -117,11 +117,15 @@ class FlashHintTests(unittest.TestCase):
         with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
             with mock.patch.object(seeed_zephyr, "prepare_ra4m1_dfu_image", return_value=image) as prepare:
                 with mock.patch.object(seeed_zephyr, "dfu_util_path", return_value=dfu_util):
-                    with mock.patch.object(seeed_zephyr, "run_command") as run_command:
-                        selected_port = seeed_zephyr.run_west_flash("xiao_ra4m1")
+                    with mock.patch.object(
+                        seeed_zephyr, "prepare_ra4m1_dfu_bootloader", return_value=None
+                    ) as prepare_dfu:
+                        with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                            selected_port = seeed_zephyr.run_west_flash("xiao_ra4m1")
 
         self.assertIsNone(selected_port)
         prepare.assert_called_once_with()
+        prepare_dfu.assert_called_once_with(None)
         run_command.assert_called_once_with(
             [
                 str(dfu_util),
@@ -161,6 +165,84 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn(".option_setting_osis", command)
         self.assertIn("-O", command)
         self.assertIn("binary", command)
+
+    def test_ra4m1_dfu_detection_accepts_runtime_and_bootloader_ids(self) -> None:
+        result = seeed_zephyr.subprocess.CompletedProcess(
+            [],
+            0,
+            "Found Runtime: [2886:0049]\nFound DFU: [2886:8049]\n",
+        )
+
+        with mock.patch.object(seeed_zephyr, "run_command_capture", return_value=result):
+            self.assertTrue(seeed_zephyr.ra4m1_dfu_device_available())
+
+    def test_ra4m1_flash_requests_bootloader_over_serial_before_dfu(self) -> None:
+        with mock.patch.object(seeed_zephyr, "ra4m1_dfu_device_available", side_effect=[False, True]):
+            with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value=None):
+                with mock.patch.object(seeed_zephyr, "detect_serial_port", return_value="/dev/cu.usbmodem1101"):
+                    with mock.patch.object(seeed_zephyr, "touch_serial_1200") as touch:
+                        with mock.patch.object(seeed_zephyr.time, "sleep"):
+                            selected_port = seeed_zephyr.prepare_ra4m1_dfu_bootloader(None)
+
+        self.assertEqual(selected_port, "/dev/cu.usbmodem1101")
+        touch.assert_called_once_with("/dev/cu.usbmodem1101")
+
+    def test_ra4m1_flash_skips_serial_touch_when_dfu_is_already_visible(self) -> None:
+        with mock.patch.object(seeed_zephyr, "ra4m1_dfu_device_available", return_value=True):
+            with mock.patch.object(seeed_zephyr, "detect_serial_port") as detect:
+                with mock.patch.object(seeed_zephyr, "touch_serial_1200") as touch:
+                    selected_port = seeed_zephyr.prepare_ra4m1_dfu_bootloader("/dev/cu.usbmodem1101")
+
+        self.assertEqual(selected_port, "/dev/cu.usbmodem1101")
+        detect.assert_not_called()
+        touch.assert_not_called()
+
+    def test_ra4m1_flash_timeout_mentions_manual_dfu(self) -> None:
+        with mock.patch.object(seeed_zephyr, "ra4m1_dfu_device_available", return_value=False):
+            with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value=None):
+                with mock.patch.object(seeed_zephyr, "detect_serial_port", return_value="/dev/cu.usbmodem1101"):
+                    with mock.patch.object(seeed_zephyr, "touch_serial_1200"):
+                        with mock.patch.object(seeed_zephyr.time, "sleep"):
+                            with self.assertRaises(seeed_zephyr.CliError) as context:
+                                seeed_zephyr.prepare_ra4m1_dfu_bootloader(
+                                    None, timeout_seconds=0, poll_seconds=0
+                                )
+
+        message = str(context.exception)
+        self.assertIn("DFU bootloader", message)
+        self.assertIn("BOOT", message)
+
+    def test_ra4m1_flash_stops_on_rom_boot_serial(self) -> None:
+        with mock.patch.object(seeed_zephyr, "ra4m1_dfu_device_available", return_value=False):
+            with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value="/dev/cu.usbmodem1101"):
+                with mock.patch.object(seeed_zephyr, "detect_serial_port") as detect:
+                    with mock.patch.object(seeed_zephyr, "touch_serial_1200") as touch:
+                        with self.assertRaises(seeed_zephyr.CliError) as context:
+                            seeed_zephyr.prepare_ra4m1_dfu_bootloader(None)
+
+        message = str(context.exception)
+        self.assertIn("Renesas ROM bootloader", message)
+        self.assertIn("Press RESET", message)
+        detect.assert_not_called()
+        touch.assert_not_called()
+
+    def test_ra4m1_example_supports_1200_baud_bootloader_request(self) -> None:
+        source = (
+            seeed_zephyr.REPO_ROOT
+            / "examples"
+            / "boards"
+            / "xiao_ra4m1"
+            / "blinky"
+            / "src"
+            / "main.c"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("UART_LINE_CTRL_BAUD_RATE", source)
+        self.assertIn("RA4M1_BOOTLOADER_BAUD_RATE", source)
+        self.assertIn("RA4M1_BOOTLOADER_MAGIC", source)
+        self.assertIn("R_SYSTEM->VBTBKR", source)
+        self.assertIn("R_USB_FS0->SYSCFG_b.DPRPU", source)
+        self.assertIn("sys_reboot(SYS_REBOOT_COLD)", source)
 
     def test_raspberrypi_flash_timeout_keeps_manual_bootsel_hint(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[]):

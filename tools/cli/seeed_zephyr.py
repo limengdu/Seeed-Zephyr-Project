@@ -43,8 +43,14 @@ MG24_BOARD_ID = "xiao_mg24"
 MG24_PYOCD_TARGET = "EFR32MG24B220F1536IM48"
 RA4M1_BOARD_ID = "xiao_ra4m1"
 RA4M1_DFU_VID_PID = "2886:0049,:8049"
+RA4M1_DFU_RUNTIME_ID = "2886:0049"
+RA4M1_DFU_BOOTLOADER_ID = "2886:8049"
+RA4M1_ROM_BOOT_VID = "045b"
+RA4M1_ROM_BOOT_PID = "0261"
 RA4M1_DFU_ALT = "0"
 RA4M1_DFU_MAX_IMAGE_BYTES = 0x40000 - 0x4000
+RA4M1_DFU_WAIT_SECONDS = 10
+RA4M1_DFU_POLL_SECONDS = 0.5
 
 
 class CliError(Exception):
@@ -463,12 +469,123 @@ def prepare_ra4m1_dfu_image() -> Path:
     return image_file
 
 
-def run_ra4m1_dfu_flash() -> None:
+def ra4m1_bootloader_hint(port: str | None) -> str:
+    port_hint = f" Current port: {port}." if port else ""
+    return (
+        "XIAO RA4M1 flashing uses the board USB DFU bootloader."
+        f"{port_hint} If this is the first repository firmware install, hold BOOT, "
+        "tap RESET, keep holding BOOT for 1 to 2 seconds, then rerun the flash "
+        "command. After repository firmware is installed, later flashes should "
+        "enter DFU automatically."
+    )
+
+
+def ra4m1_dfu_device_available() -> bool:
+    dfu_util = dfu_util_path()
+    if dfu_util is None:
+        raise CliError(f"dfu-util was not found. {dfu_util_install_hint()}")
+
+    result = run_command_capture(
+        [str(dfu_util), "--list"], cwd=zephyr_workspace(), env=west_command_env()
+    )
+    output = result.stdout.lower()
+    return (
+        RA4M1_DFU_RUNTIME_ID.lower() in output
+        or RA4M1_DFU_BOOTLOADER_ID.lower() in output
+    )
+
+
+def ra4m1_rom_boot_port() -> str | None:
+    python = zephyr_venv_python()
+    script = (
+        "import serial.tools.list_ports\n"
+        f"target_vid = '{RA4M1_ROM_BOOT_VID}'\n"
+        f"target_pid = '{RA4M1_ROM_BOOT_PID}'\n"
+        "for port in serial.tools.list_ports.comports():\n"
+        "    vid = f'{port.vid:04x}' if port.vid is not None else ''\n"
+        "    pid = f'{port.pid:04x}' if port.pid is not None else ''\n"
+        "    description = (port.description or '').lower()\n"
+        "    if (vid, pid) == (target_vid, target_pid) or 'ra usb boot' in description:\n"
+        "        print(port.device)\n"
+        "        break\n"
+    )
+    result = run_command_capture(
+        [str(python), "-c", script], cwd=zephyr_workspace(), env=west_command_env()
+    )
+    if result.returncode != 0:
+        return None
+
+    ports = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return ports[0] if ports else None
+
+
+def ra4m1_rom_boot_hint(port: str) -> str:
+    return (
+        f"XIAO RA4M1 is currently visible as Renesas ROM bootloader on {port}. "
+        "This is not the Seeed USB DFU device used by dfu-util. Press RESET once "
+        "to return to the running application, or enter the board USB DFU "
+        "bootloader before flashing."
+    )
+
+
+def wait_for_ra4m1_dfu_device(
+    timeout_seconds: int = RA4M1_DFU_WAIT_SECONDS,
+    poll_seconds: float = RA4M1_DFU_POLL_SECONDS,
+) -> None:
+    # Waits for either runtime DFU or bootloader DFU to enumerate.
+    # 等待 runtime DFU 或 bootloader DFU 完成枚举。
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        if ra4m1_dfu_device_available():
+            return
+        rom_boot_port = ra4m1_rom_boot_port()
+        if rom_boot_port is not None:
+            raise CliError(ra4m1_rom_boot_hint(rom_boot_port))
+        time.sleep(poll_seconds)
+
+    raise CliError("Timed out waiting for the RA4M1 DFU bootloader.")
+
+
+def prepare_ra4m1_dfu_bootloader(
+    port: str | None,
+    timeout_seconds: int = RA4M1_DFU_WAIT_SECONDS,
+    poll_seconds: float = RA4M1_DFU_POLL_SECONDS,
+) -> str | None:
+    if ra4m1_dfu_device_available():
+        return port
+
+    rom_boot_port = ra4m1_rom_boot_port()
+    if rom_boot_port is not None:
+        raise CliError(ra4m1_rom_boot_hint(rom_boot_port))
+
+    try:
+        selected_port = port or detect_serial_port()
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {ra4m1_bootloader_hint(port)}") from error
+
+    print(
+        f"Requesting RA4M1 DFU bootloader via {selected_port} at {RP2_BOOTLOADER_BAUD} baud...",
+        flush=True,
+    )
+    touch_serial_1200(selected_port)
+
+    try:
+        wait_for_ra4m1_dfu_device(timeout_seconds, poll_seconds)
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {ra4m1_bootloader_hint(selected_port)}") from error
+
+    print("RA4M1 DFU bootloader detected.", flush=True)
+    return selected_port
+
+
+def run_ra4m1_dfu_flash(port: str | None = None) -> str | None:
     dfu_util = dfu_util_path()
     if dfu_util is None:
         raise CliError(f"dfu-util was not found. {dfu_util_install_hint()}")
 
     image = prepare_ra4m1_dfu_image()
+    selected_port = prepare_ra4m1_dfu_bootloader(port)
     run_command(
         [
             str(dfu_util),
@@ -483,6 +600,7 @@ def run_ra4m1_dfu_flash() -> None:
         cwd=zephyr_workspace(),
         env=west_command_env(),
     )
+    return selected_port
 
 
 def uses_uf2_runner(board: dict[str, str]) -> bool:
@@ -626,8 +744,7 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     board = require_board(board_id)
     port = resolve_flash_port(board, port)
     if board["id"] == RA4M1_BOARD_ID:
-        run_ra4m1_dfu_flash()
-        return port
+        return run_ra4m1_dfu_flash(port)
 
     if uses_uf2_runner(board):
         port = prepare_uf2_bootloader(board_id, port)
@@ -875,6 +992,8 @@ def cmd_flash(args: argparse.Namespace) -> None:
         if uses_uf2_runner(board) and args.port is None:
             monitor_port = None
             wait_for_uf2_detach()
+        if board["id"] == RA4M1_BOARD_ID and args.port is None:
+            monitor_port = None
         run_monitor(args.board_id, port=monitor_port, baud=args.baud)
 
 

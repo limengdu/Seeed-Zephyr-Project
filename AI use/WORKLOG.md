@@ -1107,3 +1107,29 @@ Verification:
 - After replacing the previous firmware with the Zephyr app, a later flash
   attempt found no DFU-capable USB device. This shows runtime DFU re-entry is
   not yet solved for Zephyr-generated RA4M1 firmware.
+
+## 2026-06-21 - Add XIAO RA4M1 runtime DFU request path
+
+Scope:
+- Added a RA4M1 application-side bootloader request path to the baseline
+  example.
+- Updated the CLI to detect both Seeed DFU VID/PID values and the Renesas ROM
+  bootloader serial state.
+- Updated RA4M1 board development notes in Chinese and English.
+
+Result:
+- The RA4M1 baseline example watches USB CDC line-control baud rate. When the
+  host requests 1200 baud, it writes `0x07738135` to `R_SYSTEM->VBTBKR[0]`,
+  disconnects the USB D+ pull-up, and resets.
+- `seeed-zephyr flash xiao_ra4m1` can request DFU automatically after firmware
+  with this entry path is installed.
+- If the host sees `RA USB Boot` / `045B:0261`, the CLI now reports that this is
+  Renesas ROM bootloader state, not the Seeed DFU target used by `dfu-util`.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py`
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py tools/cli/test_seeed_zephyr.py`
+- `scripts/seeed-zephyr build xiao_ra4m1`
+- Non-invasive USB checks after build found no active XIAO RA4M1 DFU or USB CDC
+  serial device on the host, so consecutive hardware flash verification is still
+  pending.

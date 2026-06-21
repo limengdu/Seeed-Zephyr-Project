@@ -1,59 +1,70 @@
 # XIAO RA4M1 Zephyr Development Guide
 
-This page records board-specific Zephyr development notes for Seeed Studio XIAO RA4M1.
-For the full setup, build, and flash flow, see [Getting Started](../getting-started.md).
+This page records XIAO RA4M1 board-specific development notes. For the full
+command flow, see [Getting Started](../getting-started.md).
 
 ## USB DFU Flashing
 
-This repository flashes XIAO RA4M1 through the board USB DFU bootloader:
+Common command:
 
 ```sh
 seeed-zephyr flash xiao_ra4m1 --monitor
 ```
 
-When repository setup is run with `--board xiao_ra4m1`, or without a board for
-full setup, the script installs `dfu-util`. The CLI converts the Zephyr build
-output into a compact bin suitable for the DFU bootloader, then uploads it with
-`dfu-util`.
+Setup installs `dfu-util` when `xiao_ra4m1` is selected, or when full setup is
+run without selecting a board. The CLI generates a bin file for the board USB
+DFU bootloader and uploads it with `dfu-util`.
 
-If the board is currently running firmware with a DFU runtime interface, the CLI
-can switch from runtime to DFU and upload directly. If the running firmware does
-not expose DFU runtime, enter the DFU bootloader manually before flashing.
+For the first repository firmware install, if the current firmware cannot enter
+DFU automatically, enter DFU bootloader manually:
+
+1. Hold Boot.
+2. Tap Reset.
+3. Keep holding Boot for about 1 to 2 seconds after releasing Reset.
+4. Run the flash command again.
 
 ## Application Start Address
 
-XIAO RA4M1's board USB DFU bootloader occupies the first 16 KB of flash. Zephyr
-examples must start at `0x4000`:
+The RA4M1 board DFU bootloader occupies the first 16 KB of flash. Zephyr examples
+must keep:
 
 ```conf
 CONFIG_FLASH_LOAD_OFFSET=0x4000
 ```
 
-Keep this configuration when creating new RA4M1 examples.
+## Flash Again Without Boot
 
-## Enter DFU Bootloader
+Custom RA4M1 examples need these settings if later flashes should not require
+manual DFU entry:
 
-If the host cannot see the DFU device during flashing, enter bootloader mode:
+```conf
+CONFIG_REBOOT=y
+CONFIG_UART_LINE_CTRL=y
+CONFIG_USB_DEVICE_STACK_NEXT=y
+CONFIG_CDC_ACM_SERIAL_INITIALIZE_AT_BOOT=y
+```
 
-1. Connect the XIAO RA4M1 USB port.
-2. Hold the right Boot button.
-3. Tap the left Reset button.
-4. Keep holding Boot for about 1 to 2 seconds after releasing Reset.
-5. Run the flash command again.
+The application should detect a `1200` baud request on USB CDC serial, then:
+
+1. Write `0x07738135` to `R_SYSTEM->VBTBKR[0]`.
+2. Clear `R_USB_FS0->SYSCFG_b.DPRPU`.
+3. Call `sys_reboot(SYS_REBOOT_COLD)`.
+
+The repository baseline example already includes this entry path and can be used
+as a reference for custom examples.
+
+## RA USB Boot State
+
+If the host sees `RA USB Boot` or `045B:0261`, the board is in Renesas ROM
+bootloader, not the Seeed USB DFU device used by `dfu-util`. Tap Reset once to
+return to the running application.
 
 ## Serial Monitor
 
-The repository baseline example routes Zephyr console output to USB CDC serial.
-Open the serial monitor after flashing:
+Open the monitor:
 
 ```sh
 seeed-zephyr monitor xiao_ra4m1
-```
-
-If multiple USB serial devices are attached, pass the port:
-
-```sh
-seeed-zephyr monitor xiao_ra4m1 --port /dev/cu.usbmodem1101
 ```
 
 Exit monitor:
@@ -64,8 +75,7 @@ Ctrl+]
 
 ## Debugging
 
-XIAO RA4M1 uses J-Link as Zephyr's default debug runner. Debugging requires an
-external debugger connected to the SWD pads on the bottom of the board. Normal
-flashing does not require J-Link.
+Zephyr debug defaults to J-Link and requires an external debugger connected to
+the SWD pads on the bottom of the board. Normal flashing does not require J-Link.
 
 Reference: [Zephyr XIAO RA4M1 documentation](https://docs.zephyrproject.org/latest/boards/seeed/xiao_ra4m1/doc/index.html).
