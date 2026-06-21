@@ -11,6 +11,8 @@ Build from the repository root:
 bash scripts/build-example.sh examples/boards/xiao_ra4m1/blinky
 ```
 
+Flash notes are in `docs/en/boards/xiao-ra4m1.md`.
+
 ## 中文
 
 这个 demo 通过 Zephyr GPIO 翻转板载 LED，是 Seeed Studio XIAO RA4M1 的基线 demo。
@@ -20,3 +22,5 @@ bash scripts/build-example.sh examples/boards/xiao_ra4m1/blinky
 ```sh
 bash scripts/build-example.sh examples/boards/xiao_ra4m1/blinky
 ```
+
+烧录说明见 `docs/zh/boards/xiao-ra4m1.md`。

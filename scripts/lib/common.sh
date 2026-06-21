@@ -44,6 +44,11 @@ CLI_INSTALL_STATUS="pending"
 MG24_BOARD_ID="xiao_mg24"
 MG24_PYOCD_TARGET="EFR32MG24B220F1536IM48"
 PYOCD="$VENV_DIR/bin/pyocd"
+RA4M1_BOARD_ID="xiao_ra4m1"
+RFP_INSTALL_ROOT="${SEEED_ZEPHYR_RFP_INSTALL_ROOT:-$HOME/.seeed-zephyr/tools/renesas-rfp}"
+RFP_DOWNLOAD_DIR="${SEEED_ZEPHYR_RFP_DOWNLOAD_DIR:-$HOME/.seeed-zephyr/downloads}"
+RFP_DOWNLOAD_PAGE="https://www.renesas.com/en/software-tool/renesas-flash-programmer-programming-gui"
+RFP_MACOS_ARM64_URL="https://www.renesas.com/en/document/sws/renesas-flash-programmer-v32300-macosarm64"
 
 # Prints an error message and exits the script.
 # 打印错误信息并退出脚本。
@@ -570,6 +575,175 @@ check_bossac_tool() {
   printf 'BOSSA bossac flash tool is available.\n'
 }
 
+# Finds an installed Renesas Flash Programmer CLI executable.
+# 查找已安装的 Renesas Flash Programmer CLI 可执行文件。
+rfp_cli_path() {
+  local candidate
+
+  if command_exists rfp-cli; then
+    command -v rfp-cli
+    return 0
+  fi
+
+  [[ -d "$RFP_INSTALL_ROOT" ]] || return 1
+
+  while IFS= read -r -d '' candidate; do
+    printf '%s\n' "$candidate"
+    return 0
+  done < <(find "$RFP_INSTALL_ROOT" -type f \( -name 'rfp-cli' -o -name 'rfp-cli.exe' \) -print0)
+
+  return 1
+}
+
+# Returns the official RFP CLI download URL for the current host when known.
+# 在已知时返回当前主机对应的 RFP CLI 官方下载地址。
+rfp_download_url() {
+  local kernel
+  local machine
+
+  if [[ -n "${SEEED_ZEPHYR_RFP_DOWNLOAD_URL:-}" ]]; then
+    printf '%s\n' "$SEEED_ZEPHYR_RFP_DOWNLOAD_URL"
+    return 0
+  fi
+
+  kernel="$(uname -s)"
+  machine="$(uname -m)"
+
+  if [[ "$kernel" == "Darwin" && "$machine" == "arm64" ]]; then
+    printf '%s\n' "$RFP_MACOS_ARM64_URL"
+    return 0
+  fi
+
+  return 1
+}
+
+# Returns success when the file is a valid zip archive.
+# 当文件是有效 zip 压缩包时返回成功。
+valid_zip_archive() {
+  local archive=$1
+
+  [[ -f "$archive" ]] || return 1
+  unzip -tq "$archive" >/dev/null 2>&1
+}
+
+# Finds a local official RFP archive downloaded by the user or a previous setup run.
+# 查找用户或之前 setup 已下载到本地的官方 RFP 压缩包。
+find_local_rfp_archive() {
+  local candidate
+  local search_dir
+
+  if [[ -n "${SEEED_ZEPHYR_RFP_ARCHIVE:-}" ]]; then
+    if valid_zip_archive "$SEEED_ZEPHYR_RFP_ARCHIVE"; then
+      printf '%s\n' "$SEEED_ZEPHYR_RFP_ARCHIVE"
+      return 0
+    fi
+    fail "SEEED_ZEPHYR_RFP_ARCHIVE is not a valid zip archive: $SEEED_ZEPHYR_RFP_ARCHIVE"
+  fi
+
+  for search_dir in "$RFP_DOWNLOAD_DIR" "$HOME/Downloads"; do
+    [[ -d "$search_dir" ]] || continue
+
+    while IFS= read -r -d '' candidate; do
+      if valid_zip_archive "$candidate"; then
+        printf '%s\n' "$candidate"
+        return 0
+      fi
+    done < <(find "$search_dir" -maxdepth 2 -type f \( \
+      -iname '*renesas*flash*programmer*.zip' -o \
+      -iname '*rfp*cli*.zip' -o \
+      -iname 'RFP*.zip' \
+    \) -print0)
+  done
+
+  return 1
+}
+
+# Downloads the official RFP archive when the vendor endpoint allows it.
+# 当厂商端点允许时下载官方 RFP 压缩包。
+download_rfp_archive() {
+  local archive
+  local invalid_archive
+  local timestamp
+  local url
+
+  command_exists curl || fail "curl was not found. Install curl, then rerun setup."
+  command_exists unzip || fail "unzip was not found. Install unzip, then rerun setup."
+
+  if ! url="$(rfp_download_url)"; then
+    return 1
+  fi
+
+  mkdir -p "$RFP_DOWNLOAD_DIR"
+  archive="$RFP_DOWNLOAD_DIR/renesas-flash-programmer.zip"
+  timestamp="$(date +%Y%m%d%H%M%S)"
+  invalid_archive="$archive.invalid-$timestamp"
+
+  printf 'Downloading Renesas Flash Programmer CLI from %s\n' "$url" >&2
+  if ! curl -fL --retry 2 -o "$archive" "$url"; then
+    return 1
+  fi
+
+  if valid_zip_archive "$archive"; then
+    printf '%s\n' "$archive"
+    return 0
+  fi
+
+  mv "$archive" "$invalid_archive"
+  printf 'Downloaded file was not a zip archive; saved it as %s.\n' "$invalid_archive" >&2
+  return 1
+}
+
+# Extracts an RFP archive and returns the installed rfp-cli path.
+# 解压 RFP 压缩包，并返回安装后的 rfp-cli 路径。
+install_rfp_archive() {
+  local archive=$1
+  local candidate
+  local stage
+
+  command_exists unzip || fail "unzip was not found. Install unzip, then rerun setup."
+
+  mkdir -p "$RFP_INSTALL_ROOT"
+  stage="$RFP_INSTALL_ROOT/RFP-$(date +%Y%m%d%H%M%S)"
+
+  printf 'Installing Renesas Flash Programmer CLI from %s\n' "$archive" >&2
+  unzip -q "$archive" -d "$stage"
+
+  while IFS= read -r -d '' candidate; do
+    chmod +x "$candidate" || true
+    printf '%s\n' "$candidate"
+    return 0
+  done < <(find "$stage" -type f \( -name 'rfp-cli' -o -name 'rfp-cli.exe' \) -print0)
+
+  fail "rfp-cli was not found inside archive: $archive"
+}
+
+# Ensures the RFP CLI required by Zephyr's xiao_ra4m1 rfp runner is installed.
+# 确保 Zephyr xiao_ra4m1 rfp runner 需要的 RFP CLI 已安装。
+ensure_ra4m1_rfp_cli() {
+  local archive
+  local installed
+  local rfp_cli
+
+  if rfp_cli="$(rfp_cli_path)"; then
+    printf 'Renesas Flash Programmer CLI is available: %s\n' "$rfp_cli"
+    return
+  fi
+
+  if archive="$(download_rfp_archive)"; then
+    installed="$(install_rfp_archive "$archive")"
+    printf 'Renesas Flash Programmer CLI is available: %s\n' "$installed"
+    return
+  fi
+
+  if archive="$(find_local_rfp_archive)"; then
+    installed="$(install_rfp_archive "$archive")"
+    printf 'Renesas Flash Programmer CLI is available: %s\n' "$installed"
+    return
+  fi
+
+  fail "Renesas Flash Programmer CLI could not be installed automatically. Download the official RFP CLI zip from $RFP_DOWNLOAD_PAGE into $RFP_DOWNLOAD_DIR or ~/Downloads, then rerun setup."
+}
+
 # Returns success when pyOCD can see the installed MG24 target.
 # 当 pyOCD 能看到已安装的 MG24 target 时返回成功。
 pyocd_target_available() {
@@ -609,6 +783,10 @@ check_board_host_tools() {
   if [[ "$BOARD_ID" == "$MG24_BOARD_ID" ]]; then
     ensure_mg24_pyocd_pack
   fi
+
+  if [[ "$BOARD_ID" == "$RA4M1_BOARD_ID" ]]; then
+    ensure_ra4m1_rfp_cli
+  fi
 }
 
 # Checks host tools needed when setup runs without a board filter.
@@ -617,6 +795,7 @@ check_full_host_tools() {
   check_espressif_zephyr_tools
   check_bossac_tool
   ensure_mg24_pyocd_pack
+  ensure_ra4m1_rfp_cli
 }
 
 # Prints informational proprietary-runner guidance for selected boards.
@@ -627,10 +806,6 @@ print_vendor_flash_tool_note() {
       printf '\nFlash note: Zephyr provides openocd, pyocd, and esptool for most boards through the SDK and Python packages.\n'
       printf 'The default Zephyr runner for %s may require SEGGER J-Link plus nrfjprog.\n' "$BOARD_BUILD_TARGET"
       printf 'Some XIAO boards, including nRF52840, also support UF2.\n'
-      ;;
-    xiao_ra4m1)
-      printf '\nFlash note: Zephyr provides openocd, pyocd, and esptool for most boards through the SDK and Python packages.\n'
-      printf 'The default Zephyr runner for %s may require SEGGER J-Link plus Renesas Flash Programmer (rfp).\n' "$BOARD_BUILD_TARGET"
       ;;
   esac
 }

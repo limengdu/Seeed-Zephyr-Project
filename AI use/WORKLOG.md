@@ -1065,3 +1065,29 @@ Verification:
 - `seeed-zephyr flash xiao_mg24 --monitor` built the repository example,
   flashed through Zephyr's `pyocd` runner, opened pyserial miniterm, and
   observed repeated LED state output.
+
+## 2026-06-21 - Add XIAO RA4M1 RFP CLI dependency handling
+
+Scope:
+- Investigated the XIAO RA4M1 flash failure:
+  `FATAL ERROR: required program rfp-cli not found`.
+- Confirmed Zephyr's official XIAO RA4M1 flash path is the `rfp` runner, with
+  `jlink` reserved for debug flows.
+- Added repository setup handling for the Renesas Flash Programmer CLI needed
+  by Zephyr's `rfp` runner.
+
+Result:
+- `scripts/setup-macos.sh --board xiao_ra4m1` and full setup now attempt to
+  prepare `rfp-cli`.
+- `scripts/setup-linux.sh --board xiao_ra4m1` and full Linux/WSL2 setup now
+  install `curl` and `unzip`, then use the same RFP CLI preparation path.
+- The setup path first attempts the official Renesas download endpoint when a
+  platform URL is known, then searches `~/.seeed-zephyr/downloads` and
+  `~/Downloads` for a valid official RFP zip and installs `rfp-cli` from it.
+- `seeed-zephyr flash xiao_ra4m1` now checks for RFP CLI before flashing and
+  passes the resolved path to Zephyr as `west flash --rfp-cli <path>`.
+
+Current constraint:
+- Renesas currently redirects unauthenticated script download attempts for the
+  macOS RFP package to a MyRenesas login flow. The setup still automates the
+  install once an official zip is available locally.

@@ -49,7 +49,9 @@ APT_PACKAGES=(
   ccache
   dfu-util
   device-tree-compiler
+  curl
   wget
+  unzip
   python3-dev
   python3-venv
   python3-pip
@@ -74,7 +76,9 @@ DNF_PACKAGES=(
   ccache
   dfu-util
   dtc
+  curl
   wget
+  unzip
   which
   xz
   file

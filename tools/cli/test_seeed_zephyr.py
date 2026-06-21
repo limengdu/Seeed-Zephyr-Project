@@ -95,6 +95,30 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn("pyocd pack install EFR32MG24B220F1536IM48", message)
         self.assertIn("EFR32MG24B220F1536IM48", message)
 
+    def test_xiao_ra4m1_requires_rfp_cli(self) -> None:
+        board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "resolve_rfp_cli_path", return_value=None):
+                with self.assertRaises(seeed_zephyr.CliError) as context:
+                    seeed_zephyr.require_flash_tools("xiao_ra4m1")
+
+        message = str(context.exception)
+        self.assertIn("Renesas Flash Programmer CLI", message)
+        self.assertIn("scripts/setup", message)
+
+    def test_xiao_ra4m1_flash_passes_rfp_cli_to_zephyr_runner(self) -> None:
+        board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
+        rfp_cli = seeed_zephyr.Path("/tmp/renesas-rfp/rfp-cli")
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "resolve_rfp_cli_path", return_value=rfp_cli):
+                with mock.patch.object(seeed_zephyr, "run_west") as run_west:
+                    selected_port = seeed_zephyr.run_west_flash("xiao_ra4m1")
+
+        self.assertIsNone(selected_port)
+        run_west.assert_called_once_with(["flash", "--rfp-cli", str(rfp_cli)])
+
     def test_raspberrypi_flash_timeout_keeps_manual_bootsel_hint(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[]):
             with mock.patch.object(seeed_zephyr, "detect_serial_port", return_value="/dev/cu.usbmodem1101"):
