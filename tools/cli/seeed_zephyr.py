@@ -51,6 +51,8 @@ RA4M1_DFU_ALT = "0"
 RA4M1_DFU_MAX_IMAGE_BYTES = 0x40000 - 0x4000
 RA4M1_DFU_WAIT_SECONDS = 10
 RA4M1_DFU_POLL_SECONDS = 0.5
+RA4M1_ROM_FLASH_SCRIPT = Path(__file__).resolve().parent / "ra4m1_rom_flash.py"
+RA4M1_DFU_BOOTLOADER_BIN = Path(__file__).resolve().parent / "bootloaders" / "ra4m1_dfu.bin"
 
 
 class CliError(Exception):
@@ -406,7 +408,7 @@ def require_ra4m1_dfu_util() -> None:
         raise CliError(f"dfu-util was not found. {dfu_util_install_hint()}")
 
 
-def require_flash_tools(board_id: str) -> None:
+def require_flash_tools(board_id: str, rom_boot: bool = False) -> None:
     board = require_board(board_id)
     if board["vendor"] == "espressif":
         require_west_venv_tool(
@@ -418,7 +420,7 @@ def require_flash_tools(board_id: str) -> None:
         require_host_tool("bossac", bossac_install_hint())
     if board["id"] == MG24_BOARD_ID:
         require_mg24_pyocd_pack()
-    if board["id"] == RA4M1_BOARD_ID:
+    if board["id"] == RA4M1_BOARD_ID and not rom_boot:
         require_ra4m1_dfu_util()
 
 
@@ -469,6 +471,27 @@ def prepare_ra4m1_dfu_image() -> Path:
     return image_file
 
 
+def run_ra4m1_rom_flash(rom_port: str) -> str | None:
+    # Flashes firmware through the Renesas ROM bootloader serial protocol.
+    # 通过 Renesas ROM bootloader 串口协议烧录固件。
+    app_image = prepare_ra4m1_dfu_image()
+    combined_image = app_image.parent / "zephyr.ra4m1.combined.bin"
+
+    bootloader_bytes = RA4M1_DFU_BOOTLOADER_BIN.read_bytes()
+    app_bytes = app_image.read_bytes()
+    # Combines the factory DFU bootloader at 0x0 with the offset app image at 0x4000.
+    # 将出厂 DFU bootloader 放在 0x0，并把偏移后的应用镜像接在 0x4000 之后。
+    combined_image.write_bytes(bootloader_bytes + app_bytes)
+
+    python = zephyr_venv_python()
+    run_command(
+        [str(python), str(RA4M1_ROM_FLASH_SCRIPT), rom_port, str(combined_image)],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+    return None
+
+
 def ra4m1_bootloader_hint(port: str | None) -> str:
     port_hint = f" Current port: {port}." if port else ""
     return (
@@ -476,7 +499,8 @@ def ra4m1_bootloader_hint(port: str | None) -> str:
         f"{port_hint} If this is the first repository firmware install, hold BOOT, "
         "tap RESET, keep holding BOOT for 1 to 2 seconds, then rerun the flash "
         "command. After repository firmware is installed, later flashes should "
-        "enter DFU automatically."
+        "enter DFU automatically. If the board DFU bootloader is missing, enter "
+        "ROM Boot mode (hold BOOT, tap RESET) and rerun the flash command."
     )
 
 
@@ -521,10 +545,8 @@ def ra4m1_rom_boot_port() -> str | None:
 
 def ra4m1_rom_boot_hint(port: str) -> str:
     return (
-        f"XIAO RA4M1 is currently visible as Renesas ROM bootloader on {port}. "
-        "This is not the Seeed USB DFU device used by dfu-util. Press RESET once "
-        "to return to the running application, or enter the board USB DFU "
-        "bootloader before flashing."
+        f"XIAO RA4M1 is in Renesas ROM bootloader mode on {port}. "
+        "Run 'seeed-zephyr flash xiao_ra4m1' to flash via ROM boot automatically."
     )
 
 
@@ -680,6 +702,29 @@ def wait_for_uf2_detach(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECONDS) -> N
     raise CliError(
         "UF2 mass storage volume did not detach after flashing. "
         "Unplug and reconnect the board, then open monitor again."
+    )
+
+
+def wait_for_ra4m1_rom_boot_detach(timeout_seconds: int = 30) -> None:
+    # Waits for the ROM bootloader USB device to disappear after flash.
+    # 等待 ROM bootloader USB 设备在烧录后消失。
+    print(
+        "Press RESET to boot the new firmware. "
+        "Waiting for ROM bootloader to detach...",
+        flush=True,
+    )
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        if ra4m1_rom_boot_port() is None:
+            print("Board rebooted. Starting monitor...", flush=True)
+            return
+        time.sleep(0.5)
+
+    raise CliError(
+        "ROM bootloader did not detach after flashing. "
+        "Press RESET on the board, then open monitor manually with: "
+        "seeed-zephyr monitor xiao_ra4m1"
     )
 
 
@@ -980,10 +1025,25 @@ def cmd_build(args: argparse.Namespace) -> None:
 
 def cmd_flash(args: argparse.Namespace) -> None:
     example = require_supported_example(args.board_id)
-    require_flash_tools(args.board_id)
 
-    run_west_build(args.board_id, example)
-    port = run_west_flash(args.board_id, port=args.port)
+    ra4m1_rom = None
+    if args.board_id == RA4M1_BOARD_ID:
+        ra4m1_rom = ra4m1_rom_boot_port()
+
+    require_flash_tools(args.board_id, rom_boot=ra4m1_rom is not None)
+
+    if ra4m1_rom is not None:
+        print(
+            f"ROM bootloader detected on {ra4m1_rom}. "
+            "Building app image for DFU offset recovery flash...",
+            flush=True,
+        )
+        run_west_build(args.board_id, example)
+        port = run_ra4m1_rom_flash(ra4m1_rom)
+    else:
+        run_west_build(args.board_id, example)
+        port = run_west_flash(args.board_id, port=args.port)
+
     if args.monitor:
         board = require_board(args.board_id)
         monitor_port = port
@@ -994,6 +1054,8 @@ def cmd_flash(args: argparse.Namespace) -> None:
             wait_for_uf2_detach()
         if board["id"] == RA4M1_BOARD_ID and args.port is None:
             monitor_port = None
+            if ra4m1_rom is not None:
+                wait_for_ra4m1_rom_boot_detach()
         run_monitor(args.board_id, port=monitor_port, baud=args.baud)
 
 
@@ -1023,9 +1085,24 @@ def cmd_matrix(_args: argparse.Namespace) -> None:
 
 def cmd_verify_hardware(args: argparse.Namespace) -> None:
     example = require_supported_example(args.board_id)
-    require_flash_tools(args.board_id)
-    run_west_build(args.board_id, example)
-    run_west_flash(args.board_id)
+
+    ra4m1_rom = None
+    if args.board_id == RA4M1_BOARD_ID:
+        ra4m1_rom = ra4m1_rom_boot_port()
+
+    require_flash_tools(args.board_id, rom_boot=ra4m1_rom is not None)
+
+    if ra4m1_rom is not None:
+        print(
+            f"ROM bootloader detected on {ra4m1_rom}. "
+            "Building app image for DFU offset recovery flash...",
+            flush=True,
+        )
+        run_west_build(args.board_id, example)
+        run_ra4m1_rom_flash(ra4m1_rom)
+    else:
+        run_west_build(args.board_id, example)
+        run_west_flash(args.board_id)
 
     print("\nHardware observation")
     print("Answer the prompts after checking the physical board.")

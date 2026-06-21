@@ -109,6 +109,20 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn("xiao_ra4m1", message)
         self.assertNotIn("rfp-cli", message)
 
+    def test_xiao_ra4m1_rom_boot_skips_dfu_util_check(self) -> None:
+        board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "dfu_util_path", return_value=None):
+                seeed_zephyr.require_flash_tools("xiao_ra4m1", rom_boot=True)
+
+    def test_wait_for_ra4m1_rom_boot_detach_returns_after_port_disappears(self) -> None:
+        with mock.patch.object(
+            seeed_zephyr, "ra4m1_rom_boot_port", side_effect=["/dev/cu.usbmodem1101", None]
+        ):
+            with mock.patch.object(seeed_zephyr.time, "sleep"):
+                seeed_zephyr.wait_for_ra4m1_rom_boot_detach(timeout_seconds=1)
+
     def test_xiao_ra4m1_flash_uses_dfu_util(self) -> None:
         board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
         dfu_util = seeed_zephyr.Path("/tmp/dfu-util")
@@ -166,6 +180,62 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn("-O", command)
         self.assertIn("binary", command)
 
+    def test_ra4m1_rom_flash_invokes_rom_flash_script(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = seeed_zephyr.Path(tmpdir)
+            build_dir = workspace / "build" / "zephyr"
+            build_dir.mkdir(parents=True)
+            python = workspace / "venv" / "bin" / "python"
+            bootloader = workspace / "ra4m1_dfu.bin"
+            app_image = build_dir / "zephyr.ra4m1.dfu.bin"
+            bootloader.write_bytes(b"\xff" * 16384)
+            app_image.write_bytes(b"APP")
+
+            with mock.patch.object(seeed_zephyr, "prepare_ra4m1_dfu_image", return_value=app_image):
+                with mock.patch.object(seeed_zephyr, "RA4M1_DFU_BOOTLOADER_BIN", bootloader):
+                    with mock.patch.object(seeed_zephyr, "zephyr_venv_python", return_value=python):
+                        with mock.patch.object(seeed_zephyr, "zephyr_workspace", return_value=workspace):
+                            with mock.patch.object(seeed_zephyr, "west_command_env", return_value={}):
+                                with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                                    result = seeed_zephyr.run_ra4m1_rom_flash("/dev/cu.usbmodem1101")
+
+        combined_image = workspace / "build" / "zephyr" / "zephyr.ra4m1.combined.bin"
+
+        self.assertIsNone(result)
+        run_command.assert_called_once_with(
+            [
+                str(python),
+                str(seeed_zephyr.RA4M1_ROM_FLASH_SCRIPT),
+                "/dev/cu.usbmodem1101",
+                str(combined_image),
+            ],
+            cwd=workspace,
+            env={},
+        )
+        self.assertTrue(str(run_command.call_args.args[0][-1]).endswith("zephyr.ra4m1.combined.bin"))
+
+    def test_ra4m1_rom_flash_combines_bootloader_and_app(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = seeed_zephyr.Path(tmpdir)
+            build_dir = workspace / "build" / "zephyr"
+            build_dir.mkdir(parents=True)
+            bootloader = workspace / "ra4m1_dfu.bin"
+            app_image = build_dir / "zephyr.ra4m1.dfu.bin"
+            bootloader.write_bytes(b"BOOTLOADER")
+            app_image.write_bytes(b"APP")
+
+            with mock.patch.object(seeed_zephyr, "prepare_ra4m1_dfu_image", return_value=app_image):
+                with mock.patch.object(seeed_zephyr, "RA4M1_DFU_BOOTLOADER_BIN", bootloader):
+                    with mock.patch.object(seeed_zephyr, "zephyr_venv_python", return_value=workspace / "python"):
+                        with mock.patch.object(seeed_zephyr, "zephyr_workspace", return_value=workspace):
+                            with mock.patch.object(seeed_zephyr, "west_command_env", return_value={}):
+                                with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                                    seeed_zephyr.run_ra4m1_rom_flash("/dev/cu.usbmodem1101")
+
+            combined_image = build_dir / "zephyr.ra4m1.combined.bin"
+            self.assertEqual(combined_image.read_bytes(), b"BOOTLOADERAPP")
+            self.assertEqual(str(combined_image), run_command.call_args.args[0][-1])
+
     def test_ra4m1_dfu_detection_accepts_runtime_and_bootloader_ids(self) -> None:
         result = seeed_zephyr.subprocess.CompletedProcess(
             [],
@@ -222,7 +292,7 @@ class FlashHintTests(unittest.TestCase):
 
         message = str(context.exception)
         self.assertIn("Renesas ROM bootloader", message)
-        self.assertIn("Press RESET", message)
+        self.assertIn("seeed-zephyr flash xiao_ra4m1", message)
         detect.assert_not_called()
         touch.assert_not_called()
 
@@ -339,6 +409,61 @@ class MonitorCommandTests(unittest.TestCase):
 
         wait_detach.assert_called_once_with()
         run_monitor.assert_called_once_with("xiao_nrf52840", port=None, baud=115200)
+
+    def test_cmd_flash_uses_rom_boot_path_when_rom_bootloader_detected(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_ra4m1", port=None, monitor=False, baud=115200
+        )
+
+        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value="/dev/cu.usbmodem1101"):
+                with mock.patch.object(seeed_zephyr, "require_flash_tools") as req_tools:
+                    with mock.patch.object(seeed_zephyr, "run_west_build") as build:
+                        with mock.patch.object(seeed_zephyr, "run_ra4m1_rom_flash", return_value=None) as rom_flash:
+                            with mock.patch.object(seeed_zephyr, "run_west_flash") as west_flash:
+                                seeed_zephyr.cmd_flash(args)
+
+        req_tools.assert_called_once_with("xiao_ra4m1", rom_boot=True)
+        build.assert_called_once_with("xiao_ra4m1", {"path": "example"})
+        rom_flash.assert_called_once_with("/dev/cu.usbmodem1101")
+        west_flash.assert_not_called()
+
+    def test_cmd_flash_rom_boot_with_monitor_waits_for_detach(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_ra4m1", port=None, monitor=True, baud=115200
+        )
+
+        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value="/dev/cu.usbmodem1101"):
+                with mock.patch.object(seeed_zephyr, "require_flash_tools"):
+                    with mock.patch.object(seeed_zephyr, "run_west_build"):
+                        with mock.patch.object(seeed_zephyr, "run_ra4m1_rom_flash", return_value=None):
+                            with mock.patch.object(
+                                seeed_zephyr, "wait_for_ra4m1_rom_boot_detach"
+                            ) as wait_detach:
+                                with mock.patch.object(seeed_zephyr, "run_monitor") as run_monitor:
+                                    seeed_zephyr.cmd_flash(args)
+
+        wait_detach.assert_called_once_with()
+        run_monitor.assert_called_once_with("xiao_ra4m1", port=None, baud=115200)
+
+    def test_cmd_flash_uses_dfu_path_when_no_rom_bootloader(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_ra4m1", port=None, monitor=False, baud=115200
+        )
+
+        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value=None):
+                with mock.patch.object(seeed_zephyr, "require_flash_tools") as req_tools:
+                    with mock.patch.object(seeed_zephyr, "run_west_build") as build:
+                        with mock.patch.object(seeed_zephyr, "run_west_flash", return_value=None) as west_flash:
+                            with mock.patch.object(seeed_zephyr, "run_ra4m1_rom_flash") as rom_flash:
+                                seeed_zephyr.cmd_flash(args)
+
+        req_tools.assert_called_once_with("xiao_ra4m1", rom_boot=False)
+        build.assert_called_once_with("xiao_ra4m1", {"path": "example"})
+        west_flash.assert_called_once_with("xiao_ra4m1", port=None)
+        rom_flash.assert_not_called()
 
     def test_wait_for_uf2_detach_returns_after_volume_disappears(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", side_effect=[["/Volumes/XIAO-SENSE"], []]):

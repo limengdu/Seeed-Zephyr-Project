@@ -47,10 +47,21 @@ CONFIG_CDC_ACM_SERIAL_INITIALIZE_AT_BOOT=y
 
 本仓库基础示例已经包含这套入口，可作为自建示例参考。
 
-## RA USB Boot 状态
+## ROM Boot 恢复烧录
 
-如果电脑看到的是 `RA USB Boot` 或 `045B:0261`，这是 Renesas ROM bootloader，不是
-`dfu-util` 使用的 Seeed USB DFU 设备。点按一次 Reset 可回到正常运行状态。
+当板载 DFU bootloader 丢失时，可以通过 Renesas ROM bootloader 恢复烧录。
+
+1. 按住 Boot，点按 Reset，松开 Boot，进入 ROM Boot 模式（电脑枚举 `RA USB Boot` 或 `045B:0261`）。
+2. 运行烧录命令：
+
+```sh
+seeed-zephyr flash xiao_ra4m1 --monitor
+```
+
+CLI 自动检测到 ROM Boot 设备后，按 DFU 偏移构建应用固件，并把 DFU bootloader 与应用固件合并后，通过
+ROM bootloader 串口协议（9600 baud，256 字节分块）写入 flash。烧录完成后按 Reset 启动新固件。
+
+ROM Boot 恢复烧录同时写回 DFU bootloader，恢复完成后板子回到出厂状态，后续烧录走正常 DFU 流程。
 
 ## 串口 Monitor
 

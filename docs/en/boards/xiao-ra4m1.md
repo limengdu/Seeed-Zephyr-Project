@@ -53,11 +53,25 @@ The application should detect a `1200` baud request on USB CDC serial, then:
 The repository baseline example already includes this entry path and can be used
 as a reference for custom examples.
 
-## RA USB Boot State
+## ROM Boot Recovery Flashing
 
-If the host sees `RA USB Boot` or `045B:0261`, the board is in Renesas ROM
-bootloader, not the Seeed USB DFU device used by `dfu-util`. Tap Reset once to
-return to the running application.
+When the board DFU bootloader is missing, the Renesas ROM bootloader can
+recover the board.
+
+1. Hold Boot, tap Reset, release Boot to enter ROM Boot mode (host enumerates `RA USB Boot` or `045B:0261`).
+2. Run the flash command:
+
+```sh
+seeed-zephyr flash xiao_ra4m1 --monitor
+```
+
+The CLI detects the ROM Boot device automatically, builds the application
+firmware with the DFU offset, combines it with the DFU bootloader, and writes it
+through the ROM bootloader serial protocol (9600 baud, 256-byte chunks). Press
+Reset after flashing to boot the new firmware.
+
+ROM Boot recovery also restores the DFU bootloader. After recovery the board
+returns to factory state and subsequent flashes use the normal DFU flow.
 
 ## Serial Monitor
 
