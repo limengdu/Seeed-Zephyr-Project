@@ -41,9 +41,6 @@ SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
 MG24_BOARD_ID = "xiao_mg24"
 MG24_PYOCD_TARGET = "EFR32MG24B220F1536IM48"
-RA4M1_BOARD_ID = "xiao_ra4m1"
-RFP_CLI_NAMES = ("rfp-cli", "rfp-cli.exe")
-RFP_INSTALL_ROOT = Path.home() / ".seeed-zephyr" / "tools" / "renesas-rfp"
 
 
 class CliError(Exception):
@@ -379,37 +376,6 @@ def require_mg24_pyocd_pack() -> None:
         raise CliError(mg24_pyocd_pack_hint())
 
 
-def resolve_rfp_cli_path() -> Path | None:
-    for tool_name in RFP_CLI_NAMES:
-        path = shutil.which(tool_name, path=west_command_env().get("PATH"))
-        if path is not None:
-            return Path(path)
-
-    if not RFP_INSTALL_ROOT.is_dir():
-        return None
-
-    for tool_name in RFP_CLI_NAMES:
-        for candidate in sorted(RFP_INSTALL_ROOT.rglob(tool_name)):
-            if candidate.is_file():
-                return candidate
-
-    return None
-
-
-def rfp_cli_install_hint() -> str:
-    return (
-        "XIAO RA4M1 flashing uses Zephyr's rfp runner. "
-        "Run scripts/setup-macos.sh --board xiao_ra4m1 or "
-        "scripts/setup-linux.sh --board xiao_ra4m1 so setup installs the "
-        "Renesas Flash Programmer CLI."
-    )
-
-
-def require_ra4m1_rfp_cli() -> None:
-    if resolve_rfp_cli_path() is None:
-        raise CliError(f"Renesas Flash Programmer CLI was not found. {rfp_cli_install_hint()}")
-
-
 def require_flash_tools(board_id: str) -> None:
     board = require_board(board_id)
     if board["vendor"] == "espressif":
@@ -422,8 +388,6 @@ def require_flash_tools(board_id: str) -> None:
         require_host_tool("bossac", bossac_install_hint())
     if board["id"] == MG24_BOARD_ID:
         require_mg24_pyocd_pack()
-    if board["id"] == RA4M1_BOARD_ID:
-        require_ra4m1_rfp_cli()
 
 
 def uses_uf2_runner(board: dict[str, str]) -> bool:
@@ -574,11 +538,6 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
         command.extend(["--runner", "uf2"])
     if board["id"] == MG24_BOARD_ID:
         command.extend(["--runner", "pyocd"])
-    if board["id"] == RA4M1_BOARD_ID:
-        rfp_cli = resolve_rfp_cli_path()
-        if rfp_cli is None:
-            raise CliError(f"Renesas Flash Programmer CLI was not found. {rfp_cli_install_hint()}")
-        command.extend(["--rfp-cli", str(rfp_cli)])
     if board["target"] == "seeeduino_xiao" and port is not None:
         command.extend(["--bossac-port", port, "--delay", SAMD21_BOSSAC_DELAY_SECONDS])
 
