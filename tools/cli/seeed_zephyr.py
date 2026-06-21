@@ -41,6 +41,10 @@ SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
 MG24_BOARD_ID = "xiao_mg24"
 MG24_PYOCD_TARGET = "EFR32MG24B220F1536IM48"
+RA4M1_BOARD_ID = "xiao_ra4m1"
+RA4M1_DFU_VID_PID = "2886:0049,:8049"
+RA4M1_DFU_ALT = "0"
+RA4M1_DFU_MAX_IMAGE_BYTES = 0x40000 - 0x4000
 
 
 class CliError(Exception):
@@ -376,6 +380,26 @@ def require_mg24_pyocd_pack() -> None:
         raise CliError(mg24_pyocd_pack_hint())
 
 
+def dfu_util_path() -> Path | None:
+    path = shutil.which("dfu-util", path=west_command_env().get("PATH"))
+    if path is None:
+        return None
+    return Path(path)
+
+
+def dfu_util_install_hint() -> str:
+    return (
+        "XIAO RA4M1 flashing uses the board USB DFU bootloader. "
+        "Run scripts/setup-macos.sh --board xiao_ra4m1 or "
+        "scripts/setup-linux.sh --board xiao_ra4m1 so setup installs dfu-util."
+    )
+
+
+def require_ra4m1_dfu_util() -> None:
+    if dfu_util_path() is None:
+        raise CliError(f"dfu-util was not found. {dfu_util_install_hint()}")
+
+
 def require_flash_tools(board_id: str) -> None:
     board = require_board(board_id)
     if board["vendor"] == "espressif":
@@ -388,6 +412,77 @@ def require_flash_tools(board_id: str) -> None:
         require_host_tool("bossac", bossac_install_hint())
     if board["id"] == MG24_BOARD_ID:
         require_mg24_pyocd_pack()
+    if board["id"] == RA4M1_BOARD_ID:
+        require_ra4m1_dfu_util()
+
+
+def zephyr_objcopy_path() -> Path:
+    path = shutil.which("arm-zephyr-eabi-objcopy", path=west_command_env().get("PATH"))
+    if path is not None:
+        return Path(path)
+
+    for sdk_dir in sorted(Path.home().glob("zephyr-sdk-*"), reverse=True):
+        candidate = sdk_dir / "gnu" / "arm-zephyr-eabi" / "bin" / "arm-zephyr-eabi-objcopy"
+        if candidate.exists():
+            return candidate
+
+    raise CliError(
+        "arm-zephyr-eabi-objcopy was not found. Rerun setup so the Zephyr SDK is installed."
+    )
+
+
+def prepare_ra4m1_dfu_image() -> Path:
+    build_zephyr_dir = zephyr_workspace() / "build" / "zephyr"
+    elf_file = build_zephyr_dir / "zephyr.elf"
+    image_file = build_zephyr_dir / "zephyr.ra4m1.dfu.bin"
+
+    if not elf_file.exists():
+        raise CliError(f"Zephyr ELF was not found: {elf_file}")
+
+    run_command(
+        [
+            str(zephyr_objcopy_path()),
+            "-O",
+            "binary",
+            "-R",
+            ".option_setting_osis",
+            str(elf_file),
+            str(image_file),
+        ],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+
+    image_size = image_file.stat().st_size
+    if image_size > RA4M1_DFU_MAX_IMAGE_BYTES:
+        raise CliError(
+            f"RA4M1 DFU image is too large: {image_size} bytes. "
+            f"Maximum is {RA4M1_DFU_MAX_IMAGE_BYTES} bytes."
+        )
+
+    return image_file
+
+
+def run_ra4m1_dfu_flash() -> None:
+    dfu_util = dfu_util_path()
+    if dfu_util is None:
+        raise CliError(f"dfu-util was not found. {dfu_util_install_hint()}")
+
+    image = prepare_ra4m1_dfu_image()
+    run_command(
+        [
+            str(dfu_util),
+            "--device",
+            RA4M1_DFU_VID_PID,
+            "-D",
+            str(image),
+            "-a",
+            RA4M1_DFU_ALT,
+            "-R",
+        ],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
 
 
 def uses_uf2_runner(board: dict[str, str]) -> bool:
@@ -530,6 +625,10 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     # 执行 Zephyr 烧录，并返回后续 monitor 可复用的串口。
     board = require_board(board_id)
     port = resolve_flash_port(board, port)
+    if board["id"] == RA4M1_BOARD_ID:
+        run_ra4m1_dfu_flash()
+        return port
+
     if uses_uf2_runner(board):
         port = prepare_uf2_bootloader(board_id, port)
 

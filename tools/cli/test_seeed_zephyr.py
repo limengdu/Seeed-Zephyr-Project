@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 import unittest
 from unittest import mock
 
@@ -94,6 +95,72 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn("pyocd runner", message)
         self.assertIn("pyocd pack install EFR32MG24B220F1536IM48", message)
         self.assertIn("EFR32MG24B220F1536IM48", message)
+
+    def test_xiao_ra4m1_requires_dfu_util(self) -> None:
+        board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "dfu_util_path", return_value=None):
+                with self.assertRaises(seeed_zephyr.CliError) as context:
+                    seeed_zephyr.require_flash_tools("xiao_ra4m1")
+
+        message = str(context.exception)
+        self.assertIn("dfu-util", message)
+        self.assertIn("xiao_ra4m1", message)
+        self.assertNotIn("rfp-cli", message)
+
+    def test_xiao_ra4m1_flash_uses_dfu_util(self) -> None:
+        board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
+        dfu_util = seeed_zephyr.Path("/tmp/dfu-util")
+        image = seeed_zephyr.Path("/tmp/zephyr.ra4m1.dfu.bin")
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "prepare_ra4m1_dfu_image", return_value=image) as prepare:
+                with mock.patch.object(seeed_zephyr, "dfu_util_path", return_value=dfu_util):
+                    with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                        selected_port = seeed_zephyr.run_west_flash("xiao_ra4m1")
+
+        self.assertIsNone(selected_port)
+        prepare.assert_called_once_with()
+        run_command.assert_called_once_with(
+            [
+                str(dfu_util),
+                "--device",
+                "2886:0049,:8049",
+                "-D",
+                str(image),
+                "-a",
+                "0",
+                "-R",
+            ],
+            cwd=seeed_zephyr.zephyr_workspace(),
+            env=seeed_zephyr.west_command_env(),
+        )
+
+    def test_ra4m1_dfu_image_excludes_option_setting_section(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = seeed_zephyr.Path(tmpdir)
+            build_dir = workspace / "build" / "zephyr"
+            build_dir.mkdir(parents=True)
+            (build_dir / "zephyr.elf").write_bytes(b"ELF")
+
+            def create_image(*_args, **_kwargs) -> None:
+                (build_dir / "zephyr.ra4m1.dfu.bin").write_bytes(b"BIN")
+
+            with mock.patch.object(seeed_zephyr, "zephyr_workspace", return_value=workspace):
+                with mock.patch.object(
+                    seeed_zephyr,
+                    "zephyr_objcopy_path",
+                    return_value=seeed_zephyr.Path("/tmp/arm-zephyr-eabi-objcopy"),
+                ):
+                    with mock.patch.object(seeed_zephyr, "run_command", side_effect=create_image) as run_command:
+                        image = seeed_zephyr.prepare_ra4m1_dfu_image()
+
+        self.assertEqual(image, workspace / "build" / "zephyr" / "zephyr.ra4m1.dfu.bin")
+        command = run_command.call_args.args[0]
+        self.assertIn(".option_setting_osis", command)
+        self.assertIn("-O", command)
+        self.assertIn("binary", command)
 
     def test_raspberrypi_flash_timeout_keeps_manual_bootsel_hint(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[]):
@@ -287,6 +354,24 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertIn("NRF52_BOOTLOADER_MAGIC", main_c)
         self.assertIn("nrf_power_gpregret_set(NRF_POWER, 0, NRF52_BOOTLOADER_MAGIC)", main_c)
         self.assertIn("sys_reboot(SYS_REBOOT_COLD)", main_c)
+
+    def test_ra4m1_example_starts_after_dfu_bootloader(self) -> None:
+        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_ra4m1/blinky"
+        prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
+
+        self.assertIn("CONFIG_FLASH_LOAD_OFFSET=0x4000", prj_conf)
+
+    def test_ra4m1_example_uses_usb_cdc_console(self) -> None:
+        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_ra4m1/blinky"
+        prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
+        app_overlay = (example_dir / "app.overlay").read_text(encoding="utf-8")
+
+        self.assertIn("CONFIG_USB_DEVICE_STACK_NEXT=y", prj_conf)
+        self.assertIn("CONFIG_CDC_ACM_SERIAL_INITIALIZE_AT_BOOT=y", prj_conf)
+        self.assertIn("CONFIG_CDC_ACM_SERIAL_VID=0x2886", prj_conf)
+        self.assertIn("CONFIG_CDC_ACM_SERIAL_PID=0x0049", prj_conf)
+        self.assertIn('zephyr,console = &cdc_acm_uart0;', app_overlay)
+        self.assertIn('compatible = "zephyr,cdc-acm-uart";', app_overlay)
 
 
 if __name__ == "__main__":

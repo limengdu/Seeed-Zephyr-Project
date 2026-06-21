@@ -88,10 +88,13 @@ install_board_brew_packages() {
     seeeduino_xiao)
       install_brew_packages bossa
       ;;
+    xiao_ra4m1)
+      install_brew_packages dfu-util
+      ;;
     "")
       # No board selection means a full host dependency install.
       # 未选择开发板时执行完整主机依赖安装。
-      install_brew_packages bossa
+      install_brew_packages bossa dfu-util
       ;;
     *)
       printf 'No board-specific Homebrew packages required for %s.\n' "$BOARD_ID"

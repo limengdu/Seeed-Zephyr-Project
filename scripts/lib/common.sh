@@ -570,6 +570,29 @@ check_bossac_tool() {
   printf 'BOSSA bossac flash tool is available.\n'
 }
 
+# Prints the platform-specific dfu-util install hint.
+# 打印当前平台对应的 dfu-util 安装提示。
+dfu_util_install_hint() {
+  case "$SETUP_PLATFORM_LABEL" in
+    macOS)
+      printf 'Install it with: brew install dfu-util'
+      ;;
+    Linux)
+      printf 'Install it with: sudo apt-get install dfu-util, or sudo dnf install dfu-util'
+      ;;
+    *)
+      printf 'Install dfu-util for this platform, or run scripts/setup-linux.sh inside WSL2'
+      ;;
+  esac
+}
+
+# Confirms the dfu-util command used by XIAO RA4M1 USB DFU flashing is available.
+# 确认 XIAO RA4M1 USB DFU 烧录使用的 dfu-util 命令可用。
+check_dfu_util_tool() {
+  command_exists dfu-util || fail "dfu-util was not found. $(dfu_util_install_hint)."
+  printf 'dfu-util flash tool is available.\n'
+}
+
 # Returns success when pyOCD can see the installed MG24 target.
 # 当 pyOCD 能看到已安装的 MG24 target 时返回成功。
 pyocd_target_available() {
@@ -609,6 +632,10 @@ check_board_host_tools() {
   if [[ "$BOARD_ID" == "$MG24_BOARD_ID" ]]; then
     ensure_mg24_pyocd_pack
   fi
+
+  if [[ "$BOARD_ID" == "xiao_ra4m1" ]]; then
+    check_dfu_util_tool
+  fi
 }
 
 # Checks host tools needed when setup runs without a board filter.
@@ -616,6 +643,7 @@ check_board_host_tools() {
 check_full_host_tools() {
   check_espressif_zephyr_tools
   check_bossac_tool
+  check_dfu_util_tool
   ensure_mg24_pyocd_pack
 }
 
@@ -629,8 +657,7 @@ print_vendor_flash_tool_note() {
       printf 'Some XIAO boards, including nRF52840, also support UF2.\n'
       ;;
     xiao_ra4m1)
-      printf '\nFlash note: Zephyr provides openocd, pyocd, and esptool for most boards through the SDK and Python packages.\n'
-      printf 'The default Zephyr runner for %s may require SEGGER J-Link plus Renesas Flash Programmer (rfp).\n' "$BOARD_BUILD_TARGET"
+      printf '\nFlash note: %s uses the board USB DFU bootloader through dfu-util in this repository.\n' "$BOARD_BUILD_TARGET"
       ;;
   esac
 }

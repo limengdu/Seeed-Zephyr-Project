@@ -79,6 +79,9 @@ bash scripts/setup-linux.sh
 setup 流程会准备 `~/zephyrproject`，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
 安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。当你通过 `--board` 选择 Espressif
 开发板时，setup 还会检查 Zephyr 自带的 `hal_espressif` 烧录和 monitor 工具是否可用。
+当你选择其他开发板时，setup 也会处理该板子需要的烧录工具，例如 SAMD21 的 `bossac`、
+MG24 的 PyOCD CMSIS pack、RA4M1 的 `dfu-util`。不带 `--board` 运行时，setup 会执行
+当前仓库覆盖范围内的全量板级依赖安装。
 
 执行到 CLI 安装步骤时，脚本会询问：
 
@@ -173,7 +176,7 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | PASS | 可构建 |
 | XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 硬件已验证；默认使用 Zephyr PyOCD runner |
 | XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 硬件已验证 |
-| XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建 |
+| XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建；使用 USB DFU bootloader |
 | XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO RP2350 | `xiao_rp2350/rp2350a/m33` | `examples/boards/xiao_rp2350/blinky` | PASS | 硬件已验证；M33 target |
 
@@ -224,6 +227,9 @@ seeed-zephyr monitor xiao_samd21
 
 关于 XIAO MG24 PyOCD 烧录和 CMSIS pack 要求，见
 [XIAO MG24 开发板说明](boards/xiao-mg24.md)。
+
+关于 XIAO RA4M1 USB DFU 烧录和应用起始地址，见
+[XIAO RA4M1 开发板说明](boards/xiao-ra4m1.md)。
 
 如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
 

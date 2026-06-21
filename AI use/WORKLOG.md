@@ -1065,3 +1065,45 @@ Verification:
 - `seeed-zephyr flash xiao_mg24 --monitor` built the repository example,
   flashed through Zephyr's `pyocd` runner, opened pyserial miniterm, and
   observed repeated LED state output.
+
+## 2026-06-21 - Switch XIAO RA4M1 flash path to USB DFU
+
+Scope:
+- Reverted the prior RA4M1 RFP CLI dependency handling.
+- Investigated Seeed's XIAO RA4M1 Arduino package and confirmed the board
+  upload path uses `dfu-util` with VID/PID `2886:8049`.
+- Updated the repository RA4M1 example to start after the board USB DFU
+  bootloader at `0x4000`.
+
+Result:
+- `seeed-zephyr flash xiao_ra4m1` no longer requires Renesas Flash Programmer
+  CLI or `rfp-cli`.
+- The CLI generates `zephyr.ra4m1.dfu.bin` from `zephyr.elf`, excluding the
+  high-address `.option_setting_osis` section so the DFU image stays compact.
+- The CLI uploads the compact image with
+  `dfu-util --device 2886:0049,:8049 -D ... -a 0 -R`.
+- setup now installs/checks `dfu-util` for `xiao_ra4m1` and full setup.
+- The baseline RA4M1 example now starts at `0x4000` and routes console output
+  through USB CDC serial.
+
+Reasoning evidence:
+- Seeed Arduino `boards.txt` sets `XIAO_RA4M1.upload.tool=dfu-util`,
+  `XIAO_RA4M1.upload.pid=0x8049`, and `XIAO_RA4M1.upload.interface=0`.
+- Seeed Arduino `memory_regions.ld` sets `FLASH_IMAGE_START = 0x4000`.
+- Zephyr's default RA4M1 `zephyr.bin` includes a high-address option-setting
+  section, producing a sparse 16 MB binary that is not suitable for direct DFU
+  upload.
+
+Verification:
+- `brew install dfu-util` installed `dfu-util 0.11` for local hardware testing.
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py`
+- `PYTHONPYCACHEPREFIX=/private/tmp/seeed-zephyr-pycache python3 -m py_compile tools/cli/seeed_zephyr.py tools/cli/test_seeed_zephyr.py`
+- `/Users/mengdu/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py`
+- `bash scripts/build-example.sh examples/boards/xiao_ra4m1/blinky`
+- `seeed-zephyr flash xiao_ra4m1 --monitor` built the example and completed a
+  DFU upload of 21256 bytes while the previous firmware exposed DFU runtime.
+- Homebrew `dfu-util 0.11` rejected Arduino's `-Q` option; the CLI was changed
+  to the supported `-R` reset option.
+- After replacing the previous firmware with the Zephyr app, a later flash
+  attempt found no DFU-capable USB device. This shows runtime DFU re-entry is
+  not yet solved for Zephyr-generated RA4M1 firmware.
