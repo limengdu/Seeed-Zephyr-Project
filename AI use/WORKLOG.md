@@ -1043,22 +1043,3 @@ Verification:
 
 Remaining:
 - Continue with the next board in the hardware verification sequence.
-
-## 2026-06-21 - Route XIAO MG24 flashing through Seeed Debug Mate OpenOCD
-
-Scope:
-- Added CLI detection for the Seeed XIAO MG24 Debug Mate OpenOCD package.
-- Kept flashing on Zephyr's `west flash` OpenOCD runner, but pass the OpenOCD
-  executable and script directory from the MG24 package.
-- Added board notes for MG24 Debug Mate flashing and recorded the XIAO nRF54L15
-  hardware pass reported during board verification.
-
-Result:
-- XIAO MG24 flashing now fails before building if the required MG24 OpenOCD
-  package is not available.
-- Users can point the CLI at the extracted package with
-  `SEEED_ZEPHYR_MG24_OPENOCD`.
-
-Verification pending:
-- Run the MG24 hardware flash again after the Seeed MG24 OpenOCD package is
-  installed or discoverable.

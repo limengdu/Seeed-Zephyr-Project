@@ -171,8 +171,8 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | XIAO ESP32C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
 | XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 可构建 |
 | XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | PASS | 可构建 |
-| XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 可构建；Debug Mate 烧录需要 Seeed MG24 OpenOCD 包 |
-| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 硬件已验证 |
+| XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 可构建 |
+| XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 可构建 |
 | XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建 |
 | XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO RP2350 | `xiao_rp2350/rp2350a/m33` | `examples/boards/xiao_rp2350/blinky` | PASS | 硬件已验证；M33 target |
@@ -221,9 +221,6 @@ seeed-zephyr monitor xiao_samd21
 
 关于 XIAO nRF52840 UF2 烧录和 1200 baud 自动进 bootloader 行为，见
 [XIAO nRF52840 开发板说明](boards/xiao-nrf52840.md)。
-
-关于 XIAO MG24 Debug Mate OpenOCD 烧录要求，见
-[XIAO MG24 开发板说明](boards/xiao-mg24.md)。
 
 如果已经连接合适的硬件调试器，可以启动 Zephyr 调试会话：
 

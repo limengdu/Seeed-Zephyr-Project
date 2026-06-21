@@ -2,5 +2,5 @@ id: xiao_nrf54l15_blinky
 board_id: xiao_nrf54l15
 demo: blinky
 zephyr_target: xiao_nrf54l15/nrf54l15/cpuapp
-validation_status: hardware-tested
+validation_status: build-only
 expected_behavior: Toggles the board LED once per second and prints the LED state.
