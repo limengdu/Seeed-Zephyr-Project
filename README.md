@@ -52,10 +52,25 @@ Then run Linux setup inside WSL2:
 bash scripts/setup-linux.sh
 ```
 
-After setup installs the CLI, build a repository board demo from any directory:
+After setup installs the CLI, build a repository board example from any
+directory:
 
 ```sh
 seeed-zephyr build xiao_esp32c6
+```
+
+When a board has multiple examples, the CLI lists them and lets you choose.
+Specify the example name directly to skip the prompt:
+
+```sh
+seeed-zephyr build xiao_esp32c6 blinky
+```
+
+Build and flash an external Zephyr application (any directory with
+`CMakeLists.txt` and `prj.conf`):
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 ```
 
 List supported boards and examples:
@@ -80,6 +95,13 @@ Flash and then open the monitor:
 seeed-zephyr flash xiao_esp32c6 --monitor
 seeed-zephyr flash xiao_samd21 --monitor
 seeed-zephyr flash xiao_rp2040 --monitor
+```
+
+Open the serial monitor without specifying a board (interactive port and baud
+rate selection):
+
+```sh
+seeed-zephyr monitor
 ```
 
 For XIAO MG24 flashing, the CLI uses Zephyr's PyOCD runner. See

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import seeed_zephyr
@@ -394,11 +395,11 @@ class MonitorCommandTests(unittest.TestCase):
 
     def test_uf2_flash_monitor_waits_for_bootloader_volume_to_detach(self) -> None:
         args = seeed_zephyr.argparse.Namespace(
-            board_id="xiao_nrf52840", port=None, monitor=True, baud=115200
+            board_id="xiao_nrf52840", example=None, app=None, port=None, monitor=True, baud=115200
         )
         board = {"id": "xiao_nrf52840", "vendor": "nordic", "target": "xiao_ble"}
 
-        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
             with mock.patch.object(seeed_zephyr, "require_flash_tools"):
                 with mock.patch.object(seeed_zephyr, "run_west_build"):
                     with mock.patch.object(seeed_zephyr, "run_west_flash", return_value="/dev/cu.usbmodem1101"):
@@ -412,10 +413,10 @@ class MonitorCommandTests(unittest.TestCase):
 
     def test_cmd_flash_uses_rom_boot_path_when_rom_bootloader_detected(self) -> None:
         args = seeed_zephyr.argparse.Namespace(
-            board_id="xiao_ra4m1", port=None, monitor=False, baud=115200
+            board_id="xiao_ra4m1", example=None, app=None, port=None, monitor=False, baud=115200
         )
 
-        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
             with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value="/dev/cu.usbmodem1101"):
                 with mock.patch.object(seeed_zephyr, "require_flash_tools") as req_tools:
                     with mock.patch.object(seeed_zephyr, "run_west_build") as build:
@@ -430,10 +431,10 @@ class MonitorCommandTests(unittest.TestCase):
 
     def test_cmd_flash_rom_boot_with_monitor_waits_for_detach(self) -> None:
         args = seeed_zephyr.argparse.Namespace(
-            board_id="xiao_ra4m1", port=None, monitor=True, baud=115200
+            board_id="xiao_ra4m1", example=None, app=None, port=None, monitor=True, baud=115200
         )
 
-        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
             with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value="/dev/cu.usbmodem1101"):
                 with mock.patch.object(seeed_zephyr, "require_flash_tools"):
                     with mock.patch.object(seeed_zephyr, "run_west_build"):
@@ -449,10 +450,10 @@ class MonitorCommandTests(unittest.TestCase):
 
     def test_cmd_flash_uses_dfu_path_when_no_rom_bootloader(self) -> None:
         args = seeed_zephyr.argparse.Namespace(
-            board_id="xiao_ra4m1", port=None, monitor=False, baud=115200
+            board_id="xiao_ra4m1", example=None, app=None, port=None, monitor=False, baud=115200
         )
 
-        with mock.patch.object(seeed_zephyr, "require_supported_example", return_value={"path": "example"}):
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
             with mock.patch.object(seeed_zephyr, "ra4m1_rom_boot_port", return_value=None):
                 with mock.patch.object(seeed_zephyr, "require_flash_tools") as req_tools:
                     with mock.patch.object(seeed_zephyr, "run_west_build") as build:
@@ -579,6 +580,176 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertIn("CONFIG_CDC_ACM_SERIAL_PID=0x0049", prj_conf)
         self.assertIn('zephyr,console = &cdc_acm_uart0;', app_overlay)
         self.assertIn('compatible = "zephyr,cdc-acm-uart";', app_overlay)
+
+
+class MonitorInteractiveTests(unittest.TestCase):
+    def test_cmd_monitor_with_board_id_calls_run_monitor(self) -> None:
+        args = mock.MagicMock()
+        args.board_id = "xiao_esp32c6"
+        args.port = None
+        args.baud = None
+        board = {"id": "xiao_esp32c6", "vendor": "espressif", "target": "xiao_esp32c6/esp32c6/hpcore"}
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "run_monitor") as m:
+                seeed_zephyr.cmd_monitor(args)
+        m.assert_called_once_with("xiao_esp32c6", port=None, baud=115200)
+
+    def test_cmd_monitor_without_board_id_uses_interactive_port(self) -> None:
+        args = mock.MagicMock()
+        args.board_id = None
+        args.port = None
+        args.baud = None
+        with mock.patch.object(
+            seeed_zephyr, "interactive_select_port", return_value="/dev/cu.test"
+        ) as sel_port:
+            with mock.patch.object(
+                seeed_zephyr, "interactive_select_baud", return_value=115200
+            ) as sel_baud:
+                with mock.patch.object(seeed_zephyr, "zephyr_venv_python", return_value="python3"):
+                    with mock.patch.object(seeed_zephyr, "run_command") as run:
+                        seeed_zephyr.cmd_monitor(args)
+        sel_port.assert_called_once()
+        sel_baud.assert_called_once()
+        run.assert_called_once()
+        cmd = run.call_args[0][0]
+        self.assertIn("/dev/cu.test", cmd)
+        self.assertIn("115200", cmd)
+
+    def test_cmd_monitor_without_board_id_skips_interactive_when_port_and_baud_given(self) -> None:
+        args = mock.MagicMock()
+        args.board_id = None
+        args.port = "/dev/cu.manual"
+        args.baud = 9600
+        with mock.patch.object(seeed_zephyr, "zephyr_venv_python", return_value="python3"):
+            with mock.patch.object(seeed_zephyr, "run_command") as run:
+                seeed_zephyr.cmd_monitor(args)
+        cmd = run.call_args[0][0]
+        self.assertIn("/dev/cu.manual", cmd)
+        self.assertIn("9600", cmd)
+
+    def test_interactive_select_port_single_device_auto_selects(self) -> None:
+        with mock.patch.object(
+            seeed_zephyr, "list_serial_ports_detailed",
+            return_value=[("/dev/cu.usb1", "XIAO Board")],
+        ):
+            result = seeed_zephyr.interactive_select_port()
+        self.assertEqual(result, "/dev/cu.usb1")
+
+    def test_interactive_select_port_no_devices_raises(self) -> None:
+        with mock.patch.object(
+            seeed_zephyr, "list_serial_ports_detailed", return_value=[],
+        ):
+            with self.assertRaises(seeed_zephyr.CliError):
+                seeed_zephyr.interactive_select_port()
+
+    def test_interactive_select_port_multiple_devices_prompts(self) -> None:
+        ports = [("/dev/cu.usb1", "Board A"), ("/dev/cu.usb2", "Board B")]
+        with mock.patch.object(
+            seeed_zephyr, "list_serial_ports_detailed", return_value=ports,
+        ):
+            with mock.patch("builtins.input", return_value="2"):
+                result = seeed_zephyr.interactive_select_port()
+        self.assertEqual(result, "/dev/cu.usb2")
+
+    def test_interactive_select_port_enter_selects_first(self) -> None:
+        ports = [("/dev/cu.usb1", "Board A"), ("/dev/cu.usb2", "Board B")]
+        with mock.patch.object(
+            seeed_zephyr, "list_serial_ports_detailed", return_value=ports,
+        ):
+            with mock.patch("builtins.input", return_value=""):
+                result = seeed_zephyr.interactive_select_port()
+        self.assertEqual(result, "/dev/cu.usb1")
+
+    def test_interactive_select_baud_default(self) -> None:
+        with mock.patch("builtins.input", return_value=""):
+            result = seeed_zephyr.interactive_select_baud()
+        self.assertEqual(result, 115200)
+
+    def test_interactive_select_baud_custom(self) -> None:
+        with mock.patch("builtins.input", return_value="9600"):
+            result = seeed_zephyr.interactive_select_baud()
+        self.assertEqual(result, 9600)
+
+
+class ExampleSelectionTests(unittest.TestCase):
+    def test_select_example_single_auto_selects(self) -> None:
+        example = {"demo": "blinky", "validation_status": "hardware-tested", "path": "examples/boards/xiao_ra4m1/blinky"}
+        with mock.patch.object(seeed_zephyr, "require_board"):
+            with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[example]):
+                result = seeed_zephyr.select_example("xiao_ra4m1")
+        self.assertEqual(result["demo"], "blinky")
+
+    def test_select_example_by_name(self) -> None:
+        ex1 = {"demo": "blinky", "validation_status": "hardware-tested", "path": "a"}
+        ex2 = {"demo": "hello_world", "validation_status": "build-only", "path": "b"}
+        with mock.patch.object(seeed_zephyr, "require_board"):
+            with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[ex1, ex2]):
+                result = seeed_zephyr.select_example("xiao_esp32c6", "hello_world")
+        self.assertEqual(result["demo"], "hello_world")
+
+    def test_select_example_unknown_name_raises(self) -> None:
+        ex1 = {"demo": "blinky", "validation_status": "hardware-tested", "path": "a"}
+        with mock.patch.object(seeed_zephyr, "require_board"):
+            with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[ex1]):
+                with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                    seeed_zephyr.select_example("xiao_esp32c6", "nonexistent")
+        self.assertIn("nonexistent", str(ctx.exception))
+
+    def test_select_example_skips_unsupported(self) -> None:
+        ex1 = {"demo": "hello_world", "validation_status": "unsupported", "path": "a"}
+        ex2 = {"demo": "blinky", "validation_status": "build-only", "path": "b"}
+        with mock.patch.object(seeed_zephyr, "require_board"):
+            with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[ex1, ex2]):
+                result = seeed_zephyr.select_example("test_board")
+        self.assertEqual(result["demo"], "blinky")
+
+    def test_select_example_multiple_prompts(self) -> None:
+        ex1 = {"demo": "blinky", "validation_status": "build-only", "path": "a"}
+        ex2 = {"demo": "hello_world", "validation_status": "build-only", "path": "b"}
+        with mock.patch.object(seeed_zephyr, "require_board"):
+            with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[ex1, ex2]):
+                with mock.patch("builtins.input", return_value="2"):
+                    result = seeed_zephyr.select_example("test_board")
+        self.assertEqual(result["demo"], "hello_world")
+
+    def test_select_example_no_examples_raises(self) -> None:
+        with mock.patch.object(seeed_zephyr, "require_board"):
+            with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[]):
+                with self.assertRaises(seeed_zephyr.CliError):
+                    seeed_zephyr.select_example("test_board")
+
+    def test_resolve_app_example_valid_dir(self) -> None:
+        board = {"id": "xiao_esp32c6", "vendor": "espressif", "target": "xiao_esp32c6/esp32c6/hpcore"}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.20)")
+            (Path(tmpdir) / "prj.conf").write_text("CONFIG_PRINTK=y")
+            with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+                result = seeed_zephyr.resolve_app_example("xiao_esp32c6", tmpdir)
+        self.assertEqual(result["zephyr_target"], "xiao_esp32c6/esp32c6/hpcore")
+        self.assertTrue(Path(result["path"]).is_absolute())
+
+    def test_resolve_app_example_missing_cmakelists_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / "prj.conf").write_text("CONFIG_PRINTK=y")
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.resolve_app_example("xiao_esp32c6", tmpdir)
+        self.assertIn("CMakeLists.txt", str(ctx.exception))
+
+    def test_resolve_app_example_missing_dir_raises(self) -> None:
+        with self.assertRaises(seeed_zephyr.CliError):
+            seeed_zephyr.resolve_app_example("xiao_esp32c6", "/nonexistent/path")
+
+    def test_cmd_build_with_app_uses_external_path(self) -> None:
+        args = mock.MagicMock()
+        args.board_id = "xiao_esp32c6"
+        args.example = None
+        args.app = "/tmp/my_app"
+        ext_example = {"path": "/tmp/my_app", "demo": "my_app", "zephyr_target": "t"}
+        with mock.patch.object(seeed_zephyr, "resolve_app_example", return_value=ext_example) as resolve:
+            with mock.patch.object(seeed_zephyr, "run_west_build") as build:
+                seeed_zephyr.cmd_build(args)
+        resolve.assert_called_once_with("xiao_esp32c6", "/tmp/my_app")
+        build.assert_called_once_with("xiao_esp32c6", ext_example)
 
 
 if __name__ == "__main__":

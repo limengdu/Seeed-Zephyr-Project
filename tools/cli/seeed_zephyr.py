@@ -91,12 +91,34 @@ def build_parser() -> argparse.ArgumentParser:
     )
     list_examples.set_defaults(func=cmd_list_examples)
 
-    build = subparsers.add_parser("build", help="Build a board's baseline example.")
+    build = subparsers.add_parser("build", help="Build a board example.")
     build.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    build.add_argument(
+        "example",
+        nargs="?",
+        default=None,
+        help="Example name such as blinky. Omit to select interactively.",
+    )
+    build.add_argument(
+        "--app",
+        default=None,
+        help="Path to an external Zephyr application directory.",
+    )
     build.set_defaults(func=cmd_build)
 
     flash = subparsers.add_parser("flash", help="Build and flash a board example.")
     flash.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    flash.add_argument(
+        "example",
+        nargs="?",
+        default=None,
+        help="Example name such as blinky. Omit to select interactively.",
+    )
+    flash.add_argument(
+        "--app",
+        default=None,
+        help="Path to an external Zephyr application directory.",
+    )
     flash.add_argument(
         "--monitor",
         action="store_true",
@@ -117,15 +139,31 @@ def build_parser() -> argparse.ArgumentParser:
 
     debug = subparsers.add_parser("debug", help="Build and start a board debug session.")
     debug.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    debug.add_argument(
+        "example",
+        nargs="?",
+        default=None,
+        help="Example name such as blinky. Omit to select interactively.",
+    )
+    debug.add_argument(
+        "--app",
+        default=None,
+        help="Path to an external Zephyr application directory.",
+    )
     debug.set_defaults(func=cmd_debug)
 
     monitor = subparsers.add_parser("monitor", help="Open a board monitor.")
-    monitor.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    monitor.add_argument(
+        "board_id",
+        nargs="?",
+        default=None,
+        help="Board id such as xiao_esp32c6. Omit for interactive port selection.",
+    )
     monitor.add_argument("--port", default=None, help="Serial port device path.")
     monitor.add_argument(
         "--baud",
         type=int,
-        default=115200,
+        default=None,
         help="Serial baud rate (default: 115200).",
     )
     monitor.set_defaults(func=cmd_monitor)
@@ -206,6 +244,87 @@ def resolve_example(board_id: str) -> dict[str, str] | None:
     values = read_flat_yaml(chosen)
     values["path"] = chosen.parent.relative_to(REPO_ROOT).as_posix()
     return values
+
+
+def resolve_board_examples(board_id: str) -> list[dict[str, str]]:
+    # Returns all examples for a board, each with a 'path' and 'demo' field.
+    # 返回一个板的所有 example，每个包含 'path' 和 'demo' 字段。
+    board_example_dir = EXAMPLES_DIR / board_id
+    if not board_example_dir.is_dir():
+        return []
+
+    examples = []
+    for example_file in sorted(board_example_dir.glob("*/example.yaml")):
+        values = read_flat_yaml(example_file)
+        values["path"] = example_file.parent.relative_to(REPO_ROOT).as_posix()
+        examples.append(values)
+    return examples
+
+
+def select_example(board_id: str, example_name: str | None = None) -> dict[str, str]:
+    # Selects an example by name, or interactively when multiple are available.
+    # 按名称选择 example，多个可用时交互选择。
+    require_board(board_id)
+    examples = resolve_board_examples(board_id)
+    supported = [e for e in examples if e.get("validation_status") != "unsupported"]
+
+    if not examples:
+        raise CliError(f"No repository example found for {board_id}.")
+    if not supported:
+        raise CliError(f"{board_id} is unsupported in the selected Zephyr baseline.")
+
+    if example_name is not None:
+        for ex in supported:
+            if ex.get("demo") == example_name:
+                return ex
+        available = ", ".join(ex.get("demo", "?") for ex in supported)
+        raise CliError(
+            f"Example '{example_name}' not found for {board_id}. "
+            f"Available: {available}"
+        )
+
+    if len(supported) == 1:
+        return supported[0]
+
+    print(f"\nAvailable examples for {board_id}:", flush=True)
+    for i, ex in enumerate(supported, 1):
+        demo = ex.get("demo", "unknown")
+        status = ex.get("validation_status", "")
+        print(f"  [{i}] {demo}  ({status})", flush=True)
+    while True:
+        choice = input(f"Select example [1]: ").strip()
+        if not choice:
+            return supported[0]
+        try:
+            index = int(choice)
+            if 1 <= index <= len(supported):
+                return supported[index - 1]
+        except ValueError:
+            pass
+        print(f"  Enter a number between 1 and {len(supported)}.", flush=True)
+
+
+def resolve_app_example(board_id: str, app_path: str) -> dict[str, str]:
+    # Builds an example dict from an external Zephyr application directory.
+    # 从外部 Zephyr 应用目录构造 example 字典。
+    app_dir = Path(app_path).expanduser().resolve()
+    if not app_dir.is_dir():
+        raise CliError(f"Application directory not found: {app_dir}")
+
+    has_cmakelists = (app_dir / "CMakeLists.txt").exists()
+    has_prj_conf = (app_dir / "prj.conf").exists()
+    if not has_cmakelists:
+        raise CliError(f"Not a Zephyr application: {app_dir} (CMakeLists.txt missing)")
+    if not has_prj_conf:
+        raise CliError(f"Not a Zephyr application: {app_dir} (prj.conf missing)")
+
+    board = require_board(board_id)
+    return {
+        "path": str(app_dir),
+        "demo": app_dir.name,
+        "zephyr_target": board["target"],
+        "validation_status": "external",
+    }
 
 
 def require_board(board_id: str) -> dict[str, str]:
@@ -842,11 +961,12 @@ def ensure_chip_blobs(board: dict[str, str]) -> None:
 
 
 def run_west_build(board_id: str, example: dict[str, str]) -> None:
-    # Builds the selected repository example through Zephyr's west command.
-    # 通过 Zephyr 的 west 命令构建选中的仓库示例。
+    # Builds the selected example through Zephyr's west command.
+    # 通过 Zephyr 的 west 命令构建选中的示例。
     board = require_board(board_id)
     target = example.get("zephyr_target") or board["target"]
-    example_dir = REPO_ROOT / example["path"]
+    example_path = Path(example["path"])
+    example_dir = example_path if example_path.is_absolute() else REPO_ROOT / example_path
     ensure_chip_blobs(board)
     print(f"Building {example['path']} for {target}...", flush=True)
     command = ["build", "-p", "always", "-b", target]
@@ -876,6 +996,88 @@ def usb_serial_devices() -> list[str]:
         )
 
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def list_serial_ports_detailed() -> list[tuple[str, str]]:
+    python = zephyr_venv_python()
+    # Lists USB serial devices with their descriptions.
+    # 列出 USB 串口设备及其描述信息。
+    script = (
+        "import serial.tools.list_ports\n"
+        "for p in serial.tools.list_ports.comports():\n"
+        "    if any(k in (p.device + ' ' + (p.description or '')).lower() "
+        "for k in ('usbmodem', 'ttyacm', 'ttyusb', 'cu.usbmodem', 'usb')):\n"
+        "        desc = p.description or p.device\n"
+        "        print(f'{p.device}\\t{desc}')\n"
+    )
+    result = run_command_capture([str(python), "-c", script], cwd=zephyr_workspace())
+    if result.returncode != 0:
+        raise CliError(
+            "Serial port detection failed. Is pyserial installed in the Zephyr venv?\n"
+            f"Try: {zephyr_workspace()}/.venv/bin/python -m pip install pyserial"
+        )
+    ports = []
+    for line in result.stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split("\t", 1)
+        device = parts[0]
+        description = parts[1] if len(parts) > 1 else device
+        ports.append((device, description))
+    return ports
+
+
+COMMON_BAUD_RATES = [9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
+
+
+def interactive_select_port() -> str:
+    # Prompts the user to select a serial port from available devices.
+    # 让用户从可用串口设备中交互选择一个。
+    ports = list_serial_ports_detailed()
+    if not ports:
+        raise CliError(
+            "No USB serial device found. Check:\n"
+            "- Is the board plugged in?\n"
+            "- On WSL2: did you run 'usbipd attach --wsl --busid <BUSID>'?\n"
+            "- Try specifying the port manually with --port <device>"
+        )
+    if len(ports) == 1:
+        device, description = ports[0]
+        print(f"Serial port: {device} ({description})", flush=True)
+        return device
+
+    print("\nAvailable serial ports:", flush=True)
+    for i, (device, description) in enumerate(ports, 1):
+        print(f"  [{i}] {device} - {description}", flush=True)
+    while True:
+        choice = input(f"Select port [1]: ").strip()
+        if not choice:
+            return ports[0][0]
+        try:
+            index = int(choice)
+            if 1 <= index <= len(ports):
+                return ports[index - 1][0]
+        except ValueError:
+            pass
+        print(f"  Enter a number between 1 and {len(ports)}.", flush=True)
+
+
+def interactive_select_baud(default: int = 115200) -> int:
+    # Prompts the user to enter or select a baud rate.
+    # 让用户输入或选择波特率。
+    print(f"\nCommon baud rates: {', '.join(str(b) for b in COMMON_BAUD_RATES)}")
+    while True:
+        choice = input(f"Baud rate [{default}]: ").strip()
+        if not choice:
+            return default
+        try:
+            baud = int(choice)
+            if baud > 0:
+                return baud
+        except ValueError:
+            pass
+        print("  Enter a valid baud rate (positive integer).", flush=True)
 
 
 def detect_serial_port() -> str:
@@ -1013,18 +1215,33 @@ def cmd_list_boards(_args: argparse.Namespace) -> None:
 
 
 def cmd_list_examples(_args: argparse.Namespace) -> None:
-    print("board_id\tstatus\texample")
-    for record in board_records():
-        print(f"{record['id']}\t{record['status']}\t{record['example_path']}")
+    print("board_id\tdemo\tstatus\texample")
+    for board_file in sorted(BOARD_DIR.glob("*.yaml")):
+        values = read_flat_yaml(board_file)
+        board_id = values.get("id", board_file.stem)
+        examples = resolve_board_examples(board_id)
+        if not examples:
+            print(f"{board_id}\t-\tmissing\t-")
+            continue
+        for ex in examples:
+            demo = ex.get("demo", "?")
+            status = ex.get("validation_status", "unknown")
+            print(f"{board_id}\t{demo}\t{status}\t{ex.get('path', '')}")
 
 
 def cmd_build(args: argparse.Namespace) -> None:
-    example = require_supported_example(args.board_id)
+    if args.app:
+        example = resolve_app_example(args.board_id, args.app)
+    else:
+        example = select_example(args.board_id, args.example)
     run_west_build(args.board_id, example)
 
 
 def cmd_flash(args: argparse.Namespace) -> None:
-    example = require_supported_example(args.board_id)
+    if args.app:
+        example = resolve_app_example(args.board_id, args.app)
+    else:
+        example = select_example(args.board_id, args.example)
 
     ra4m1_rom = None
     if args.board_id == RA4M1_BOARD_ID:
@@ -1060,7 +1277,10 @@ def cmd_flash(args: argparse.Namespace) -> None:
 
 
 def cmd_debug(args: argparse.Namespace) -> None:
-    example = require_supported_example(args.board_id)
+    if args.app:
+        example = resolve_app_example(args.board_id, args.app)
+    else:
+        example = select_example(args.board_id, args.example)
     run_west_build(args.board_id, example)
     try:
         run_west(["debug"])
@@ -1069,8 +1289,22 @@ def cmd_debug(args: argparse.Namespace) -> None:
 
 
 def cmd_monitor(args: argparse.Namespace) -> None:
-    require_supported_example(args.board_id)
-    run_monitor(args.board_id, port=args.port, baud=args.baud)
+    baud = args.baud if args.baud is not None else 115200
+
+    if args.board_id is not None:
+        require_board(args.board_id)
+        run_monitor(args.board_id, port=args.port, baud=baud)
+        return
+
+    # Interactive mode: select port and baud rate, open miniterm directly.
+    # 交互模式：选择串口和波特率，直接用 miniterm 打开。
+    port = args.port or interactive_select_port()
+    if args.baud is None:
+        baud = interactive_select_baud()
+    python = zephyr_venv_python()
+    print(f"\nOpening serial monitor: {port} @ {baud} baud", flush=True)
+    print("Press Ctrl+] to exit.\n", flush=True)
+    run_command([str(python), "-m", "serial.tools.miniterm", port, str(baud)])
 
 
 def cmd_matrix(_args: argparse.Namespace) -> None:
