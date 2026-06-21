@@ -39,6 +39,8 @@ RP2_BOOTLOADER_WAIT_SECONDS = 10
 SERIAL_READY_WAIT_SECONDS = 10
 SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
+MG24_BOARD_ID = "xiao_mg24"
+MG24_PYOCD_TARGET = "EFR32MG24B220F1536IM48"
 
 
 class CliError(Exception):
@@ -343,6 +345,37 @@ def require_host_tool(tool_name: str, install_hint: str) -> None:
         raise CliError(f"{tool_name} was not found. {install_hint}.")
 
 
+def pyocd_path() -> Path:
+    return west_path().parent / "pyocd"
+
+
+def mg24_pyocd_pack_hint() -> str:
+    return (
+        "XIAO MG24 flashing uses Zephyr's pyocd runner. "
+        f"Install the CMSIS pack with: {pyocd_path()} pack install {MG24_PYOCD_TARGET}."
+    )
+
+
+def pyocd_target_available(target: str) -> bool:
+    # Checks pyOCD's installed target list for the selected CMSIS pack target.
+    # 检查 pyOCD 已安装 target 列表中是否包含选定的 CMSIS pack target。
+    pyocd = pyocd_path()
+    if not pyocd.exists():
+        return False
+
+    result = run_command_capture(
+        [str(pyocd), "list", "--targets"],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+    return result.returncode == 0 and target.lower() in result.stdout.lower()
+
+
+def require_mg24_pyocd_pack() -> None:
+    if not pyocd_target_available(MG24_PYOCD_TARGET):
+        raise CliError(mg24_pyocd_pack_hint())
+
+
 def require_flash_tools(board_id: str) -> None:
     board = require_board(board_id)
     if board["vendor"] == "espressif":
@@ -353,6 +386,8 @@ def require_flash_tools(board_id: str) -> None:
         )
     if board["target"] == "seeeduino_xiao":
         require_host_tool("bossac", bossac_install_hint())
+    if board["id"] == MG24_BOARD_ID:
+        require_mg24_pyocd_pack()
 
 
 def uses_uf2_runner(board: dict[str, str]) -> bool:
@@ -501,6 +536,8 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     command = ["flash"]
     if board["id"] in UF2_RUNNER_BOARD_IDS:
         command.extend(["--runner", "uf2"])
+    if board["id"] == MG24_BOARD_ID:
+        command.extend(["--runner", "pyocd"])
     if board["target"] == "seeeduino_xiao" and port is not None:
         command.extend(["--bossac-port", port, "--delay", SAMD21_BOSSAC_DELAY_SECONDS])
 

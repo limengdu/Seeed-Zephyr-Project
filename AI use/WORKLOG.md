@@ -1043,3 +1043,25 @@ Verification:
 
 Remaining:
 - Continue with the next board in the hardware verification sequence.
+
+## 2026-06-21 - Route XIAO MG24 flashing through Zephyr PyOCD
+
+Scope:
+- Reverted the earlier MG24 OpenOCD-default implementation.
+- Updated the CLI so only `xiao_mg24` uses Zephyr's official `pyocd` runner.
+- Updated setup to install the MG24 CMSIS pack for `xiao_mg24`, and during
+  full no-board setup.
+- Added MG24 board notes and recorded the XIAO nRF54L15 hardware pass.
+
+Result:
+- MG24 flashing stays on Zephyr tooling and no longer defaults to an external
+  OpenOCD package path.
+- OpenOCD is documented only as a board-specific fallback path.
+
+Verification:
+- `pyocd pack install EFR32MG24` did not match the current pyOCD pack index.
+- `pyocd pack install EFR32MG24B220F1536IM48` installed
+  `SiliconLabs.GeckoPlatform_EFR32MG24_DFP.2025.12.1`.
+- `seeed-zephyr flash xiao_mg24 --monitor` built the repository example,
+  flashed through Zephyr's `pyocd` runner, opened pyserial miniterm, and
+  observed repeated LED state output.

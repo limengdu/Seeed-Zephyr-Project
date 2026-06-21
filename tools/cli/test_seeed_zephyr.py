@@ -72,6 +72,29 @@ class FlashHintTests(unittest.TestCase):
         self.assertIsNone(selected_port)
         run_west.assert_called_once_with(["flash", "--runner", "uf2"])
 
+    def test_xiao_mg24_flash_uses_zephyr_pyocd_runner(self) -> None:
+        board = {"id": "xiao_mg24", "vendor": "silabs", "target": "xiao_mg24"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "run_west") as run_west:
+                selected_port = seeed_zephyr.run_west_flash("xiao_mg24")
+
+        self.assertIsNone(selected_port)
+        run_west.assert_called_once_with(["flash", "--runner", "pyocd"])
+
+    def test_xiao_mg24_requires_pyocd_pack(self) -> None:
+        board = {"id": "xiao_mg24", "vendor": "silabs", "target": "xiao_mg24"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "pyocd_target_available", return_value=False):
+                with self.assertRaises(seeed_zephyr.CliError) as context:
+                    seeed_zephyr.require_flash_tools("xiao_mg24")
+
+        message = str(context.exception)
+        self.assertIn("pyocd runner", message)
+        self.assertIn("pyocd pack install EFR32MG24B220F1536IM48", message)
+        self.assertIn("EFR32MG24B220F1536IM48", message)
+
     def test_raspberrypi_flash_timeout_keeps_manual_bootsel_hint(self) -> None:
         with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[]):
             with mock.patch.object(seeed_zephyr, "detect_serial_port", return_value="/dev/cu.usbmodem1101"):

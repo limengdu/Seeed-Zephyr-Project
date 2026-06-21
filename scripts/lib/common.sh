@@ -41,6 +41,9 @@ BOARD_EXAMPLE_PATH=""
 BOARD_BUILD_STATUS=""
 CLI_COMMAND_PATH=""
 CLI_INSTALL_STATUS="pending"
+MG24_BOARD_ID="xiao_mg24"
+MG24_PYOCD_TARGET="EFR32MG24B220F1536IM48"
+PYOCD="$VENV_DIR/bin/pyocd"
 
 # Prints an error message and exits the script.
 # 打印错误信息并退出脚本。
@@ -567,6 +570,31 @@ check_bossac_tool() {
   printf 'BOSSA bossac flash tool is available.\n'
 }
 
+# Returns success when pyOCD can see the installed MG24 target.
+# 当 pyOCD 能看到已安装的 MG24 target 时返回成功。
+pyocd_target_available() {
+  local target=$1
+
+  [[ -x "$PYOCD" ]] || return 1
+  "$PYOCD" list --targets | grep -Fiq "$target"
+}
+
+# Installs the CMSIS pack required by Zephyr's XIAO MG24 pyOCD runner.
+# 安装 Zephyr XIAO MG24 pyOCD runner 需要的 CMSIS pack。
+ensure_mg24_pyocd_pack() {
+  [[ -x "$PYOCD" ]] || fail "pyocd was not found in the Zephyr venv. Rerun setup so Zephyr Python packages are installed."
+
+  if pyocd_target_available "$MG24_PYOCD_TARGET"; then
+    printf 'pyOCD target %s is available.\n' "$MG24_PYOCD_TARGET"
+    return
+  fi
+
+  printf 'Installing pyOCD CMSIS pack for XIAO MG24 target: %s\n' "$MG24_PYOCD_TARGET"
+  "$PYOCD" pack install "$MG24_PYOCD_TARGET"
+
+  pyocd_target_available "$MG24_PYOCD_TARGET" || fail "pyOCD target $MG24_PYOCD_TARGET is still unavailable after installing its CMSIS pack."
+}
+
 # Checks board-specific host tools after the Zephyr workspace is ready.
 # 在 Zephyr 工作区准备好后，检查开发板专属主机工具。
 check_board_host_tools() {
@@ -577,6 +605,18 @@ check_board_host_tools() {
   if [[ "$BOARD_BUILD_TARGET" == "seeeduino_xiao" ]]; then
     check_bossac_tool
   fi
+
+  if [[ "$BOARD_ID" == "$MG24_BOARD_ID" ]]; then
+    ensure_mg24_pyocd_pack
+  fi
+}
+
+# Checks host tools needed when setup runs without a board filter.
+# 在未指定开发板时，检查全量主机工具依赖。
+check_full_host_tools() {
+  check_espressif_zephyr_tools
+  check_bossac_tool
+  ensure_mg24_pyocd_pack
 }
 
 # Prints informational proprietary-runner guidance for selected boards.
@@ -643,14 +683,13 @@ print_board_next_steps() {
 # Runs the full setup flow in the required shared-step order.
 # 按要求的共享步骤顺序执行完整安装流程。
 run_setup_flow() {
-  local total_steps=5
+  local total_steps=6
 
   declare -F install_system_dependencies >/dev/null || fail "install_system_dependencies is not defined by the $SETUP_PLATFORM_LABEL setup script."
 
   parse_args "$@"
 
   if [[ -n "$BOARD_ID" ]]; then
-    total_steps=6
     resolve_board_metadata "$BOARD_ID"
   fi
 
@@ -676,6 +715,8 @@ run_setup_flow() {
     fetch_board_blobs
     print_board_next_steps
   else
+    step "6/$total_steps" "Checking full board-specific host tools..."
+    check_full_host_tools
     print_no_board_next_steps
   fi
 }

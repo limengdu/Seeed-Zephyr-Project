@@ -82,6 +82,9 @@ seeed-zephyr flash xiao_samd21 --monitor
 seeed-zephyr flash xiao_rp2040 --monitor
 ```
 
+For XIAO MG24 flashing, the CLI uses Zephyr's PyOCD runner. See
+[XIAO MG24 Board Notes](docs/en/boards/xiao-mg24.md).
+
 The CLI selects repository examples and board metadata. Firmware build, flash,
 monitor, and debug execution still run through Zephyr `west` commands and
 Zephyr module tools. For non-Espressif serial monitor sessions, the CLI uses
@@ -192,6 +195,7 @@ The system should let users start from hardware and intent:
 - [Onboarding and Distribution Design](AI%20use/en/onboarding-design.md)
 - [Getting Started](docs/en/getting-started.md)
 - [XIAO SAMD21 Board Notes](docs/en/boards/xiao-samd21.md)
+- [XIAO MG24 Board Notes](docs/en/boards/xiao-mg24.md)
 - [XIAO RP2040 Board Notes](docs/en/boards/xiao-rp2040.md)
 - [Validation Log](AI%20use/en/validation-log.md)
 - [Roadmap and Quality Controls](AI%20use/en/04-roadmap-and-risks.md)
@@ -207,6 +211,7 @@ The system should let users start from hardware and intent:
 - [第三阶段: VS Code 产品体验](AI%20use/zh/03-phase-three-vscode-plugin.md)
 - [入门指南](docs/zh/getting-started.md)
 - [XIAO SAMD21 开发板说明](docs/zh/boards/xiao-samd21.md)
+- [XIAO MG24 开发板说明](docs/zh/boards/xiao-mg24.md)
 - [XIAO RP2040 开发板说明](docs/zh/boards/xiao-rp2040.md)
 - [路线图与质量控制](AI%20use/zh/04-roadmap-and-risks.md)
 - [术语表](AI%20use/zh/05-glossary.md)

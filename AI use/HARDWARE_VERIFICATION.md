@@ -73,3 +73,19 @@ Entry format:
 - Result: `PASS`
 - Serial output: repeated `LED state: OFF` and `LED state: ON`
 - Notes: `seeed-zephyr flash xiao_nrf52840 --monitor` built the repository example, requested UF2 mode via `/dev/cu.usbmodem1101` at 1200 baud, detected `/Volumes/XIAO-SENSE`, copied `zephyr.uf2` through Zephyr's UF2 runner, waited for the UF2 volume to detach, opened pyserial miniterm on `/dev/cu.usbmodem1101`, and observed repeated LED state output. A consecutive run passed without double-tapping RESET.
+
+## 2026-06-21T09:37:05+08:00 - xiao_nrf54l15 - PASS
+
+- Board: `xiao_nrf54l15`
+- Example: `examples/boards/xiao_nrf54l15/blinky`
+- Result: `PASS`
+- Serial output: n/a
+- Notes: Hardware test reported `seeed-zephyr flash xiao_nrf54l15 --monitor` working normally.
+
+## 2026-06-21T09:58:49+08:00 - xiao_mg24 - PASS
+
+- Board: `xiao_mg24`
+- Example: `examples/boards/xiao_mg24/blinky`
+- Result: `PASS`
+- Serial output: `*** Booting Zephyr OS build v4.4.0 ***`; repeated `LED state: OFF` and `LED state: ON`
+- Notes: Installed the Silicon Labs `EFR32MG24B220F1536IM48` CMSIS pack for pyOCD, then `seeed-zephyr flash xiao_mg24 --monitor` built the repository example, flashed `/Users/mengdu/zephyrproject/build/zephyr/zephyr.hex` through Zephyr's `pyocd` runner, opened pyserial miniterm on `/dev/cu.usbmodem71E9F3B93`, and observed repeated LED state output.

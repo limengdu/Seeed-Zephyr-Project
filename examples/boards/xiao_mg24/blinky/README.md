@@ -11,6 +11,8 @@ Build from the repository root:
 bash scripts/build-example.sh examples/boards/xiao_mg24/blinky
 ```
 
+Flash notes are in `docs/en/boards/xiao-mg24.md`.
+
 ## 中文
 
 这个 demo 通过 Zephyr GPIO 翻转板载 LED，是 Seeed Studio XIAO MG24 的基线 demo。
@@ -20,3 +22,5 @@ bash scripts/build-example.sh examples/boards/xiao_mg24/blinky
 ```sh
 bash scripts/build-example.sh examples/boards/xiao_mg24/blinky
 ```
+
+烧录说明见 `docs/zh/boards/xiao-mg24.md`。
