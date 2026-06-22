@@ -53,11 +53,11 @@ Status is taken from the [board build matrix](tools/build_matrix/results.md) aga
 | XIAO MG24 | Silabs | `xiao_mg24` | `blinky` | 🔵 Hardware-tested |
 | XIAO RP2040 | Raspberry Pi | `xiao_rp2040` | `blinky` | 🔵 Hardware-tested |
 | XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33` | `blinky` | 🔵 Hardware-tested |
-| XIAO ESP32C6 | Espressif | `xiao_esp32c6/esp32c6/hpcore` | `blinky` | 🟢 Build-verified |
-| XIAO ESP32S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🟢 Build-verified |
-| XIAO ESP32C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🟢 Build-verified · no on-board LED |
+| XIAO ESP32-C6 | Espressif | `xiao_esp32c6/esp32c6/hpcore` | `blinky` | 🔵 Hardware-tested |
+| XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 Hardware-tested |
+| XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 Hardware-tested · no on-board LED |
 | XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🟢 Build-verified · USB DFU |
-| XIAO ESP32C5 | Espressif | `xiao_esp32c5` | `hello_world` | ⛔ No target in v4.4.0 |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5` | `hello_world` | ⛔ No target in v4.4.0 |
 
 **Legend** — 🔵 verified on real hardware · 🟢 builds cleanly in CI · ⛔ tracked, but the selected Zephyr baseline provides no board target yet.
 

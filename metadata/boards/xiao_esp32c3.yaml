@@ -1,6 +1,6 @@
 # Authored board metadata (product layer). Derived status lives in metadata/status/.
 id: xiao_esp32c3
-display_name: Seeed Studio XIAO ESP32C3
+display_name: Seeed Studio XIAO ESP32-C3
 zephyr_target: xiao_esp32c3
 vendor: espressif
 soc: esp32-c3

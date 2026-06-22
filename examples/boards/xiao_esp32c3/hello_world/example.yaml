@@ -2,5 +2,5 @@ id: xiao_esp32c3_hello_world
 board_id: xiao_esp32c3
 demo: hello_world
 zephyr_target: xiao_esp32c3
-validation_status: build-only
+validation_status: hardware-tested
 expected_behavior: Prints a heartbeat message on the Zephyr console.
