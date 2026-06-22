@@ -105,3 +105,11 @@ Entry format:
 - Result: `PASS`
 - Serial output: n/a
 - Notes: Hardware test reported `seeed-zephyr flash xiao_esp32c3 --monitor` working normally.
+
+## 2026-06-22T17:13:26+08:00 - xiao_ra4m1 - PASS
+
+- Board: `xiao_ra4m1`
+- Example: `examples/boards/xiao_ra4m1/blinky`
+- Result: `PASS`
+- Serial output: n/a
+- Notes: Hardware test reported `seeed-zephyr flash xiao_ra4m1 --monitor` working normally over the USB DFU bootloader.

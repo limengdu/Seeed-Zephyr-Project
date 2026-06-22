@@ -56,7 +56,7 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 | XIAO ESP32-C6 | Espressif | `xiao_esp32c6/esp32c6/hpcore` | `blinky` | 🔵 真机验证 |
 | XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 真机验证 |
 | XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 真机验证 · 板载无 LED |
-| XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🟢 构建验证 · USB DFU |
+| XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 真机验证 · USB DFU |
 | XIAO ESP32-C5 | Espressif | `xiao_esp32c5` | `hello_world` | ⛔ v4.4.0 暂无目标 |
 
 **图例** —— 🔵 真实硬件验证通过 · 🟢 CI 中可干净构建 · ⛔ 已在册，但所选 Zephyr 基线尚未提供该板级目标。
