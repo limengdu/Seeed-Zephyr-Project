@@ -13,6 +13,8 @@ Discover what a Seeed Studio XIAO board can build on Zephyr, see which examples 
 
 [Quick Start](#quick-start) · [Supported Boards](#supported-boards) · [CLI](#command-line-workflow) · [Documentation](#documentation) · [Roadmap](#roadmap)
 
+**English** · [简体中文](README.zh-CN.md)
+
 </div>
 
 ---
