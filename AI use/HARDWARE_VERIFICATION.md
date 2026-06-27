@@ -89,3 +89,27 @@ Entry format:
 - Result: `PASS`
 - Serial output: `*** Booting Zephyr OS build v4.4.0 ***`; repeated `LED state: OFF` and `LED state: ON`
 - Notes: Installed the Silicon Labs `EFR32MG24B220F1536IM48` CMSIS pack for pyOCD, then `seeed-zephyr flash xiao_mg24 --monitor` built the repository example, flashed `/Users/mengdu/zephyrproject/build/zephyr/zephyr.hex` through Zephyr's `pyocd` runner, opened pyserial miniterm on `/dev/cu.usbmodem71E9F3B93`, and observed repeated LED state output.
+
+## 2026-06-22T17:13:26+08:00 - xiao_esp32s3 - PASS
+
+- Board: `xiao_esp32s3`
+- Example: `examples/boards/xiao_esp32s3/blinky`
+- Result: `PASS`
+- Serial output: n/a
+- Notes: Hardware test reported `seeed-zephyr flash xiao_esp32s3 --monitor` working normally.
+
+## 2026-06-22T17:13:26+08:00 - xiao_esp32c3 - PASS
+
+- Board: `xiao_esp32c3`
+- Example: `examples/boards/xiao_esp32c3/hello_world`
+- Result: `PASS`
+- Serial output: n/a
+- Notes: Hardware test reported `seeed-zephyr flash xiao_esp32c3 --monitor` working normally.
+
+## 2026-06-22T17:13:26+08:00 - xiao_ra4m1 - PASS
+
+- Board: `xiao_ra4m1`
+- Example: `examples/boards/xiao_ra4m1/blinky`
+- Result: `PASS`
+- Serial output: n/a
+- Notes: Hardware test reported `seeed-zephyr flash xiao_ra4m1 --monitor` working normally over the USB DFU bootloader.

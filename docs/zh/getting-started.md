@@ -156,7 +156,7 @@ CLI 安装后，从任意目录构建：
 seeed-zephyr build xiao_esp32c6
 ```
 
-XIAO ESP32C3 没有板载 LED，所以它不用 `blinky`，而是用 `hello_world`：
+XIAO ESP32-C3 没有板载 LED，所以它不用 `blinky`，而是用 `hello_world`：
 
 ```sh
 seeed-zephyr build xiao_esp32c3
@@ -218,21 +218,21 @@ seeed-zephyr verify-hardware xiao_esp32c6
 | --- | --- | --- | --- | --- |
 | XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
 | XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
-| XIAO ESP32C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 无板载 LED |
-| XIAO ESP32C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
-| XIAO ESP32C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 可构建 |
-| XIAO ESP32S3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | PASS | 可构建 |
+| XIAO ESP32-C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 硬件已验证；无板载 LED |
+| XIAO ESP32-C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
+| XIAO ESP32-C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 硬件已验证 |
+| XIAO ESP32-S3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | PASS | 硬件已验证 |
 | XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 硬件已验证；默认使用 Zephyr PyOCD runner |
 | XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 硬件已验证 |
-| XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 可构建；使用 USB DFU bootloader |
+| XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 硬件已验证；使用 USB DFU bootloader |
 | XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO RP2350 | `xiao_rp2350/rp2350a/m33` | `examples/boards/xiao_rp2350/blinky` | PASS | 硬件已验证；M33 target |
 
 `UNSUPPORTED` 的意思不是脚本写错了，而是当前固定使用的 Zephyr v4.4.0 里没有这个
-XIAO board target。XIAO ESP32C5 已经有仓库 demo 记录，但要等选定 Zephyr 基线提供
+XIAO board target。XIAO ESP32-C5 已经有仓库 demo 记录，但要等选定 Zephyr 基线提供
 真实 `xiao_esp32c5` target 后才能构建。
 
-一句话总结：当前 10 个 target 能构建本仓库 demo，XIAO ESP32C5 已记录但在当前基线下不可构建。
+一句话总结：当前 10 个 target 能构建本仓库 demo，XIAO ESP32-C5 已记录但在当前基线下不可构建。
 
 ## 6. 烧录到开发板
 

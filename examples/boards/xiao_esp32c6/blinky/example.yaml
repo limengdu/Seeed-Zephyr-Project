@@ -2,5 +2,5 @@ id: xiao_esp32c6_blinky
 board_id: xiao_esp32c6
 demo: blinky
 zephyr_target: xiao_esp32c6/esp32c6/hpcore
-validation_status: build-only
+validation_status: hardware-tested
 expected_behavior: Toggles the board LED once per second and prints the LED state.

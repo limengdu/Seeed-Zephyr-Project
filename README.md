@@ -1,70 +1,114 @@
+<div align="center">
+
 # Seeed Zephyr Base
 
-Seeed Zephyr Base is the Seeed XIAO + Grove Zephyr example library, project collection, capability catalog, validation knowledge base, and future project-generation foundation.
+**The XIAO + Grove example library, capability catalog, and command-line workflow for [Zephyr RTOS](https://www.zephyrproject.org/).**
 
-Its purpose is to make XIAO + Grove development on Zephyr discoverable, repeatable, and community-extensible. The repository should contain the smallest verified examples for supported XIAO boards, larger reusable project examples, board and Grove capability metadata, validation evidence, contribution rules, and developer-facing tools that are built from those assets.
+Discover what a Seeed Studio XIAO board can build on Zephyr, see which examples are verified, and go from a fresh checkout to flashing firmware with a single command.
 
-In simple terms, upstream Zephyr answers: "Can this board run Zephyr?"
+[![Metadata Validation](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml/badge.svg)](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml)
+[![Zephyr](https://img.shields.io/badge/Zephyr-v4.4.0-7929d3)](https://docs.zephyrproject.org/4.4.0/)
+[![Boards](https://img.shields.io/badge/XIAO%20boards-11%20tracked-00979d)](#supported-boards)
+[![Platform](https://img.shields.io/badge/host-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#quick-start)
 
-This project answers: "What can a XIAO + Grove user build with Zephyr, which examples are verified, and how can new examples be contributed safely?"
+[Quick Start](#quick-start) · [Supported Boards](#supported-boards) · [CLI](#command-line-workflow) · [Documentation](#documentation) · [Roadmap](#roadmap)
 
-## Start Here
+**English** · [简体中文](README.zh-CN.md)
 
-If you are new to this repository, start with the Getting Started guide before reading the phase documents:
+</div>
 
-- [English Getting Started](docs/en/getting-started.md)
-- [English Board Notes](docs/en/boards/README.md)
-- [中文入门指南](docs/zh/getting-started.md)
-- [中文开发板说明](docs/zh/boards/README.md)
+---
 
-If you are an AI agent, maintainer, or contributor preparing project work, start with the AI project charter:
+## Overview
 
-- [AI Project Charter](AI%20use/README.md)
-- [AI Work Log](AI%20use/WORKLOG.md)
+XIAO is a multi-chip ecosystem. Different XIAO boards use different silicon vendors, wireless stacks, SDKs, flashing tools, and development workflows. Zephyr is becoming the shared technical base across these boards — and this repository adds the XIAO + Grove product experience on top of it.
 
-The short version: this repository stores XIAO/Grove examples, project examples, metadata, scripts, docs, and validation results. The actual Zephyr source tree and firmware builds live in a separate workspace, normally `~/zephyrproject`.
+Upstream Zephyr answers one question: *"Can this board run Zephyr?"*
+
+**Seeed Zephyr Base answers the next ones:**
+
+> What can a XIAO + Grove user actually build on Zephyr? Which examples are verified on real hardware? And how do I build and flash one without first learning Devicetree, Kconfig, and `west`?
+
+You get the smallest verified example for each supported board, board and Grove capability metadata, a build matrix that proves what compiles, and a thin `seeed-zephyr` CLI that picks the right board target and example for you — then hands the real work to standard Zephyr tooling.
+
+## Highlights
+
+- **🧩 One example per board** — minimal, buildable demos for every tracked XIAO board, ready to flash.
+- **⚡ Single-command workflow** — `seeed-zephyr build | flash | monitor | debug <board>` works from any directory after setup.
+- **🔌 Auto board handling** — UF2 mode entry, DFU, PyOCD, and 1200-baud bootloader requests are handled per board, so you don't memorize each vendor's flash dance.
+- **📇 Capability catalog** — structured metadata for XIAO boards, Grove modules, and expansion boards.
+- **✅ Honest validation** — every board ships with a build-matrix result, and hardware-tested boards are marked as such.
+- **🌍 Bilingual docs** — getting-started guides and board notes in English and 中文.
+- **🤖 Thin by design** — the CLI is a repository knowledge layer; firmware build, flash, monitor, and debug always run through Zephyr `west` and vendor tools.
+
+## Supported Boards
+
+Status is taken from the [board build matrix](tools/build_matrix/results.md) against the Zephyr **v4.4.0** baseline.
+
+| Board | Vendor | Zephyr target | Example | Status |
+| --- | --- | --- | --- | --- |
+| XIAO SAMD21 | Microchip | `seeeduino_xiao` | `blinky` | 🔵 Hardware-tested |
+| XIAO nRF52840 | Nordic | `xiao_ble` | `blinky` | 🔵 Hardware-tested |
+| XIAO nRF54L15 | Nordic | `xiao_nrf54l15/nrf54l15/cpuapp` | `blinky` | 🔵 Hardware-tested |
+| XIAO MG24 | Silabs | `xiao_mg24` | `blinky` | 🔵 Hardware-tested |
+| XIAO RP2040 | Raspberry Pi | `xiao_rp2040` | `blinky` | 🔵 Hardware-tested |
+| XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33` | `blinky` | 🔵 Hardware-tested |
+| XIAO ESP32-C6 | Espressif | `xiao_esp32c6/esp32c6/hpcore` | `blinky` | 🔵 Hardware-tested |
+| XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 Hardware-tested |
+| XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 Hardware-tested · no on-board LED |
+| XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 Hardware-tested · USB DFU |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5` | `hello_world` | ⛔ No target in v4.4.0 |
+
+**Legend** — 🔵 verified on real hardware · 🟢 builds cleanly in CI · ⛔ tracked, but the selected Zephyr baseline provides no board target yet.
+
+Board-specific flashing, reset, and bootloader behavior is documented in [board notes](docs/en/boards/README.md).
 
 ## Install
 
-Three ways to install the CLI. Pick the one that fits your workflow.
-
-### Option A: pip (all platforms)
+The CLI is also available as a standalone package — no repository clone required:
 
 ```sh
-pip install seeed-zephyr
+pip install seeed-zephyr          # all platforms
 ```
 
-Or with [pipx](https://pipx.pypa.io/) for isolated installation:
-
-```sh
-pipx install seeed-zephyr
-```
-
-### Option B: One-line installer (macOS / Linux)
-
-Clones the repository and runs the full Zephyr environment setup:
+Or with [pipx](https://pipx.pypa.io/) (`pipx install seeed-zephyr`), [Homebrew](https://brew.sh/) (`brew install seeed-studio/seeed/seeed-zephyr`), or the one-line installer:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
 ```
 
-### Option C: Homebrew (macOS / Linux)
+After installing via pip or Homebrew, you still need the Zephyr toolchain — see the [Getting Started guide](docs/en/getting-started.md#2b-zephyr-environment-setup).
+
+## Quick Start
+
+> **Where things live:** this repository holds the XIAO/Grove examples, metadata, scripts, and docs. The Zephyr source tree, SDK, and `west` workspace are set up separately in `~/zephyrproject`. Setup prepares both for you.
+
+### 1. Clone
 
 ```sh
-brew tap seeed-studio/seeed
-brew install seeed-studio/seeed/seeed-zephyr
+git clone https://github.com/limengdu/Seeed-Zephyr-Project.git
+cd Seeed-Zephyr-Project
 ```
 
-### From source (contributor workflow)
+### 2. Run setup
 
-Clone the repository and run the setup script for your OS.
-When setup asks `Install seeed-zephyr CLI? [Y/n]`, press Enter to install.
+Setup prepares the Zephyr workspace, installs the Python venv and `west`, downloads Zephyr v4.4.0 and the SDK, fetches per-board flash tools, and offers to install the `seeed-zephyr` CLI. When prompted with `Install seeed-zephyr CLI? [Y/n]`, press Enter.
 
-macOS:
+**macOS** (verified path):
 
 ```sh
 bash scripts/setup-macos.sh
 ```
+
+To install dependencies for just one board, pass `--board`:
+
+```sh
+bash scripts/setup-macos.sh --board xiao_esp32c6
+```
+
+<details>
+<summary><b>Linux & Windows</b></summary>
+
 
 Linux:
 
@@ -78,193 +122,134 @@ Windows (WSL2):
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
 ```
 
-Then run Linux setup inside WSL2:
-
 ```sh
 bash scripts/setup-linux.sh
 ```
 
-After installation, build a board example from any directory:
+</details>
+
+### 3. Build your first example
+
+After the CLI is installed, run it from any directory:
 
 ```sh
 seeed-zephyr build xiao_esp32c6
 ```
 
-When a board has multiple examples, the CLI lists them and lets you choose.
-Specify the example name directly to skip the prompt:
+That's it — the CLI reads the board metadata, finds the repository example, and calls Zephyr's `west build` with the validated target.
+
+> If you skipped CLI installation, the in-repo fallback is `scripts/seeed-zephyr <command>`.
+
+## Command-Line Workflow
+
+`seeed-zephyr` chooses the board, example, and validated metadata, then delegates the actual device work to Zephyr tooling.
+
+### Build, flash, monitor, debug
+
+```sh
+seeed-zephyr build   xiao_esp32c6
+seeed-zephyr flash   xiao_esp32c6
+seeed-zephyr monitor xiao_esp32c6
+seeed-zephyr debug   xiao_esp32c6
+```
+
+Flash, then jump straight into the serial monitor:
+
+```sh
+seeed-zephyr flash xiao_esp32c6 --monitor
+```
+
+### Choose an example
+
+When a board has more than one example, the CLI lists them and lets you pick. Name the example to skip the prompt:
 
 ```sh
 seeed-zephyr build xiao_esp32c6 blinky
 ```
 
-Build and flash an external Zephyr application (any directory with
-`CMakeLists.txt` and `prj.conf`):
+### Build an external application
+
+Point the CLI at any Zephyr app folder (one with `CMakeLists.txt` and `prj.conf`):
 
 ```sh
 seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 ```
 
-List supported boards and examples:
+### Discover what's available
 
 ```sh
 seeed-zephyr list boards
 seeed-zephyr list examples
 ```
 
-Build, flash, monitor, and start a debug session:
+### Serial monitor, no board required
 
-```sh
-seeed-zephyr build xiao_esp32c6
-seeed-zephyr flash xiao_esp32c6
-seeed-zephyr monitor xiao_esp32c6
-seeed-zephyr debug xiao_esp32c6
-```
-
-Flash and then open the monitor:
-
-```sh
-seeed-zephyr flash xiao_esp32c6 --monitor
-seeed-zephyr flash xiao_samd21 --monitor
-seeed-zephyr flash xiao_rp2040 --monitor
-```
-
-Open the serial monitor without specifying a board (interactive port and baud
-rate selection):
+Interactive port and baud-rate selection:
 
 ```sh
 seeed-zephyr monitor
 ```
 
-For XIAO MG24 flashing, the CLI uses Zephyr's PyOCD runner. See
-[XIAO MG24 Board Notes](docs/en/boards/xiao-mg24.md).
+### Maintainer commands
 
-The CLI selects repository examples and board metadata. Firmware build, flash,
-monitor, and debug execution still run through Zephyr `west` commands and
-Zephyr module tools. For non-Espressif serial monitor sessions, the CLI uses
-pyserial miniterm from the Zephyr venv.
+```sh
+seeed-zephyr matrix                     # rebuild the full board build matrix
+seeed-zephyr verify-hardware xiao_esp32c6  # record a hardware observation
+```
 
-## Why This Exists
+For the complete walk-through, see the [Getting Started guide](docs/en/getting-started.md).
 
-XIAO is becoming a multi-chip ecosystem. Different XIAO boards use different silicon vendors, wireless stacks, SDKs, flashing tools, and development workflows. Arduino remains important for beginner-friendly workflows, but new chips often support vendor SDKs or Zephyr before Arduino support is complete.
+## Grove & Expansion Support
 
-Zephyr can become the shared technical base for many XIAO boards. This repository adds the XIAO/Grove product experience around board targets, Devicetree overlays, Kconfig options, west commands, toolchains, and driver details.
+The capability catalog also tracks the Grove modules and expansion boards that pair with XIAO, including their interface, default address, power rail, and the Zephyr driver and Kconfig options they need.
 
-This repository defines the example and validation layer that makes Zephyr practical for XIAO and Grove users. Project generators, CLIs, and editor extensions should be built from this layer.
+**Grove modules:** AS5600 magnetic rotary encoder · GPS (Air530) · GSR sensor · Ultrasonic Ranger
 
-## Strategic Position
+**Expansion boards:** Grove Shield for XIAO · XIAO Expansion Board · XIAO Round Display
 
-The recommended position is Zephyr-first while keeping other ecosystems available where they are the better fit.
+See [`metadata/`](metadata/) for the full, machine-readable catalog.
 
-Zephyr should become the default unified path for common XIAO projects, reusable samples, compatibility validation, Grove integration, and future developer tools. Vendor SDKs, Arduino, MicroPython, CircuitPython, and PlatformIO should remain available where they are the better fit.
+## Repository Structure
 
-## Three Phases
+```text
+Seeed-Zephyr-Project/
+├── examples/boards/      # Minimal, buildable demo per XIAO board
+├── metadata/             # Board, Grove module, and expansion-board catalog
+│   ├── boards/
+│   ├── grove_modules/
+│   └── expansion_boards/
+├── scripts/              # Cross-platform setup + the seeed-zephyr launcher
+├── tools/
+│   ├── cli/              # seeed-zephyr CLI implementation
+│   ├── build_matrix/     # Full board-demo build verification
+│   └── validate_metadata/# Metadata schema checks (run in CI)
+├── docs/                 # User-facing guides and per-board notes (EN + 中文)
+└── .github/workflows/    # CI: metadata validation
+```
 
-### Phase 1: Examples, Projects, Metadata, And Validation Base
+## Roadmap
 
-Build the reliable foundation:
+The project is being built in three layers, each enabling the next.
 
-- XIAO board metadata
-- Grove module metadata
-- expansion-board metadata
-- minimum XIAO function examples
-- reusable XIAO + Grove project examples
-- compatibility matrix
-- CI build verification
-- selected hardware-in-loop tests
-- contribution structure for external examples
-- version and release policy
+1. **Examples, metadata & validation base** *(in progress)* — minimal board examples, reusable XIAO + Grove project examples, the capability catalog, the build matrix, CI verification, and selected hardware-in-the-loop tests.
+2. **Discovery & generation CLI** — extend `seeed-zephyr` to scaffold new examples and projects from repository templates, compose board + Grove + scenario templates, and generate west / PlatformIO projects with README, overlays, and source.
+3. **VS Code product experience** — pick a board, Grove module, and expansion board visually; browse examples; view compatibility and validation status; render wiring; generate a project; then hand build/flash/monitor/debug to the official Zephyr VS Code extension.
 
-See [Phase 1: Examples, Projects, Metadata, And Validation Base](AI%20use/en/01-phase-one-zephyr-base.md).
+The guiding principle: examples and projects are the product core; metadata, the CLI, generators, and editor tooling exist to make those examples easy to find, build, validate, and extend.
 
-### Phase 2: CLI For Discovery, Build, Validation, And Generation
+## Documentation
 
-Turn the foundation into a deterministic command-line workflow:
+| English | 中文 |
+| --- | --- |
+| [Getting Started](docs/en/getting-started.md) | [入门指南](docs/zh/getting-started.md) |
+| [Board Notes](docs/en/boards/README.md) | [开发板说明](docs/zh/boards/README.md) |
 
-- list supported boards, modules, examples, projects, and validation status
-- create new examples and project skeletons from repository templates
-- generate west projects
-- generate PlatformIO Zephyr projects
-- build and validate selected examples
-- compose board, Grove, expansion-board, and scenario templates
-- output README, wiring data, overlays, configuration files, and source code
-- base correctness on repository metadata, templates, and validation evidence
+Per-board notes cover flashing, reset, bootloader, and serial specifics for SAMD21, nRF52840, MG24, RA4M1, RP2040, and RP2350.
 
-See [Phase 2: CLI For Discovery, Build, Validation, And Generation](AI%20use/en/02-phase-two-cli-generator.md).
+## Contributing
 
-### Phase 3: VS Code Product Experience
+Contributions of new board examples, Grove modules, project examples, and validation evidence are welcome. Metadata is validated automatically on every push and pull request via the [Metadata Validation workflow](.github/workflows/metadata.yml), so keep new catalog entries schema-valid and back build/hardware status with evidence rather than assumptions.
 
-Turn the CLI and metadata into a developer-facing product:
+## Acknowledgements
 
-- select XIAO boards, Grove modules, and expansion boards
-- browse examples and project examples
-- display compatibility and validation status
-- render wiring diagrams
-- configure GPIO, I2C address, UART baud rate, sampling interval, and scenario settings
-- generate projects
-- hand off build, flash, monitor, and debug to the official Zephyr VS Code extension
-
-See [Phase 3: VS Code Product Experience](AI%20use/en/03-phase-three-vscode-plugin.md).
-
-## Repository Purpose
-
-This repository should eventually become the single source of truth for:
-
-- what XIAO boards support in Zephyr
-- which Grove modules can be used with each board
-- which minimum examples exist for each supported XIAO board
-- which larger XIAO + Grove project examples are available
-- which examples are build-only, experimental, or hardware-tested
-- how external contributors add examples and validation evidence
-- how projects are generated
-- how documentation and compatibility pages are produced
-- which Zephyr versions are recommended
-
-## Key Principle
-
-Examples and project directories are the product core. Metadata, scripts, CLIs, generators, and editor extensions exist to make those examples easier to find, build, validate, and extend.
-
-Users should be able to build a useful XIAO + Grove project before they understand every Zephyr detail.
-
-The CLI should stay a thin repository knowledge layer. It can choose the board,
-example, and validated metadata, but it must delegate build, flash, monitor,
-and debug execution to Zephyr tooling.
-
-The system should let users start from hardware and intent:
-
-1. Select a XIAO board.
-2. Select a Grove module or expansion board.
-3. Browse a verified minimum example or project example.
-4. Build, flash, and verify it locally.
-5. Generate a new project from the same repository knowledge when the CLI or plugin supports it.
-
-## Document Index
-
-- [Executive Summary](AI%20use/en/00-executive-summary.md)
-- [AI Project Charter](AI%20use/README.md)
-- [AI Work Log](AI%20use/WORKLOG.md)
-- [Phase 1: Examples, Projects, Metadata, And Validation Base](AI%20use/en/01-phase-one-zephyr-base.md)
-- [Phase 2: CLI For Discovery, Build, Validation, And Generation](AI%20use/en/02-phase-two-cli-generator.md)
-- [Phase 3: VS Code Product Experience](AI%20use/en/03-phase-three-vscode-plugin.md)
-- [Onboarding and Distribution Design](AI%20use/en/onboarding-design.md)
-- [Getting Started](docs/en/getting-started.md)
-- [XIAO SAMD21 Board Notes](docs/en/boards/xiao-samd21.md)
-- [XIAO MG24 Board Notes](docs/en/boards/xiao-mg24.md)
-- [XIAO RP2040 Board Notes](docs/en/boards/xiao-rp2040.md)
-- [Validation Log](AI%20use/en/validation-log.md)
-- [Roadmap and Quality Controls](AI%20use/en/04-roadmap-and-risks.md)
-- [Glossary](AI%20use/en/05-glossary.md)
-
-## Chinese Documents
-
-- [执行摘要](AI%20use/zh/00-executive-summary.md)
-- [AI 项目纲领](AI%20use/README.md)
-- [AI 工作记录](AI%20use/WORKLOG.md)
-- [第一阶段: 示例、项目、元数据与验证基础](AI%20use/zh/01-phase-one-zephyr-base.md)
-- [第二阶段: 发现、构建、验证与生成 CLI](AI%20use/zh/02-phase-two-cli-generator.md)
-- [第三阶段: VS Code 产品体验](AI%20use/zh/03-phase-three-vscode-plugin.md)
-- [入门指南](docs/zh/getting-started.md)
-- [XIAO SAMD21 开发板说明](docs/zh/boards/xiao-samd21.md)
-- [XIAO MG24 开发板说明](docs/zh/boards/xiao-mg24.md)
-- [XIAO RP2040 开发板说明](docs/zh/boards/xiao-rp2040.md)
-- [路线图与质量控制](AI%20use/zh/04-roadmap-and-risks.md)
-- [术语表](AI%20use/zh/05-glossary.md)
+Built on the [Zephyr Project](https://www.zephyrproject.org/) and the [Seeed Studio XIAO](https://www.seeedstudio.com/xiao-series-page) and [Grove](https://wiki.seeedstudio.com/Grove_System/) ecosystems.
