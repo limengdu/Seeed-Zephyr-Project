@@ -299,7 +299,7 @@ class FlashHintTests(unittest.TestCase):
 
     def test_ra4m1_example_supports_1200_baud_bootloader_request(self) -> None:
         source = (
-            seeed_zephyr.REPO_ROOT
+            seeed_zephyr._REPO_ROOT
             / "examples"
             / "boards"
             / "xiao_ra4m1"
@@ -474,7 +474,10 @@ class MonitorCommandTests(unittest.TestCase):
 
 class BuildCommandTests(unittest.TestCase):
     def test_raspberrypi_build_uses_bootmode_retention_snippet(self) -> None:
-        example = {"path": "examples/boards/xiao_rp2040/blinky", "zephyr_target": "xiao_rp2040"}
+        example = {
+            "path": str(seeed_zephyr._REPO_ROOT / "examples/boards/xiao_rp2040/blinky"),
+            "zephyr_target": "xiao_rp2040",
+        }
 
         with mock.patch.object(seeed_zephyr, "ensure_chip_blobs"):
             with mock.patch.object(seeed_zephyr, "run_west") as run_west:
@@ -489,13 +492,13 @@ class BuildCommandTests(unittest.TestCase):
                 "xiao_rp2040",
                 "-S",
                 "rp2-boot-mode-retention",
-                str(seeed_zephyr.REPO_ROOT / "examples/boards/xiao_rp2040/blinky"),
+                str(seeed_zephyr._REPO_ROOT / "examples/boards/xiao_rp2040/blinky"),
             ]
         )
 
     def test_non_raspberrypi_build_does_not_use_bootmode_retention_snippet(self) -> None:
         example = {
-            "path": "examples/boards/xiao_samd21/blinky",
+            "path": str(seeed_zephyr._REPO_ROOT / "examples/boards/xiao_samd21/blinky"),
             "zephyr_target": "seeeduino_xiao",
         }
 
@@ -510,9 +513,9 @@ class BuildCommandTests(unittest.TestCase):
 
 class ExampleConfigTests(unittest.TestCase):
     def test_rp2350_defaults_to_m33_target(self) -> None:
-        board_file = seeed_zephyr.REPO_ROOT / "metadata/boards/xiao_rp2350.yaml"
+        board_file = seeed_zephyr._REPO_ROOT / "metadata/boards/xiao_rp2350.yaml"
         example_file = (
-            seeed_zephyr.REPO_ROOT / "examples/boards/xiao_rp2350/blinky/example.yaml"
+            seeed_zephyr._REPO_ROOT / "examples/boards/xiao_rp2350/blinky/example.yaml"
         )
         board = seeed_zephyr.read_flat_yaml(board_file)
         example = seeed_zephyr.read_flat_yaml(example_file)
@@ -521,7 +524,7 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertEqual(example["zephyr_target"], "xiao_rp2350/rp2350a/m33")
 
     def test_rp2350_example_enables_usb_cdc_monitor_and_bootloader_request(self) -> None:
-        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_rp2350/blinky"
+        example_dir = seeed_zephyr._REPO_ROOT / "examples/boards/xiao_rp2350/blinky"
         prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
         overlay = (example_dir / "app.overlay").read_text(encoding="utf-8")
         main_c = (example_dir / "src/main.c").read_text(encoding="utf-8")
@@ -543,7 +546,7 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertIn("sys_reboot(SYS_REBOOT_COLD)", main_c)
 
     def test_nrf52840_example_enables_usb_cdc_monitor_and_bootloader_request(self) -> None:
-        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_nrf52840/blinky"
+        example_dir = seeed_zephyr._REPO_ROOT / "examples/boards/xiao_nrf52840/blinky"
         prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
         main_c = (example_dir / "src/main.c").read_text(encoding="utf-8")
 
@@ -564,13 +567,13 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertIn("sys_reboot(SYS_REBOOT_COLD)", main_c)
 
     def test_ra4m1_example_starts_after_dfu_bootloader(self) -> None:
-        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_ra4m1/blinky"
+        example_dir = seeed_zephyr._REPO_ROOT / "examples/boards/xiao_ra4m1/blinky"
         prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
 
         self.assertIn("CONFIG_FLASH_LOAD_OFFSET=0x4000", prj_conf)
 
     def test_ra4m1_example_uses_usb_cdc_console(self) -> None:
-        example_dir = seeed_zephyr.REPO_ROOT / "examples/boards/xiao_ra4m1/blinky"
+        example_dir = seeed_zephyr._REPO_ROOT / "examples/boards/xiao_ra4m1/blinky"
         prj_conf = (example_dir / "prj.conf").read_text(encoding="utf-8")
         app_overlay = (example_dir / "app.overlay").read_text(encoding="utf-8")
 

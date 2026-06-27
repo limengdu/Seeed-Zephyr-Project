@@ -13,19 +13,37 @@ import time
 from pathlib import Path
 
 
-def resolve_repo_root() -> Path:
+def _find_repo_root() -> Path | None:
+    """Walk up from this file to find repo root (identified by metadata/boards/).
+    Returns None when running as an installed package without a local repo.
+    从当前文件向上遍历目录，通过 metadata/boards/ 标记识别仓库根目录。
+    以安装包形式运行时返回 None。"""
     env_root = os.environ.get("SEEED_ZEPHYR_REPO_ROOT")
     if env_root:
-        return Path(env_root).expanduser().resolve()
+        candidate = Path(env_root).expanduser().resolve()
+        if (candidate / "metadata" / "boards").is_dir():
+            return candidate
 
-    return Path(__file__).resolve().parents[2]
+    current = Path(__file__).resolve().parent
+    for _ in range(8):
+        if (current / "metadata" / "boards").is_dir():
+            return current
+        parent = current.parent
+        if parent == current:
+            break
+        current = parent
+    return None
 
 
-REPO_ROOT = resolve_repo_root()
-BOARD_DIR = REPO_ROOT / "metadata" / "boards"
-EXAMPLES_DIR = REPO_ROOT / "examples" / "boards"
-BUILD_MATRIX_SCRIPT = REPO_ROOT / "tools" / "build_matrix" / "run.sh"
-HARDWARE_LOG = REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md"
+_REPO_ROOT = _find_repo_root()
+# Bundled data directory for installed package mode
+# 安装包模式下使用的打包数据目录
+_PKG_DATA = Path(__file__).resolve().parent / "data"
+
+BOARD_DIR = (_REPO_ROOT / "metadata" / "boards") if _REPO_ROOT else (_PKG_DATA / "boards")
+EXAMPLES_DIR = (_REPO_ROOT / "examples" / "boards") if _REPO_ROOT else (_PKG_DATA / "examples")
+BUILD_MATRIX_SCRIPT = (_REPO_ROOT / "tools" / "build_matrix" / "run.sh") if _REPO_ROOT else None
+HARDWARE_LOG = (_REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md") if _REPO_ROOT else None
 DEBUG_HINT = (
     "Debugging needs a hardware debugger (J-Link, CMSIS-DAP, or on-chip "
     "USB-JTAG); most XIAO boards use printf-over-serial (`seeed-zephyr monitor`) "
@@ -242,7 +260,7 @@ def resolve_example(board_id: str) -> dict[str, str] | None:
             break
 
     values = read_flat_yaml(chosen)
-    values["path"] = chosen.parent.relative_to(REPO_ROOT).as_posix()
+    values["path"] = str(chosen.parent)
     return values
 
 
@@ -256,7 +274,7 @@ def resolve_board_examples(board_id: str) -> list[dict[str, str]]:
     examples = []
     for example_file in sorted(board_example_dir.glob("*/example.yaml")):
         values = read_flat_yaml(example_file)
-        values["path"] = example_file.parent.relative_to(REPO_ROOT).as_posix()
+        values["path"] = str(example_file.parent)
         examples.append(values)
     return examples
 
@@ -349,7 +367,7 @@ def require_supported_example(board_id: str) -> dict[str, str]:
 
 
 def run_command(
-    command: list[str], *, cwd: Path = REPO_ROOT, env: dict[str, str] | None = None
+    command: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None
 ) -> None:
     result = subprocess.run(command, cwd=cwd, env=env, check=False)
     if result.returncode != 0:
@@ -357,7 +375,7 @@ def run_command(
 
 
 def run_command_capture(
-    command: list[str], *, cwd: Path = REPO_ROOT, env: dict[str, str] | None = None
+    command: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
@@ -965,16 +983,18 @@ def run_west_build(board_id: str, example: dict[str, str]) -> None:
     # 通过 Zephyr 的 west 命令构建选中的示例。
     board = require_board(board_id)
     target = example.get("zephyr_target") or board["target"]
-    example_path = Path(example["path"])
-    example_dir = example_path if example_path.is_absolute() else REPO_ROOT / example_path
+    example_dir = Path(example["path"])
+    display_name = (
+        example_dir.relative_to(_REPO_ROOT).as_posix() if _REPO_ROOT else example_dir.name
+    )
     ensure_chip_blobs(board)
-    print(f"Building {example['path']} for {target}...", flush=True)
+    print(f"Building {display_name} for {target}...", flush=True)
     command = ["build", "-p", "always", "-b", target]
     if board["vendor"] == "raspberrypi":
         command.extend(["-S", RP2_BOOTLOADER_SNIPPET])
     command.append(str(example_dir))
     run_west(command)
-    print(f"Build succeeded: {example['path']}", flush=True)
+    print(f"Build succeeded: {display_name}", flush=True)
 
 
 def usb_serial_devices() -> list[str]:
@@ -1308,16 +1328,22 @@ def cmd_monitor(args: argparse.Namespace) -> None:
 
 
 def cmd_matrix(_args: argparse.Namespace) -> None:
+    if BUILD_MATRIX_SCRIPT is None or _REPO_ROOT is None:
+        raise CliError("'matrix' requires a local repo clone.")
+
     env = os.environ.copy()
     # Use today's date for generated matrix evidence unless the caller pins it.
     # 如果调用方没有固定日期，就用当天日期生成矩阵证据。
     env.setdefault("BUILD_MATRIX_GENERATED_ON", dt.date.today().isoformat())
-    result = subprocess.run(["bash", str(BUILD_MATRIX_SCRIPT)], cwd=REPO_ROOT, env=env)
+    result = subprocess.run(["bash", str(BUILD_MATRIX_SCRIPT)], cwd=_REPO_ROOT, env=env)
     if result.returncode != 0:
         raise CliError(f"Build matrix failed with status {result.returncode}.")
 
 
 def cmd_verify_hardware(args: argparse.Namespace) -> None:
+    if HARDWARE_LOG is None or _REPO_ROOT is None:
+        raise CliError("'verify-hardware' requires a local repo clone.")
+
     example = require_supported_example(args.board_id)
 
     ra4m1_rom = None
@@ -1351,7 +1377,7 @@ def cmd_verify_hardware(args: argparse.Namespace) -> None:
         serial_output=serial_output,
         notes=notes,
     )
-    print(f"Hardware verification recorded in {HARDWARE_LOG.relative_to(REPO_ROOT)}.")
+    print(f"Hardware verification recorded in {HARDWARE_LOG.relative_to(_REPO_ROOT)}.")
 
 
 def prompt_choice(prompt: str) -> bool:

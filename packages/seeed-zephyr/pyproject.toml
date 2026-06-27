@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "seeed-zephyr"
+version = "0.1.0"
+description = "CLI for Seeed Studio XIAO boards with Zephyr RTOS"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = []
+keywords = ["zephyr", "xiao", "seeed", "embedded", "iot"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Embedded Systems",
+]
+
+[project.urls]
+Homepage = "https://github.com/Seeed-Projects/seeed-zephyr-base"
+Issues = "https://github.com/Seeed-Projects/seeed-zephyr-base/issues"
+
+[project.scripts]
+seeed-zephyr = "seeed_zephyr.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/seeed_zephyr"]
+
+[tool.hatch.build.force-include]
+"../../tools/cli/seeed_zephyr.py" = "src/seeed_zephyr/cli.py"
+"../../tools/cli/ra4m1_rom_flash.py" = "src/seeed_zephyr/ra4m1_rom_flash.py"
+"../../tools/cli/bootloaders" = "src/seeed_zephyr/bootloaders"
+"../../metadata/boards" = "src/seeed_zephyr/data/boards"
+"../../examples/boards" = "src/seeed_zephyr/data/examples"

@@ -24,9 +24,41 @@ If you are an AI agent, maintainer, or contributor preparing project work, start
 
 The short version: this repository stores XIAO/Grove examples, project examples, metadata, scripts, docs, and validation results. The actual Zephyr source tree and firmware builds live in a separate workspace, normally `~/zephyrproject`.
 
-Run setup from the repository root. Choose the entry point for your host OS.
-When setup asks `Install seeed-zephyr CLI? [Y/n]`, press Enter to install the
-command.
+## Install
+
+Three ways to install the CLI. Pick the one that fits your workflow.
+
+### Option A: pip (all platforms)
+
+```sh
+pip install seeed-zephyr
+```
+
+Or with [pipx](https://pipx.pypa.io/) for isolated installation:
+
+```sh
+pipx install seeed-zephyr
+```
+
+### Option B: One-line installer (macOS / Linux)
+
+Clones the repository and runs the full Zephyr environment setup:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+```
+
+### Option C: Homebrew (macOS / Linux)
+
+```sh
+brew tap seeed-studio/seeed
+brew install seeed-studio/seeed/seeed-zephyr
+```
+
+### From source (contributor workflow)
+
+Clone the repository and run the setup script for your OS.
+When setup asks `Install seeed-zephyr CLI? [Y/n]`, press Enter to install.
 
 macOS:
 
@@ -34,13 +66,13 @@ macOS:
 bash scripts/setup-macos.sh
 ```
 
-Linux, written but pending real-Linux validation:
+Linux:
 
 ```sh
 bash scripts/setup-linux.sh
 ```
 
-Windows, written but pending real-Windows validation, prepares WSL2 first:
+Windows (WSL2):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
@@ -52,8 +84,7 @@ Then run Linux setup inside WSL2:
 bash scripts/setup-linux.sh
 ```
 
-After setup installs the CLI, build a repository board example from any
-directory:
+After installation, build a board example from any directory:
 
 ```sh
 seeed-zephyr build xiao_esp32c6
