@@ -36,34 +36,71 @@ Zephyr 已经支持很多开发板，但它默认要求用户知道这些概念�
 
 一句话总结：Zephyr 是底层引擎，本仓库给 XIAO 用户提供整理好的示例和可重复命令。
 
-## 2. 第一次安装环境
+## 2. 安装 CLI
 
-从项目根目录运行：
+三种安装方式，选适合你的。
+
+### 方式 A：pip（全平台通用）
+
+```sh
+pip install seeed-zephyr
+```
+
+或者用 [pipx](https://pipx.pypa.io/) 隔离安装：
+
+```sh
+pipx install seeed-zephyr
+```
+
+通过 pip 安装 CLI 后，还需要 Zephyr 工具链。见下方
+[第 2b 节](#2b-zephyr-环境安装)。
+
+### 方式 B：一键安装（macOS / Linux）
+
+同时安装 CLI **和** Zephyr 环境，一步到位：
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+```
+
+完成后直接跳到[第 3 节](#3-构建一块板子的-demo)。
+
+### 方式 C：Homebrew（macOS / Linux）
+
+```sh
+brew tap seeed-studio/seeed
+brew install seeed-studio/seeed/seeed-zephyr
+```
+
+通过 Homebrew 安装 CLI 后，还需要 Zephyr 工具链。见下方
+[第 2b 节](#2b-zephyr-环境安装)。
+
+### 方式 D：从源码安装（贡献者流程）
+
+克隆仓库后运行对应系统的 setup 脚本。
 
 ```sh
 cd ~/seeed-zephyr-base
 bash scripts/setup-macos.sh
 ```
 
-如果你已经知道要用哪块板子，可以带上 `--board`。例如 XIAO ESP32C6：
+如果你已经知道要用哪块板子，可以带上 `--board`：
 
 ```sh
 cd ~/seeed-zephyr-base
 bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
-### 其他平台
+#### 其他平台
 
-非 macOS setup 入口已经写好，但还在等待真实平台验证。不要把它们当成已经验证完成的安装路径。
-
-Linux，尚未在真实 Linux 验证：
+Linux：
 
 ```sh
 cd ~/seeed-zephyr-base
 bash scripts/setup-linux.sh
 ```
 
-Windows，尚未在真实 Windows 验证，先准备 WSL2：
+Windows（WSL2）：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
@@ -76,29 +113,35 @@ cd ~/seeed-zephyr-base
 bash scripts/setup-linux.sh
 ```
 
-setup 流程会准备 `~/zephyrproject`，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
-安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。当你通过 `--board` 选择 Espressif
-开发板时，setup 还会检查 Zephyr 自带的 `hal_espressif` 烧录和 monitor 工具是否可用。
-当你选择其他开发板时，setup 也会处理该板子需要的烧录工具，例如 SAMD21 的 `bossac`、
-MG24 的 PyOCD CMSIS pack、RA4M1 的 `dfu-util`。不带 `--board` 运行时，setup 会执行
-当前仓库覆盖范围内的全量板级依赖安装。
-
 执行到 CLI 安装步骤时，脚本会询问：
 
 ```text
 Install seeed-zephyr CLI? [Y/n]
 ```
 
-直接按回车就是安装。安装后，`seeed-zephyr` 命令可以在任意目录使用。如果安装目录不在
-`PATH` 里，setup 会打印需要添加的 `PATH` 命令。
+直接按回车就是安装。从源码安装时 setup 脚本也会一并准备 Zephyr 环境，
+可以跳过第 2b 节。
 
-脚本最后会打印下一条本仓库示例命令，例如：
+## 2b. Zephyr 环境安装
+
+如果你通过 pip 或 Homebrew（方式 A 或 C）安装了 CLI，还需要 Zephyr 工具链。
+一键安装（方式 B）和从源码安装（方式 D）会自动处理这一步。
+
+`~/zephyrproject` 下的 Zephyr 工作区包含 Python venv、`west`、Zephyr v4.4.0、
+Zephyr 包、SDK 和板级 blobs。克隆仓库并运行 setup 脚本来安装：
 
 ```sh
-seeed-zephyr build xiao_esp32c6
+git clone https://github.com/Seeed-Projects/seeed-zephyr-base.git ~/.seeed-zephyr-base
+bash ~/.seeed-zephyr-base/scripts/setup-macos.sh
 ```
 
-一句话总结：setup 负责装工具链，也会默认安装后续操作示例用的命令。
+setup 流程会准备 Zephyr 工作区，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
+安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。通过 `--board` 选择 Espressif
+开发板时，setup 还会检查 Zephyr 自带的 `hal_espressif` 烧录和 monitor 工具是否可用。
+其他开发板也会处理对应的烧录工具，例如 SAMD21 的 `bossac`、MG24 的 PyOCD CMSIS pack、
+RA4M1 的 `dfu-util`。
+
+一句话总结：先装 CLI，再装 Zephyr 工具链（如果安装方式没有自动处理的话）。
 
 ## 3. 构建一块板子的 demo
 
@@ -117,7 +160,7 @@ seeed-zephyr build xiao_esp32c3
 `seeed-zephyr build <board_id>` 会读取开发板 metadata，找到仓库示例，然后把验证过的
 target 和示例路径交给 Zephyr 的 `west build`。
 
-如果你在 setup 里跳过了 CLI 安装，备用入口是从项目根目录运行
+如果你从源码安装时跳过了 CLI 安装，备用入口是从项目根目录运行
 `scripts/seeed-zephyr <command>`。
 
 一句话总结：安装后的命令可以离开仓库目录使用，但真正构建固件的仍然是 Zephyr。

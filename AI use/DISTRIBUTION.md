@@ -70,4 +70,4 @@ The `pyproject.toml` reads it via hatch's dynamic versioning.
 - [x] install.sh created
 - [x] Homebrew formula created (SHA256 placeholder)
 - [x] README updated with three install methods
-- [ ] First PyPI publish
+- [x] First PyPI publish (v0.1.0, 2026-06-27)

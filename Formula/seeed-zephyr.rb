@@ -16,7 +16,7 @@ class SeeedZephyr < Formula
   desc "CLI for Seeed Studio XIAO boards with Zephyr RTOS"
   homepage "https://github.com/Seeed-Projects/seeed-zephyr-base"
   url "https://files.pythonhosted.org/packages/source/s/seeed-zephyr/seeed_zephyr-0.1.0.tar.gz"
-  sha256 "PLACEHOLDER_UPDATE_AFTER_PYPI_PUBLISH"
+  sha256 "9c1dd026543127271995166b3293a94833a05d42a5e9fd0fee6e0d7ab8785b1b"
   license "Apache-2.0"
 
   depends_on "python@3.12"

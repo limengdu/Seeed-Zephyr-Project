@@ -31,9 +31,48 @@ This repository adds the XIAO/Grove layer:
 One-sentence summary: Zephyr is the engine; this repository gives XIAO users
 organized examples and repeatable commands.
 
-## 2. First-Time Environment Setup
+## 2. Install the CLI
 
-Run setup from the project root:
+Three ways to install. Pick the one that fits your workflow.
+
+### Option A: pip (all platforms)
+
+```sh
+pip install seeed-zephyr
+```
+
+Or with [pipx](https://pipx.pypa.io/) for isolated installation:
+
+```sh
+pipx install seeed-zephyr
+```
+
+After installing the CLI via pip, you still need the Zephyr toolchain. See
+[Section 2b](#2b-zephyr-environment-setup) below.
+
+### Option B: One-line installer (macOS / Linux)
+
+This installs the CLI **and** sets up the Zephyr environment in one step:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+```
+
+After this completes, skip to [Section 3](#3-build-one-board-demo).
+
+### Option C: Homebrew (macOS / Linux)
+
+```sh
+brew tap seeed-studio/seeed
+brew install seeed-studio/seeed/seeed-zephyr
+```
+
+After installing the CLI via Homebrew, you still need the Zephyr toolchain.
+See [Section 2b](#2b-zephyr-environment-setup) below.
+
+### Option D: From source (contributor workflow)
+
+Clone the repository and run the setup script for your OS.
 
 ```sh
 cd ~/seeed-zephyr-base
@@ -47,19 +86,16 @@ cd ~/seeed-zephyr-base
 bash scripts/setup-macos.sh --board xiao_esp32c6
 ```
 
-### Other platforms
+#### Other platforms
 
-The non-macOS setup entrypoints are written but still pending real-platform
-validation. Do not treat them as verified install paths yet.
-
-Linux, pending real-Linux validation:
+Linux:
 
 ```sh
 cd ~/seeed-zephyr-base
 bash scripts/setup-linux.sh
 ```
 
-Windows, pending real-Windows validation, prepares WSL2 first:
+Windows (WSL2):
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
@@ -72,34 +108,40 @@ cd ~/seeed-zephyr-base
 bash scripts/setup-linux.sh
 ```
 
-The setup flow prepares the Zephyr workspace at `~/zephyrproject`, installs
-the Python venv and `west`, downloads Zephyr v4.4.0, installs Zephyr packages
-and the SDK, and fetches board-specific blobs when needed. When an Espressif
-board is selected with `--board`, setup also checks that Zephyr's
-`hal_espressif` flash and monitor tools are available.
-For other selected boards, setup also prepares the required board flash tools,
-such as `bossac` for SAMD21, the PyOCD CMSIS pack for MG24, and `dfu-util` for
-RA4M1. Running setup without `--board` installs the full board-specific
-dependency set covered by this repository.
-
 During setup, the script asks:
 
 ```text
 Install seeed-zephyr CLI? [Y/n]
 ```
 
-Press Enter to install the CLI. After installation, the `seeed-zephyr` command
-can be used from any directory. If the chosen install directory is not in
-`PATH`, the setup script prints the exact `PATH` command to add.
+Press Enter to install the CLI. The setup script also prepares the full Zephyr
+environment, so you can skip Section 2b.
 
-At the end, the script prints the next repository example command, such as:
+## 2b. Zephyr Environment Setup
+
+If you installed the CLI via pip or Homebrew (Options A or C), you still need
+the Zephyr toolchain. The one-line installer (Option B) and from-source setup
+(Option D) handle this automatically.
+
+The Zephyr workspace at `~/zephyrproject` contains the Python venv, `west`,
+Zephyr v4.4.0, Zephyr packages, the SDK, and board-specific blobs. Set it up
+by cloning the repository and running the setup script:
 
 ```sh
-seeed-zephyr build xiao_esp32c6
+git clone https://github.com/Seeed-Projects/seeed-zephyr-base.git ~/.seeed-zephyr-base
+bash ~/.seeed-zephyr-base/scripts/setup-macos.sh
 ```
 
-One-sentence summary: setup prepares the toolchain, then installs the command
-used to operate this repository's examples.
+The setup flow prepares the Zephyr workspace, installs the Python venv and
+`west`, downloads Zephyr v4.4.0, installs Zephyr packages and the SDK, and
+fetches board-specific blobs when needed. When an Espressif board is selected
+with `--board`, setup also checks that Zephyr's `hal_espressif` flash and
+monitor tools are available. For other boards, setup prepares the required
+flash tools, such as `bossac` for SAMD21, the PyOCD CMSIS pack for MG24, and
+`dfu-util` for RA4M1.
+
+One-sentence summary: install the CLI first, then set up the Zephyr toolchain
+if the installer did not handle it.
 
 ## 3. Build One Board Demo
 
@@ -119,8 +161,8 @@ seeed-zephyr build xiao_esp32c3
 example, and calls Zephyr's `west build` with the validated target and example
 path.
 
-If CLI installation was skipped, the project-root fallback is
-`scripts/seeed-zephyr <command>`.
+If you installed from source and skipped CLI installation, the project-root
+fallback is `scripts/seeed-zephyr <command>`.
 
 One-sentence summary: the installed command works outside the repository, while
 Zephyr still performs the actual firmware build.

@@ -20,7 +20,8 @@ Zephyr module-provided tools, or tools already installed in the Zephyr venv:
   miniterm from the Zephyr venv.
 - `debug` builds with `west build`, then calls `west debug`.
 
-The user-facing command is installed by `scripts/setup-macos.sh` as
+The user-facing command can be installed via `pip install seeed-zephyr`, or by
+the setup script (`scripts/setup-macos.sh`) which symlinks it as
 `seeed-zephyr`. The implementation lives here so the command can remain small
 and repository-driven.
 
@@ -56,7 +57,9 @@ CLI 是仓库知识层，不是替代 Zephyr 的构建系统。build、flash、m
   模块的 monitor。其他开发板使用 Zephyr venv 中的 pyserial miniterm。
 - `debug` 先用 `west build` 构建，然后调用 `west debug`。
 
-面向用户的命令由 `scripts/setup-macos.sh` 安装为 `seeed-zephyr`。实现代码放在这里，让命令本身保持轻量，并始终由仓库内容驱动。
+面向用户的命令可以通过 `pip install seeed-zephyr` 安装，也可以由 setup 脚本
+（`scripts/setup-macos.sh`）以符号链接形式安装为 `seeed-zephyr`。实现代码放在这里，
+让命令本身保持轻量，并始终由仓库内容驱动。
 
 `seeed-zephyr flash <board_id> --monitor` 会构建、烧录，并在烧录成功后打开开发板 monitor。
 
