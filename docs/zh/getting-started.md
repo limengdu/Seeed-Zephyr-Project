@@ -38,7 +38,7 @@ Zephyr 已经支持很多开发板，但它默认要求用户知道这些概念�
 
 ## 2. 安装 CLI
 
-三种安装方式，选适合你的。
+四种安装方式，选适合你的。
 
 ### 方式 A：pip（全平台通用）
 
@@ -128,11 +128,16 @@ Install seeed-zephyr CLI? [Y/n]
 一键安装（方式 B）和从源码安装（方式 D）会自动处理这一步。
 
 `~/zephyrproject` 下的 Zephyr 工作区包含 Python venv、`west`、Zephyr v4.4.0、
-Zephyr 包、SDK 和板级 blobs。克隆仓库并运行 setup 脚本来安装：
+Zephyr 包、SDK 和板级 blobs。克隆仓库并运行对应系统的 setup 脚本来安装：
 
 ```sh
 git clone https://github.com/Seeed-Projects/seeed-zephyr-base.git ~/.seeed-zephyr-base
+
+# macOS
 bash ~/.seeed-zephyr-base/scripts/setup-macos.sh
+
+# Linux
+bash ~/.seeed-zephyr-base/scripts/setup-linux.sh
 ```
 
 setup 流程会准备 Zephyr 工作区，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，

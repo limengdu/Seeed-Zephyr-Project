@@ -33,7 +33,7 @@ organized examples and repeatable commands.
 
 ## 2. Install the CLI
 
-Three ways to install. Pick the one that fits your workflow.
+Four ways to install. Pick the one that fits your workflow.
 
 ### Option A: pip (all platforms)
 
@@ -125,11 +125,16 @@ the Zephyr toolchain. The one-line installer (Option B) and from-source setup
 
 The Zephyr workspace at `~/zephyrproject` contains the Python venv, `west`,
 Zephyr v4.4.0, Zephyr packages, the SDK, and board-specific blobs. Set it up
-by cloning the repository and running the setup script:
+by cloning the repository and running the setup script for your OS:
 
 ```sh
 git clone https://github.com/Seeed-Projects/seeed-zephyr-base.git ~/.seeed-zephyr-base
+
+# macOS
 bash ~/.seeed-zephyr-base/scripts/setup-macos.sh
+
+# Linux
+bash ~/.seeed-zephyr-base/scripts/setup-linux.sh
 ```
 
 The setup flow prepares the Zephyr workspace, installs the Python venv and

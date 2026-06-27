@@ -23,6 +23,11 @@ def _find_repo_root() -> Path | None:
         candidate = Path(env_root).expanduser().resolve()
         if (candidate / "metadata" / "boards").is_dir():
             return candidate
+        print(
+            f"Warning: SEEED_ZEPHYR_REPO_ROOT={env_root} does not contain "
+            "metadata/boards/; ignoring.",
+            file=sys.stderr,
+        )
 
     current = Path(__file__).resolve().parent
     for _ in range(8):
@@ -39,6 +44,14 @@ _REPO_ROOT = _find_repo_root()
 # Bundled data directory for installed package mode
 # 安装包模式下使用的打包数据目录
 _PKG_DATA = Path(__file__).resolve().parent / "data"
+
+
+def _display_path(p: Path) -> str:
+    """Return a short display form: repo-relative when possible, otherwise the dir name.
+    返回简短的显示路径：在仓库内时用相对路径，否则用目录名。"""
+    if _REPO_ROOT and p.is_relative_to(_REPO_ROOT):
+        return p.relative_to(_REPO_ROOT).as_posix()
+    return p.name
 
 BOARD_DIR = (_REPO_ROOT / "metadata" / "boards") if _REPO_ROOT else (_PKG_DATA / "boards")
 EXAMPLES_DIR = (_REPO_ROOT / "examples" / "boards") if _REPO_ROOT else (_PKG_DATA / "examples")
@@ -234,7 +247,9 @@ def board_records() -> list[dict[str, str]]:
                 "target": values.get("zephyr_target", ""),
                 "demo": demo,
                 "status": status,
-                "example_path": example.get("path", "") if example else "",
+                "example_path": (
+                    _display_path(Path(example["path"])) if example and example.get("path") else ""
+                ),
             }
         )
 
@@ -455,7 +470,7 @@ def bossac_install_hint() -> str:
             )
         return "Install it with: sudo apt-get install bossa-cli, or sudo dnf install bossa"
     if system == "windows":
-        return "Use the WSL2 setup path, then install it inside WSL2 with scripts/setup-linux.sh"
+        return "Use WSL2, then install it with: sudo apt-get install bossa-cli"
 
     return "Install BOSSA/bossac for this platform"
 
@@ -533,11 +548,16 @@ def dfu_util_path() -> Path | None:
 
 
 def dfu_util_install_hint() -> str:
-    return (
-        "XIAO RA4M1 flashing uses the board USB DFU bootloader. "
-        "Run scripts/setup-macos.sh --board xiao_ra4m1 or "
-        "scripts/setup-linux.sh --board xiao_ra4m1 so setup installs dfu-util."
-    )
+    if _REPO_ROOT:
+        return (
+            "XIAO RA4M1 flashing uses the board USB DFU bootloader. "
+            "Run scripts/setup-macos.sh --board xiao_ra4m1 or "
+            "scripts/setup-linux.sh --board xiao_ra4m1 so setup installs dfu-util."
+        )
+    system = platform.system().lower()
+    if system == "darwin":
+        return "XIAO RA4M1 flashing requires dfu-util. Install it with: brew install dfu-util"
+    return "XIAO RA4M1 flashing requires dfu-util. Install it with: sudo apt-get install dfu-util"
 
 
 def require_ra4m1_dfu_util() -> None:
@@ -984,9 +1004,7 @@ def run_west_build(board_id: str, example: dict[str, str]) -> None:
     board = require_board(board_id)
     target = example.get("zephyr_target") or board["target"]
     example_dir = Path(example["path"])
-    display_name = (
-        example_dir.relative_to(_REPO_ROOT).as_posix() if _REPO_ROOT else example_dir.name
-    )
+    display_name = _display_path(example_dir)
     ensure_chip_blobs(board)
     print(f"Building {display_name} for {target}...", flush=True)
     command = ["build", "-p", "always", "-b", target]
@@ -1246,7 +1264,8 @@ def cmd_list_examples(_args: argparse.Namespace) -> None:
         for ex in examples:
             demo = ex.get("demo", "?")
             status = ex.get("validation_status", "unknown")
-            print(f"{board_id}\t{demo}\t{status}\t{ex.get('path', '')}")
+            display = _display_path(Path(ex["path"])) if ex.get("path") else ""
+            print(f"{board_id}\t{demo}\t{status}\t{display}")
 
 
 def cmd_build(args: argparse.Namespace) -> None:
@@ -1372,7 +1391,7 @@ def cmd_verify_hardware(args: argparse.Namespace) -> None:
 
     append_hardware_log(
         board_id=args.board_id,
-        example_path=example["path"],
+        example_path=_display_path(Path(example["path"])),
         observed=observed,
         serial_output=serial_output,
         notes=notes,
