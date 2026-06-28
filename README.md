@@ -232,8 +232,8 @@ Seeed-Zephyr-Project/
 The project is being built in three layers, each enabling the next.
 
 1. **Examples, metadata & validation base** *(in progress)* — minimal board examples, reusable XIAO + Grove project examples, the capability catalog, the build matrix, CI verification, and selected hardware-in-the-loop tests.
-2. **Discovery & generation CLI** — extend `seeed-zephyr` to scaffold new examples and projects from repository templates, compose board + Grove + scenario templates, and generate west / PlatformIO projects with README, overlays, and source.
-3. **VS Code product experience** — pick a board, Grove module, and expansion board visually; browse examples; view compatibility and validation status; render wiring; generate a project; then hand build/flash/monitor/debug to the official Zephyr VS Code extension.
+2. **Discovery & generation CLI** *(in progress)* — `seeed-zephyr` discovers boards, examples, Grove modules, and expansion boards (with `--json` output), shows asset details, validates metadata, and generates a project from any example with a reproducible `snapshot.json`. Scenario templates and west / PlatformIO output are next.
+3. **VS Code product experience** *(MVP in progress)* — the [Seeed XIAO Zephyr Assistant extension](tools/vscode-extension/) browses boards, modules, and expansion boards with validation badges, previews example details, creates a project from an example, and offers PlatformIO-style status bar Build / Upload / Monitor actions that delegate execution to Zephyr tooling. Wiring diagrams and deeper official-extension integration are next.
 
 The guiding principle: examples and projects are the product core; metadata, the CLI, generators, and editor tooling exist to make those examples easy to find, build, validate, and extend.
 

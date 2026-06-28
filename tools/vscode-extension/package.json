@@ -1,0 +1,216 @@
+{
+  "name": "seeed-xiao-zephyr-assistant",
+  "displayName": "Seeed XIAO Zephyr Assistant",
+  "description": "Discover and create XIAO + Grove Zephyr examples, then hand build/flash to Zephyr tooling.",
+  "version": "0.1.0",
+  "publisher": "seeed-studio",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Seeed-Projects/seeed-zephyr-base"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:metadata/boards",
+    "workspaceContains:snapshot.json",
+    "workspaceContains:prj.conf"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "seeedZephyr",
+          "title": "Seeed XIAO Zephyr",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "seeedZephyr": [
+        {
+          "id": "seeedZephyrCatalog",
+          "name": "Catalog"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "seeedZephyr.refreshCatalog",
+        "title": "Refresh Catalog",
+        "category": "Seeed XIAO",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "seeedZephyr.setRepoRoot",
+        "title": "Set Repository Folder",
+        "category": "Seeed XIAO"
+      },
+      {
+        "command": "seeedZephyr.showDetail",
+        "title": "Show Detail",
+        "category": "Seeed XIAO"
+      },
+      {
+        "command": "seeedZephyr.createProject",
+        "title": "Create Project from Example",
+        "category": "Seeed XIAO",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "seeedZephyr.openGenerated",
+        "title": "Open Generated Project",
+        "category": "Seeed XIAO"
+      },
+      {
+        "command": "seeedZephyr.build",
+        "title": "Build",
+        "category": "Seeed XIAO",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "seeedZephyr.flash",
+        "title": "Flash",
+        "category": "Seeed XIAO",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "seeedZephyr.monitor",
+        "title": "Monitor",
+        "category": "Seeed XIAO",
+        "icon": "$(pulse)"
+      },
+      {
+        "command": "seeedZephyr.debug",
+        "title": "Debug",
+        "category": "Seeed XIAO",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "seeedZephyr.projectBuild",
+        "title": "Build Project",
+        "category": "Seeed XIAO"
+      },
+      {
+        "command": "seeedZephyr.projectFlash",
+        "title": "Upload Project",
+        "category": "Seeed XIAO"
+      },
+      {
+        "command": "seeedZephyr.projectMonitor",
+        "title": "Monitor Project",
+        "category": "Seeed XIAO"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "seeedZephyr.showDetail", "when": "false" },
+        { "command": "seeedZephyr.build", "when": "false" },
+        { "command": "seeedZephyr.flash", "when": "false" },
+        { "command": "seeedZephyr.monitor", "when": "false" },
+        { "command": "seeedZephyr.debug", "when": "false" }
+      ],
+      "view/title": [
+        {
+          "command": "seeedZephyr.refreshCatalog",
+          "when": "view == seeedZephyrCatalog",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "seeedZephyr.createProject",
+          "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "inline"
+        },
+        {
+          "command": "seeedZephyr.createProject",
+          "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "1_actions"
+        },
+        {
+          "command": "seeedZephyr.createProject",
+          "when": "view == seeedZephyrCatalog && viewItem == board",
+          "group": "1_actions"
+        },
+        {
+          "command": "seeedZephyr.build",
+          "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "2_run"
+        },
+        {
+          "command": "seeedZephyr.flash",
+          "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "2_run"
+        },
+        {
+          "command": "seeedZephyr.monitor",
+          "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "2_run"
+        },
+        {
+          "command": "seeedZephyr.debug",
+          "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "2_run"
+        },
+        {
+          "command": "seeedZephyr.build",
+          "when": "view == seeedZephyrCatalog && viewItem == board",
+          "group": "2_run"
+        },
+        {
+          "command": "seeedZephyr.flash",
+          "when": "view == seeedZephyrCatalog && viewItem == board",
+          "group": "2_run"
+        },
+        {
+          "command": "seeedZephyr.monitor",
+          "when": "view == seeedZephyrCatalog && viewItem == board",
+          "group": "2_run"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Seeed XIAO Zephyr Assistant",
+      "properties": {
+        "seeedZephyr.repoRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the seeed-zephyr-base repository. Auto-detected from the workspace when empty."
+        },
+        "seeedZephyr.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Override the seeed-zephyr CLI command used for create and execute actions."
+        },
+        "seeedZephyr.pythonPath": {
+          "type": "string",
+          "default": "python3",
+          "description": "Python interpreter used to run the CLI from source."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "check-types": "tsc --noEmit",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0"
+  }
+}

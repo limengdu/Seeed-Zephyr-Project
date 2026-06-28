@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import json
 import os
 import platform
 import shutil
@@ -55,8 +56,15 @@ def _display_path(p: Path) -> str:
 
 BOARD_DIR = (_REPO_ROOT / "metadata" / "boards") if _REPO_ROOT else (_PKG_DATA / "boards")
 EXAMPLES_DIR = (_REPO_ROOT / "examples" / "boards") if _REPO_ROOT else (_PKG_DATA / "examples")
+GROVE_DIR = (_REPO_ROOT / "metadata" / "grove_modules") if _REPO_ROOT else (_PKG_DATA / "grove_modules")
+EXPANSION_DIR = (
+    (_REPO_ROOT / "metadata" / "expansion_boards") if _REPO_ROOT else (_PKG_DATA / "expansion_boards")
+)
 BUILD_MATRIX_SCRIPT = (_REPO_ROOT / "tools" / "build_matrix" / "run.sh") if _REPO_ROOT else None
 HARDWARE_LOG = (_REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md") if _REPO_ROOT else None
+# Zephyr baseline version recorded in generated project snapshots.
+# 写入生成项目 snapshot 的 Zephyr 基线版本号。
+ZEPHYR_BASELINE = "v4.4.0"
 DEBUG_HINT = (
     "Debugging needs a hardware debugger (J-Link, CMSIS-DAP, or on-chip "
     "USB-JTAG); most XIAO boards use printf-over-serial (`seeed-zephyr monitor`) "
@@ -106,6 +114,17 @@ def main() -> int:
     return 0
 
 
+def add_json_flag(parser: argparse.ArgumentParser) -> None:
+    # Adds an opt-in machine-readable JSON output flag.
+    # 添加一个可选的机器可读 JSON 输出标志。
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Emit machine-readable JSON instead of text.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="seeed-zephyr",
@@ -116,11 +135,33 @@ def build_parser() -> argparse.ArgumentParser:
     list_parser = subparsers.add_parser("list", help="List repository assets.")
     list_subparsers = list_parser.add_subparsers(dest="asset", required=True)
     list_boards = list_subparsers.add_parser("boards", help="List XIAO boards.")
+    add_json_flag(list_boards)
     list_boards.set_defaults(func=cmd_list_boards)
     list_examples = list_subparsers.add_parser(
         "examples", help="List board examples."
     )
+    add_json_flag(list_examples)
     list_examples.set_defaults(func=cmd_list_examples)
+    list_grove = list_subparsers.add_parser("grove", help="List Grove modules.")
+    add_json_flag(list_grove)
+    list_grove.set_defaults(func=cmd_list_grove)
+    list_expansion = list_subparsers.add_parser("expansion", help="List expansion boards.")
+    add_json_flag(list_expansion)
+    list_expansion.set_defaults(func=cmd_list_expansion)
+
+    show_parser = subparsers.add_parser(
+        "show", help="Show details for a board or example."
+    )
+    show_subparsers = show_parser.add_subparsers(dest="asset", required=True)
+    show_board = show_subparsers.add_parser("board", help="Show board details.")
+    show_board.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    add_json_flag(show_board)
+    show_board.set_defaults(func=cmd_show_board)
+    show_example = show_subparsers.add_parser("example", help="Show example details.")
+    show_example.add_argument("board_id", help="Board id such as xiao_esp32c6.")
+    show_example.add_argument("demo", help="Demo name such as blinky.")
+    add_json_flag(show_example)
+    show_example.set_defaults(func=cmd_show_example)
 
     build = subparsers.add_parser("build", help="Build a board example.")
     build.add_argument("board_id", help="Board id such as xiao_esp32c6.")
@@ -207,6 +248,39 @@ def build_parser() -> argparse.ArgumentParser:
     )
     verify.add_argument("board_id", help="Board id such as xiao_esp32c6.")
     verify.set_defaults(func=cmd_verify_hardware)
+
+    create = subparsers.add_parser(
+        "create", help="Create a project from a repository example."
+    )
+    create.add_argument(
+        "--from",
+        dest="from_asset",
+        required=True,
+        help="Source asset, such as xiao_esp32c6/blinky.",
+    )
+    create.add_argument(
+        "--board",
+        dest="board_id",
+        required=True,
+        help="Board id the project targets, such as xiao_esp32c6.",
+    )
+    create.add_argument(
+        "--output",
+        dest="output",
+        required=True,
+        help="Destination directory for the generated project.",
+    )
+    create.add_argument(
+        "--force",
+        action="store_true",
+        help="Write into the output directory even when it is not empty.",
+    )
+    create.set_defaults(func=cmd_create)
+
+    validate_parser = subparsers.add_parser("validate", help="Validate repository assets.")
+    validate_subparsers = validate_parser.add_subparsers(dest="asset", required=True)
+    validate_metadata = validate_subparsers.add_parser("metadata", help="Validate all metadata.")
+    validate_metadata.set_defaults(func=cmd_validate_metadata)
 
     return parser
 
@@ -1243,29 +1317,237 @@ def run_monitor(board_id: str, port: str | None = None, baud: int = 115200) -> N
     run_command([str(python), "-m", "serial.tools.miniterm", port, str(baud)])
 
 
-def cmd_list_boards(_args: argparse.Namespace) -> None:
+def cmd_list_boards(args: argparse.Namespace) -> None:
+    records = board_records()
+    if getattr(args, "as_json", False):
+        print(json.dumps(records, indent=2))
+        return
     print("board_id\tstatus\tdemo\tvendor\ttarget")
-    for record in board_records():
+    for record in records:
         print(
             f"{record['id']}\t{record['status']}\t{record['demo']}\t"
             f"{record['vendor']}\t{record['target']}"
         )
 
 
-def cmd_list_examples(_args: argparse.Namespace) -> None:
-    print("board_id\tdemo\tstatus\texample")
+def cmd_list_examples(args: argparse.Namespace) -> None:
+    rows = []
     for board_file in sorted(BOARD_DIR.glob("*.yaml")):
         values = read_flat_yaml(board_file)
         board_id = values.get("id", board_file.stem)
         examples = resolve_board_examples(board_id)
         if not examples:
-            print(f"{board_id}\t-\tmissing\t-")
+            rows.append(
+                {"board_id": board_id, "demo": None, "status": "missing", "example_path": None}
+            )
             continue
         for ex in examples:
-            demo = ex.get("demo", "?")
-            status = ex.get("validation_status", "unknown")
-            display = _display_path(Path(ex["path"])) if ex.get("path") else ""
-            print(f"{board_id}\t{demo}\t{status}\t{display}")
+            rows.append(
+                {
+                    "board_id": board_id,
+                    "demo": ex.get("demo"),
+                    "status": ex.get("validation_status", "unknown"),
+                    "example_path": _display_path(Path(ex["path"])) if ex.get("path") else None,
+                    "zephyr_target": ex.get("zephyr_target"),
+                    "id": ex.get("id"),
+                }
+            )
+    if getattr(args, "as_json", False):
+        print(json.dumps(rows, indent=2))
+        return
+    print("board_id\tdemo\tstatus\texample")
+    for row in rows:
+        demo = row["demo"] or "-"
+        example = row["example_path"] or "-"
+        print(f"{row['board_id']}\t{demo}\t{row['status']}\t{example}")
+
+
+def cmd_list_grove(args: argparse.Namespace) -> None:
+    # Lists Grove modules from metadata. Scalar fields only; nested config lists
+    # are read by the YAML-aware consumers (the extension).
+    # 列出 Grove 模块元数据。仅标量字段;嵌套配置列表由能解析 YAML 的消费方(插件)读取。
+    rows = []
+    for module_file in sorted(GROVE_DIR.glob("*.yaml")):
+        values = read_flat_yaml(module_file)
+        rows.append(
+            {
+                "id": values.get("id", module_file.stem),
+                "sku": values.get("sku", ""),
+                "display_name": values.get("display_name", ""),
+                "category": values.get("category", ""),
+                "interface": values.get("interface", ""),
+                "zephyr_support": values.get("zephyr_support", ""),
+            }
+        )
+    if getattr(args, "as_json", False):
+        print(json.dumps(rows, indent=2))
+        return
+    print("id\tinterface\tsupport\tdisplay_name")
+    for row in rows:
+        print(f"{row['id']}\t{row['interface']}\t{row['zephyr_support']}\t{row['display_name']}")
+
+
+def cmd_list_expansion(args: argparse.Namespace) -> None:
+    # Lists expansion boards from metadata. Scalar fields only.
+    # 列出扩展板元数据。仅标量字段。
+    rows = []
+    for board_file in sorted(EXPANSION_DIR.glob("*.yaml")):
+        values = read_flat_yaml(board_file)
+        rows.append(
+            {
+                "id": values.get("id", board_file.stem),
+                "sku": values.get("sku", ""),
+                "display_name": values.get("display_name", ""),
+                "compatible_form_factor": values.get("compatible_form_factor", ""),
+                "zephyr_shield": values.get("zephyr_shield", ""),
+            }
+        )
+    if getattr(args, "as_json", False):
+        print(json.dumps(rows, indent=2))
+        return
+    print("id\tshield\tdisplay_name")
+    for row in rows:
+        print(f"{row['id']}\t{row['zephyr_shield'] or '-'}\t{row['display_name']}")
+
+
+def cmd_show_board(args: argparse.Namespace) -> None:
+    # Shows full metadata and examples for one board.
+    # 显示某块板子的完整元数据和示例。
+    require_board(args.board_id)
+    values = read_flat_yaml(BOARD_DIR / f"{args.board_id}.yaml")
+    examples = [
+        {
+            "demo": e.get("demo"),
+            "validation_status": e.get("validation_status", "unknown"),
+            "zephyr_target": e.get("zephyr_target"),
+            "example_path": _display_path(Path(e["path"])) if e.get("path") else None,
+        }
+        for e in resolve_board_examples(args.board_id)
+    ]
+    if getattr(args, "as_json", False):
+        print(json.dumps({**values, "examples": examples}, indent=2))
+        return
+    for key in ("id", "display_name", "vendor", "soc", "zephyr_target"):
+        print(f"{key}:\t{values.get(key, '')}")
+    print("examples:")
+    for example in examples:
+        print(f"  {example['demo']}\t{example['validation_status']}")
+
+
+def cmd_show_example(args: argparse.Namespace) -> None:
+    # Shows full metadata, file list, and README for one example.
+    # 显示某个示例的完整元数据、文件清单和 README。
+    require_board(args.board_id)
+    src_dir = EXAMPLES_DIR / args.board_id / args.demo
+    example_file = src_dir / "example.yaml"
+    if not example_file.is_file():
+        examples = resolve_board_examples(args.board_id)
+        demos = ", ".join(sorted(e.get("demo", "?") for e in examples)) or "none"
+        raise CliError(
+            f"Example '{args.demo}' not found for {args.board_id}. Available: {demos}."
+        )
+    values = read_flat_yaml(example_file)
+    files = sorted(p.name for p in src_dir.iterdir() if p.is_file())
+    detail = {**values, "path": _display_path(src_dir), "files": files}
+    readme = src_dir / "README.md"
+    if readme.is_file():
+        detail["readme"] = readme.read_text(encoding="utf-8")
+    if getattr(args, "as_json", False):
+        print(json.dumps(detail, indent=2))
+        return
+    for key in (
+        "id",
+        "board_id",
+        "demo",
+        "zephyr_target",
+        "validation_status",
+        "expected_behavior",
+    ):
+        print(f"{key}:\t{values.get(key, '')}")
+    print(f"path:\t{detail['path']}")
+    print(f"files:\t{', '.join(files)}")
+
+
+def _normalize_from_asset(from_asset: str) -> tuple[str, str]:
+    """Parse a --from value into (board_id, demo).
+    Accepts board/demo, boards/board/demo, or examples/boards/board/demo.
+    把 --from 的值解析成 (board_id, demo)。
+    支持 board/demo、boards/board/demo、examples/boards/board/demo 三种写法。"""
+    parts = [p for p in from_asset.strip().strip("/").split("/") if p]
+    if parts[:1] == ["examples"]:
+        parts = parts[1:]
+    if parts[:1] == ["boards"]:
+        parts = parts[1:]
+    if len(parts) != 2:
+        raise CliError(
+            f"Invalid --from value: {from_asset}. "
+            "Use the form <board_id>/<demo>, such as xiao_esp32c6/blinky."
+        )
+    return parts[0], parts[1]
+
+
+def cmd_create(args: argparse.Namespace) -> None:
+    # Creates a standalone project by copying a repository example.
+    # 通过复制仓库示例来创建一个独立项目。
+    source_board, demo = _normalize_from_asset(args.from_asset)
+    src_dir = EXAMPLES_DIR / source_board / demo
+    example_file = src_dir / "example.yaml"
+    if not example_file.is_file():
+        examples = resolve_board_examples(source_board)
+        if examples:
+            demos = ", ".join(sorted(e.get("demo", "?") for e in examples))
+            raise CliError(
+                f"Example '{demo}' not found for {source_board}. Available: {demos}."
+            )
+        raise CliError(
+            f"Source asset not found: {source_board}/{demo}. "
+            "Run 'seeed-zephyr list examples' to see available assets."
+        )
+
+    values = read_flat_yaml(example_file)
+    example_board = values.get("board_id") or source_board
+
+    # The MVP copies an example as-is; retargeting to another board needs pin and
+    # overlay data the catalog does not carry yet.
+    # MVP 原样复制示例;改投到别的板子需要目录里还没有的引脚和 overlay 数据。
+    if args.board_id != example_board:
+        raise CliError(
+            f"Example {source_board}/{demo} targets board '{example_board}', "
+            f"not '{args.board_id}'. Pass --board {example_board}."
+        )
+
+    if values.get("validation_status") == "unsupported":
+        reason = values.get("unsupported_reason") or "marked unsupported"
+        raise CliError(f"Cannot create from an unsupported example: {reason}.")
+
+    out_dir = Path(args.output).expanduser().resolve()
+    if out_dir.is_file():
+        raise CliError(f"Output path is a file: {out_dir}.")
+    if out_dir.is_dir() and any(out_dir.iterdir()) and not args.force:
+        raise CliError(
+            f"Output directory is not empty: {out_dir}. Use --force to write anyway."
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy the whole example directory so optional files (such as app.overlay)
+    # come along without a hardcoded file list.
+    # 整目录复制示例,让可选文件(例如 app.overlay)无需硬编码清单就一并带上。
+    shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
+
+    snapshot = {
+        "generator": "seeed-zephyr",
+        "source_asset": f"examples/boards/{example_board}/{demo}",
+        "board": args.board_id,
+        "zephyr_version": ZEPHYR_BASELINE,
+        "validation_status": values.get("validation_status") or "unknown",
+    }
+    (out_dir / "snapshot.json").write_text(
+        json.dumps(snapshot, indent=2) + "\n", encoding="utf-8"
+    )
+
+    print(f"Created project at {out_dir}", flush=True)
+    print("Next step:", flush=True)
+    print(f"  seeed-zephyr build {args.board_id} --app {out_dir}", flush=True)
 
 
 def cmd_build(args: argparse.Namespace) -> None:
@@ -1344,6 +1626,22 @@ def cmd_monitor(args: argparse.Namespace) -> None:
     print(f"\nOpening serial monitor: {port} @ {baud} baud", flush=True)
     print("Press Ctrl+] to exit.\n", flush=True)
     run_command([str(python), "-m", "serial.tools.miniterm", port, str(baud)])
+
+
+def cmd_validate_metadata(_args: argparse.Namespace) -> None:
+    # Validates all metadata by delegating to the repo's validator (needs PyYAML).
+    # 通过委托给仓库的校验器来校验所有元数据(需要 PyYAML)。
+    if _REPO_ROOT is None:
+        raise CliError("'validate metadata' requires a local repo clone.")
+    script = _REPO_ROOT / "tools" / "validate_metadata" / "validate.py"
+    if not script.is_file():
+        raise CliError(f"Validator not found: {script}")
+    result = subprocess.run([sys.executable, str(script)], cwd=str(_REPO_ROOT))
+    if result.returncode != 0:
+        raise CliError(
+            "Metadata validation failed. If the error above mentions 'yaml', "
+            "install PyYAML with: pip install -r tools/validate_metadata/requirements.txt"
+        )
 
 
 def cmd_matrix(_args: argparse.Namespace) -> None:

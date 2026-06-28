@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seeed-zephyr"
-version = "0.1.0"
+version = "0.2.0"
 description = "CLI for Seeed Studio XIAO boards with Zephyr RTOS"
 readme = "README.md"
 license = "Apache-2.0"
@@ -39,4 +39,6 @@ packages = ["src/seeed_zephyr"]
 "../../tools/cli/ra4m1_rom_flash.py" = "src/seeed_zephyr/ra4m1_rom_flash.py"
 "../../tools/cli/bootloaders" = "src/seeed_zephyr/bootloaders"
 "../../metadata/boards" = "src/seeed_zephyr/data/boards"
+"../../metadata/grove_modules" = "src/seeed_zephyr/data/grove_modules"
+"../../metadata/expansion_boards" = "src/seeed_zephyr/data/expansion_boards"
 "../../examples/boards" = "src/seeed_zephyr/data/examples"

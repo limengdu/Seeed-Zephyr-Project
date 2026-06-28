@@ -23,6 +23,7 @@ __pycache__/
 *.egg-info/
 
 .vscode/
+!tools/vscode-extension/.vscode/
 .idea/
 
 zephyr/
@@ -33,3 +34,4 @@ twister-out/
 
 *.log
 *.tmp
+*.vsix

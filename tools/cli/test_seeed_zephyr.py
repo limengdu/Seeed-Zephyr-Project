@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -689,6 +692,142 @@ class ExampleSelectionTests(unittest.TestCase):
             with mock.patch.object(seeed_zephyr, "resolve_board_examples", return_value=[ex1, ex2]):
                 result = seeed_zephyr.select_example("xiao_esp32c6", "hello_world")
         self.assertEqual(result["demo"], "hello_world")
+
+
+class CreateCommandTests(unittest.TestCase):
+    def _make_args(self, **kwargs) -> mock.MagicMock:
+        args = mock.MagicMock()
+        args.from_asset = kwargs.get("from_asset", "xiao_rp2040/blinky")
+        args.board_id = kwargs.get("board_id", "xiao_rp2040")
+        args.output = kwargs["output"]
+        args.force = kwargs.get("force", False)
+        return args
+
+    def test_create_copies_example_and_writes_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "proj"
+            seeed_zephyr.cmd_create(self._make_args(output=str(out)))
+
+            # rp2040 ships an app.overlay; the whole-directory copy must include it.
+            self.assertTrue((out / "CMakeLists.txt").is_file())
+            self.assertTrue((out / "prj.conf").is_file())
+            self.assertTrue((out / "src" / "main.c").is_file())
+            self.assertTrue((out / "app.overlay").is_file())
+
+            snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
+            self.assertEqual(snapshot["generator"], "seeed-zephyr")
+            self.assertEqual(snapshot["source_asset"], "examples/boards/xiao_rp2040/blinky")
+            self.assertEqual(snapshot["board"], "xiao_rp2040")
+            self.assertEqual(snapshot["zephyr_version"], seeed_zephyr.ZEPHYR_BASELINE)
+            self.assertEqual(snapshot["validation_status"], "hardware-tested")
+
+    def test_create_rejects_board_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self._make_args(board_id="xiao_esp32c6", output=str(Path(tmp) / "proj"))
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_create(args)
+            self.assertIn("xiao_rp2040", str(ctx.exception))
+
+    def test_create_rejects_missing_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self._make_args(from_asset="xiao_rp2040/nope", output=str(Path(tmp) / "proj"))
+            with self.assertRaises(seeed_zephyr.CliError):
+                seeed_zephyr.cmd_create(args)
+
+    def test_create_rejects_unsupported_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self._make_args(
+                from_asset="xiao_esp32c5/hello_world",
+                board_id="xiao_esp32c5",
+                output=str(Path(tmp) / "proj"),
+            )
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_create(args)
+            self.assertIn("unsupported", str(ctx.exception).lower())
+
+    def test_create_refuses_nonempty_output_without_force(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "proj"
+            out.mkdir()
+            (out / "existing.txt").write_text("keep", encoding="utf-8")
+            with self.assertRaises(seeed_zephyr.CliError):
+                seeed_zephyr.cmd_create(self._make_args(output=str(out)))
+
+    def test_create_overwrites_nonempty_output_with_force(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "proj"
+            out.mkdir()
+            (out / "existing.txt").write_text("keep", encoding="utf-8")
+            seeed_zephyr.cmd_create(self._make_args(output=str(out), force=True))
+            self.assertTrue((out / "snapshot.json").is_file())
+
+    def test_create_accepts_from_asset_path_forms(self) -> None:
+        forms = [
+            "xiao_esp32c6/blinky",
+            "boards/xiao_esp32c6/blinky",
+            "examples/boards/xiao_esp32c6/blinky",
+        ]
+        for form in forms:
+            with self.subTest(form=form):
+                with tempfile.TemporaryDirectory() as tmp:
+                    out = Path(tmp) / "proj"
+                    args = self._make_args(
+                        from_asset=form, board_id="xiao_esp32c6", output=str(out)
+                    )
+                    seeed_zephyr.cmd_create(args)
+                    snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
+                    self.assertEqual(
+                        snapshot["source_asset"], "examples/boards/xiao_esp32c6/blinky"
+                    )
+
+
+class JsonOutputTests(unittest.TestCase):
+    def _run_json(self, func, **args) -> object:
+        ns = mock.MagicMock()
+        ns.as_json = True
+        for key, value in args.items():
+            setattr(ns, key, value)
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            func(ns)
+        return json.loads(buffer.getvalue())
+
+    def test_list_boards_json_has_all_boards(self) -> None:
+        data = self._run_json(seeed_zephyr.cmd_list_boards)
+        self.assertIsInstance(data, list)
+        self.assertGreaterEqual(len(data), 11)
+        for item in data:
+            self.assertIn("id", item)
+            self.assertIn("status", item)
+            self.assertIn("target", item)
+
+    def test_list_examples_json_rows(self) -> None:
+        data = self._run_json(seeed_zephyr.cmd_list_examples)
+        self.assertIsInstance(data, list)
+        self.assertTrue(all("board_id" in row for row in data))
+
+    def test_show_example_json_merges_metadata_and_files(self) -> None:
+        data = self._run_json(
+            seeed_zephyr.cmd_show_example, board_id="xiao_esp32c6", demo="blinky"
+        )
+        self.assertEqual(data["board_id"], "xiao_esp32c6")
+        self.assertEqual(data["demo"], "blinky")
+        self.assertIn("example.yaml", data["files"])
+
+    def test_show_board_json_includes_examples(self) -> None:
+        data = self._run_json(seeed_zephyr.cmd_show_board, board_id="xiao_esp32c6")
+        self.assertEqual(data["id"], "xiao_esp32c6")
+        self.assertGreaterEqual(len(data["examples"]), 1)
+
+    def test_list_grove_json(self) -> None:
+        data = self._run_json(seeed_zephyr.cmd_list_grove)
+        self.assertGreaterEqual(len(data), 4)
+        self.assertTrue(all("interface" in module for module in data))
+
+    def test_list_expansion_json(self) -> None:
+        data = self._run_json(seeed_zephyr.cmd_list_expansion)
+        self.assertGreaterEqual(len(data), 3)
+        self.assertTrue(all("id" in board for board in data))
 
     def test_select_example_unknown_name_raises(self) -> None:
         ex1 = {"demo": "blinky", "validation_status": "hardware-tested", "path": "a"}
