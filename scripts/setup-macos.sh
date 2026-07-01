@@ -102,10 +102,41 @@ install_board_brew_packages() {
   esac
 }
 
+# Loads Homebrew into the current shell session from its known install paths.
+# 从已知安装路径把 Homebrew 载入当前 shell 会话。
+load_brew_shellenv() {
+  local brew_path
+  for brew_path in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [[ -x "$brew_path" ]]; then
+      eval "$("$brew_path" shellenv)"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Installs Homebrew automatically after asking, or exits with guidance.
+# 询问后自动安装 Homebrew，否则退出并给出指引。
+ensure_homebrew() {
+  if command_exists brew; then
+    return
+  fi
+
+  printf 'Homebrew is required to install macOS build tools but was not found.\n'
+  if prompt_yes_default "Install Homebrew automatically now?"; then
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    load_brew_shellenv || true
+    command_exists brew || fail "Homebrew install did not finish. Open a new terminal and rerun this script."
+    printf 'Homebrew is ready.\n'
+  else
+    fail "Homebrew is required. Install it from https://brew.sh/, then rerun this script."
+  fi
+}
+
 # Installs macOS system dependencies before the shared Zephyr setup flow.
 # 在共享 Zephyr 安装流程前，安装 macOS 系统依赖。
 install_system_dependencies() {
-  command_exists brew || fail "Homebrew was not found. Install Homebrew from https://brew.sh/, then rerun this script."
+  ensure_homebrew
   install_brew_packages "${BREW_PACKAGES[@]}"
   install_board_brew_packages
 }

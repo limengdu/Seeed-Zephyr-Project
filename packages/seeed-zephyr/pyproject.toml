@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "seeed-zephyr"
-version = "0.2.0"
+dynamic = ["version"]
 description = "CLI for Seeed Studio XIAO boards with Zephyr RTOS"
 readme = "README.md"
 license = "Apache-2.0"
@@ -30,6 +30,9 @@ Issues = "https://github.com/Seeed-Projects/seeed-zephyr-base/issues"
 
 [project.scripts]
 seeed-zephyr = "seeed_zephyr.cli:main"
+
+[tool.hatch.version]
+path = "src/seeed_zephyr/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/seeed_zephyr"]

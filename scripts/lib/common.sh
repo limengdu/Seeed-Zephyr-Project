@@ -493,12 +493,16 @@ ensure_workspace() {
     printf 'West workspace is already initialized at %s.\n' "$ZEPHYR_WORKSPACE"
   else
     printf 'Initializing west workspace at %s with Zephyr %s.\n' "$ZEPHYR_WORKSPACE" "$ZEPHYR_VERSION"
-    "$WEST" init "$ZEPHYR_WORKSPACE" --mr "$ZEPHYR_VERSION"
+    # Shallow-clone the manifest repository at the pinned revision only.
+    # 仅按锁定版本对 manifest 仓库做浅克隆。
+    "$WEST" init "$ZEPHYR_WORKSPACE" --mr "$ZEPHYR_VERSION" -o=--depth=1
   fi
 
   (
     cd "$ZEPHYR_WORKSPACE"
-    "$WEST" update
+    # Fetch each project at its pinned revision with shallow history.
+    # 以浅历史方式，仅获取每个项目的锁定版本。
+    "$WEST" update --narrow -o=--depth=1
   )
 }
 

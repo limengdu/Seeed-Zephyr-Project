@@ -35,3 +35,5 @@ twister-out/
 *.log
 *.tmp
 *.vsix
+
+.trash/

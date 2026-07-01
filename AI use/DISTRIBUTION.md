@@ -51,16 +51,66 @@ the script's location.
 
 ## Version Management
 
-The single source of version truth is `packages/seeed-zephyr/src/seeed_zephyr/__init__.py`.
-The `pyproject.toml` reads it via hatch's dynamic versioning.
+The single source of version truth is
+`packages/seeed-zephyr/src/seeed_zephyr/__init__.py`. `pyproject.toml` declares
+`dynamic = ["version"]` and reads that file through `[tool.hatch.version]`, so
+the version is edited in exactly one place.
 
-## Publishing Checklist
+## Automated Releases (GitHub Actions)
 
-1. Update version in `__init__.py`
-2. Run `cd packages/seeed-zephyr && python -m build`
-3. Test: `pip install dist/*.whl && seeed-zephyr list boards`
-4. Publish: `python -m twine upload dist/*`
-5. Update `Formula/seeed-zephyr.rb` with new URL and SHA256
+Two workflows publish on a version tag or from a manual run:
+
+| Workflow | Trigger | Publishes |
+|----------|---------|-----------|
+| `.github/workflows/release-pypi.yml` | tag `cli-v*` or manual run | PyPI |
+| `.github/workflows/release-vscode.yml` | tag `ext-v*` or manual run | VS Code Marketplace + Open VSX |
+
+Both workflows verify that the tag matches the version in the code
+(`__init__.py` for the CLI, `package.json` for the extension) before
+publishing.
+
+The extension workflow packages one `.vsix` and publishes it to each registry
+whose token secret is configured. A registry with no token is skipped, so the
+run succeeds even when only one marketplace is set up.
+
+**One-time setup:**
+
+- **PyPI (Trusted Publishing):** on PyPI, open the `seeed-zephyr` project →
+  Publishing → add a GitHub Actions trusted publisher with repository
+  `Seeed-Projects/seeed-zephyr-base` and workflow `release-pypi.yml`. No token
+  is stored in GitHub.
+- **VS Code Marketplace:** create a Marketplace personal access token for the
+  `seeed-studio` publisher, then add it to the GitHub repository as a secret
+  named `VSCE_PAT`.
+- **Open VSX (Cursor, Windsurf, VSCodium, Gitpod, Theia, etc.):** sign in at
+  [open-vsx.org](https://open-vsx.org) with GitHub, sign the Eclipse publisher
+  agreement, create the `seeed-studio` namespace, generate an access token, and
+  add it to the GitHub repository as a secret named `OVSX_PAT`.
+
+**Cutting a release:**
+
+```sh
+# CLI: bump packages/seeed-zephyr/src/seeed_zephyr/__init__.py, commit, then:
+git tag cli-v0.2.0 && git push origin cli-v0.2.0
+
+# Extension: bump tools/vscode-extension/package.json version, commit, then:
+git tag ext-v0.1.1 && git push origin ext-v0.1.1
+```
+
+## Manual Build (fallback)
+
+Build each artifact directly from the source tree so the force-included files
+above the package directory resolve:
+
+```sh
+cd packages/seeed-zephyr
+python -m build --wheel
+python -m build --sdist
+python -m twine upload dist/*
+```
+
+Homebrew stays manual: after a PyPI release, update `Formula/seeed-zephyr.rb`
+with the new sdist URL and SHA256.
 
 ## Status
 
@@ -71,3 +121,8 @@ The `pyproject.toml` reads it via hatch's dynamic versioning.
 - [x] Homebrew formula created (SHA256 placeholder)
 - [x] README updated with three install methods
 - [x] First PyPI publish (v0.1.0, 2026-06-27)
+- [x] Version single-sourced via hatch dynamic versioning
+- [x] Automated PyPI release workflow (`release-pypi.yml`)
+- [x] Automated VS Code Marketplace release workflow (`release-vscode.yml`)
+- [x] Open VSX publishing added to the extension workflow
+- [x] First Open VSX publish (`seeed-studio.seeed-xiao-zephyr-assistant` v0.1.0)

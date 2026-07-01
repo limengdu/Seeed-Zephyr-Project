@@ -1,0 +1,56 @@
+name: Release VS Code extension
+
+# Publishes the VS Code extension when an ext-v* tag is pushed, or when run
+# manually from the Actions tab. The extension is packaged once and published to
+# both the VS Code Marketplace and Open VSX. Each registry publishes only when
+# its token secret is set, so a missing token skips that registry instead of
+# failing the run.
+on:
+  push:
+    tags:
+      - 'ext-v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    defaults:
+      run:
+        working-directory: tools/vscode-extension
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Fails the release when the tag does not match package.json version.
+      - name: Verify tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag_version="${GITHUB_REF_NAME#ext-v}"
+          pkg_version="$(node -p "require('./package.json').version")"
+          echo "tag version: $tag_version"
+          echo "package version: $pkg_version"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Tag ext-v$tag_version does not match package.json version $pkg_version."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Build one .vsix and reuse it for every registry below.
+      - name: Package extension
+        run: npx --yes @vscode/vsce package -o extension.vsix
+
+      - name: Publish to VS Code Marketplace
+        if: env.VSCE_PAT != ''
+        run: npx --yes @vscode/vsce publish --packagePath extension.vsix --pat "$VSCE_PAT"
+
+      - name: Publish to Open VSX
+        if: env.OVSX_PAT != ''
+        run: npx --yes ovsx publish extension.vsix --pat "$OVSX_PAT"

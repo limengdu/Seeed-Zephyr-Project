@@ -46,6 +46,32 @@ function Test-IsAdministrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+# Asks to relaunch this script in an elevated PowerShell and starts it when accepted.
+# 询问后在提权的 PowerShell 中重启本脚本，用户同意时启动它。
+function Invoke-AdminRelaunch {
+    if ([string]::IsNullOrWhiteSpace($PSCommandPath)) {
+        Write-Warning "Cannot locate this script path to relaunch as Administrator."
+        return $false
+    }
+
+    $answer = Read-Host "Relaunch this script as Administrator now? [Y/n]"
+    if (-not ($answer -eq "" -or $answer -match "^(y|yes)$")) {
+        return $false
+    }
+
+    try {
+        Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList @(
+            "-ExecutionPolicy", "Bypass", "-File", ('"{0}"' -f $PSCommandPath)
+        )
+        Write-Host "Opened an elevated PowerShell window. Continue setup there; you can close this window."
+        return $true
+    }
+    catch {
+        Write-Warning ("Could not relaunch as Administrator: {0}" -f $_.Exception.Message)
+        return $false
+    }
+}
+
 # Prints a command line before running or recommending it.
 function Write-CommandLine {
     param(
@@ -358,7 +384,11 @@ if ($isAdministrator) {
     Write-Host "PowerShell is running with Administrator rights."
 }
 else {
-    Write-Warning "PowerShell is not running with Administrator rights. WSL or usbipd-win installation steps may be printed instead of executed."
+    Write-Warning "PowerShell is not running with Administrator rights. Installing WSL2 and usbipd-win needs Administrator."
+    if (Invoke-AdminRelaunch) {
+        exit 0
+    }
+    Write-Warning "Continuing without Administrator rights. Some steps will be printed instead of executed."
 }
 
 try {

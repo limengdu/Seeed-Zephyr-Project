@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+
+- Add the marketplace icon shown on the extension listing.
+
 ## 0.1.0
 
 Initial release.

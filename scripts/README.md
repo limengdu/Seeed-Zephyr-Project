@@ -32,6 +32,15 @@ Current scripts:
   and monitor operations.
 - `build-example.sh`: builds one repository example from the project root by
   calling `west build`.
+- `uninstall-macos.sh` / `uninstall-linux.sh`: remove the `seeed-zephyr` CLI
+  symlink and, after asking, the Zephyr workspace and SDK. Shared system build
+  tools are listed with removal commands rather than removed automatically.
+  Accept `--yes` to remove the workspace and SDK without prompting and
+  `--dry-run` to preview.
+- `uninstall-windows.ps1`: prints how to run the WSL2 uninstall and how to
+  remove WSL2 and usbipd-win by hand.
+- `lib/uninstall-common.sh`: contains the shared uninstall flow used by the
+  platform uninstall entrypoints.
 
 ## 中文
 
@@ -53,3 +62,9 @@ Current scripts:
   也可以通过 `pip install seeed-zephyr` 作为独立包安装。CLI 选择仓库 metadata 和示例，
   然后调用 Zephyr 工具执行构建、烧录和 monitor。
 - `build-example.sh`: 从项目根目录调用 `west build` 构建一个仓库示例。
+- `uninstall-macos.sh` / `uninstall-linux.sh`: 删除 `seeed-zephyr` CLI 符号链接，
+  并在询问后删除 Zephyr 工作区和 SDK。共享的系统构建工具只列出清单和删除命令，
+  不自动删除。可加 `--yes` 跳过询问直接删除工作区和 SDK，加 `--dry-run` 预览。
+- `uninstall-windows.ps1`: 打印如何在 WSL2 内执行卸载，以及如何手动删除 WSL2 与
+  usbipd-win。
+- `lib/uninstall-common.sh`: 保存平台卸载入口共用的卸载流程。

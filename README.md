@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/logo.png" alt="Seeed Zephyr Base logo" width="140" />
+
 # Seeed Zephyr Base
 
 **The XIAO + Grove example library, capability catalog, and command-line workflow for [Zephyr RTOS](https://www.zephyrproject.org/).**
@@ -63,82 +65,59 @@ Status is taken from the [board build matrix](tools/build_matrix/results.md) aga
 
 Board-specific flashing, reset, and bootloader behavior is documented in [board notes](docs/en/boards/README.md).
 
-## Install
+## Quick Start
 
-The CLI is also available as a standalone package — no repository clone required:
+You don't need to clone this repository to use the tools — install everything from published channels.
 
-```sh
-pip install seeed-zephyr          # all platforms
-```
+> **Where things live:** the `seeed-zephyr` CLI is installed on your `PATH`, and the Zephyr source tree, SDK, and `west` workspace live in `~/zephyrproject`. The installer prepares both for you.
 
-Or with [pipx](https://pipx.pypa.io/) (`pipx install seeed-zephyr`), [Homebrew](https://brew.sh/) (`brew install seeed-studio/seeed/seeed-zephyr`), or the one-line installer:
+### 1. Install the CLI and Zephyr environment
+
+The one-line installer sets up the `seeed-zephyr` CLI **and** the full Zephyr toolchain (SDK, `west` workspace, and per-board flash tools). It runs on macOS and Linux (use it inside WSL2 on Windows):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
 ```
 
-After installing via pip or Homebrew, you still need the Zephyr toolchain — see the [Getting Started guide](docs/en/getting-started.md#2b-zephyr-environment-setup).
-
-## Quick Start
-
-> **Where things live:** this repository holds the XIAO/Grove examples, metadata, scripts, and docs. The Zephyr source tree, SDK, and `west` workspace are set up separately in `~/zephyrproject`. Setup prepares both for you.
-
-### 1. Clone
+Set up a single board by passing `--board` through the pipe:
 
 ```sh
-git clone https://github.com/limengdu/Seeed-Zephyr-Project.git
-cd Seeed-Zephyr-Project
+curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash -s -- --board xiao_esp32c6
 ```
 
-### 2. Run setup
-
-Setup prepares the Zephyr workspace, installs the Python venv and `west`, downloads Zephyr v4.4.0 and the SDK, fetches per-board flash tools, and offers to install the `seeed-zephyr` CLI. When prompted with `Install seeed-zephyr CLI? [Y/n]`, press Enter.
-
-**macOS** (verified path):
+Prefer to install just the CLI? Use PyPI, [pipx](https://pipx.pypa.io/), or [Homebrew](https://brew.sh/), then set up the Zephyr toolchain from the [Getting Started guide](docs/en/getting-started.md#2b-zephyr-environment-setup):
 
 ```sh
-bash scripts/setup-macos.sh
+pip install seeed-zephyr                        # all platforms
+pipx install seeed-zephyr
+brew install seeed-studio/seeed/seeed-zephyr    # macOS / Linux
 ```
 
-To install dependencies for just one board, pass `--board`:
+On Windows without WSL2, follow the PowerShell setup in the [Getting Started guide](docs/en/getting-started.md).
 
-```sh
-bash scripts/setup-macos.sh --board xiao_esp32c6
-```
+### 2. Install the editor extension
 
-<details>
-<summary><b>Linux & Windows</b></summary>
-
-
-Linux:
-
-```sh
-bash scripts/setup-linux.sh
-```
-
-Windows (WSL2):
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
-```
-
-```sh
-bash scripts/setup-linux.sh
-```
-
-</details>
+The **Seeed XIAO Zephyr Assistant** browses boards and examples with validation badges and runs Build / Flash / Monitor from the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
 
 ### 3. Build your first example
 
-After the CLI is installed, run it from any directory:
+Run the CLI from any directory:
 
 ```sh
 seeed-zephyr build xiao_esp32c6
 ```
 
-That's it — the CLI reads the board metadata, finds the repository example, and calls Zephyr's `west build` with the validated target.
+The CLI reads the board metadata, finds the matching example, and calls Zephyr's `west build` with the validated target.
 
-> If you skipped CLI installation, the in-repo fallback is `scripts/seeed-zephyr <command>`.
+### Uninstall
+
+Remove the `seeed-zephyr` command and, if you choose, the Zephyr workspace and SDK:
+
+```sh
+bash uninstall.sh
+```
+
+It removes the `seeed-zephyr` CLI symlink, then asks before removing the Zephyr workspace (`~/zephyrproject`) and SDK. Shared build tools installed with Homebrew or your Linux package manager are listed with removal commands rather than removed for you. Add `--yes` to remove the workspace and SDK without prompting, or `--dry-run` to preview.
 
 ## Command-Line Workflow
 
@@ -208,6 +187,24 @@ The capability catalog also tracks the Grove modules and expansion boards that p
 **Expansion boards:** Grove Shield for XIAO · XIAO Expansion Board · XIAO Round Display
 
 See [`metadata/`](metadata/) for the full, machine-readable catalog.
+
+## Build From Source
+
+Working on the examples, metadata, or the CLI itself? Clone the repository and run the setup script directly. This also unlocks the maintainer commands (`matrix`, `verify-hardware`) and the in-repo `scripts/seeed-zephyr` launcher.
+
+```sh
+git clone https://github.com/limengdu/Seeed-Zephyr-Project.git
+cd Seeed-Zephyr-Project
+bash scripts/setup-macos.sh        # or scripts/setup-linux.sh
+```
+
+Windows (WSL2):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+```
+
+Setup prepares the Zephyr workspace, installs the Python venv and `west`, downloads Zephyr v4.4.0 and the SDK, fetches per-board flash tools, and offers to install the `seeed-zephyr` CLI. Pass `--board <target>` to limit board-specific downloads to one board.
 
 ## Repository Structure
 

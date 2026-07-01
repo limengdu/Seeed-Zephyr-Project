@@ -1,0 +1,49 @@
+name: Release CLI to PyPI
+
+# Publishes the seeed-zephyr CLI to PyPI when a cli-v* tag is pushed, or when
+# run manually from the Actions tab.
+on:
+  push:
+    tags:
+      - 'cli-v*'
+  workflow_dispatch:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      # Required for PyPI Trusted Publishing (OIDC); no stored token needed.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Fails the release when the tag does not match the packaged version.
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag_version="${GITHUB_REF_NAME#cli-v}"
+          pkg_version="$(python -c "import re, pathlib; print(re.search(r'__version__\s*=\s*\"([^\"]+)\"', pathlib.Path('packages/seeed-zephyr/src/seeed_zephyr/__init__.py').read_text()).group(1))")"
+          echo "tag version: $tag_version"
+          echo "package version: $pkg_version"
+          if [ "$tag_version" != "$pkg_version" ]; then
+            echo "::error::Tag cli-v$tag_version does not match package version $pkg_version."
+            exit 1
+          fi
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build
+          cd packages/seeed-zephyr
+          # Build each artifact directly from the source tree so the
+          # force-included files above the package resolve.
+          python -m build --wheel
+          python -m build --sdist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: packages/seeed-zephyr/dist

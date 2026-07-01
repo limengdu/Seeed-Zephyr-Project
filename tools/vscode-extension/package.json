@@ -2,9 +2,10 @@
   "name": "seeed-xiao-zephyr-assistant",
   "displayName": "Seeed XIAO Zephyr Assistant",
   "description": "Discover and create XIAO + Grove Zephyr examples, then hand build/flash to Zephyr tooling.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "seeed-studio",
   "license": "Apache-2.0",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },

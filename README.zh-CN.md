@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/logo.png" alt="Seeed Zephyr Base logo" width="140" />
+
 # Seeed Zephyr Base
 
 **面向 [Zephyr RTOS](https://www.zephyrproject.org/) 的 XIAO + Grove 示例库、能力目录与命令行工作流。**
@@ -65,63 +67,57 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 
 ## 快速开始
 
-> **目录分工：** 本仓库存放 XIAO/Grove 示例、元数据、脚本和文档。Zephyr 源码树、SDK 和 `west` 工作区是单独配置在 `~/zephyrproject` 的。setup 会一并替你准备好这两部分。
+无需克隆本仓库即可使用这些工具——新用户直接从已发布的渠道安装即可。
 
-### 1. 克隆仓库
+> **目录分工：** `seeed-zephyr` 命令行会安装到你的 `PATH` 上；Zephyr 源码树、SDK 和 `west` 工作区则位于 `~/zephyrproject`。安装脚本会替你准备好这两部分。
 
-```sh
-git clone https://github.com/limengdu/Seeed-Zephyr-Project.git
-cd Seeed-Zephyr-Project
-```
+### 1. 安装命令行与 Zephyr 环境
 
-### 2. 运行 setup
-
-setup 会准备 Zephyr 工作区、安装 Python 虚拟环境与 `west`、下载 Zephyr v4.4.0 和 SDK、获取各板所需的烧录工具，并询问你是否安装 `seeed-zephyr` 命令行。看到提示 `Install seeed-zephyr CLI? [Y/n]` 时，直接回车即可。
-
-**macOS**（已验证路径）：
+一行安装脚本会同时装好 `seeed-zephyr` 命令行**和**完整的 Zephyr 工具链（SDK、`west` 工作区、各板烧录工具）。支持 macOS 与 Linux（Windows 请在 WSL2 内运行）：
 
 ```sh
-bash scripts/setup-macos.sh
+curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
 ```
 
-只想安装单块板子的依赖时，加上 `--board`：
+只想安装单块板子的依赖时，把 `--board` 通过管道传进去：
 
 ```sh
-bash scripts/setup-macos.sh --board xiao_esp32c6
+curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash -s -- --board xiao_esp32c6
 ```
 
-<details>
-<summary><b>Linux 与 Windows</b>（入口已编写，真机验证进行中）</summary>
-
-Linux：
+只想单独装命令行？用 PyPI、[pipx](https://pipx.pypa.io/) 或 [Homebrew](https://brew.sh/) 安装,再照[入门指南](docs/zh/getting-started.md)准备 Zephyr 工具链：
 
 ```sh
-bash scripts/setup-linux.sh
+pip install seeed-zephyr                        # 全平台
+pipx install seeed-zephyr
+brew install seeed-studio/seeed/seeed-zephyr    # macOS / Linux
 ```
 
-Windows 会先准备 WSL2，随后在 WSL2 内运行 Linux 的 setup：
+Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里的 PowerShell 步骤配置。
 
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
-```
+### 2. 安装编辑器插件
 
-```sh
-bash scripts/setup-linux.sh
-```
-
-</details>
+**Seeed XIAO Zephyr Assistant** 插件可浏览带验证徽章的开发板与示例,并在编辑器内直接构建 / 烧录 / 监视。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 
 ### 3. 构建你的第一个示例
 
-命令行安装完成后，在任意目录运行：
+在任意目录运行命令行：
 
 ```sh
 seeed-zephyr build xiao_esp32c6
 ```
 
-就这么简单——命令行读取板级元数据，找到仓库示例，再用验证过的目标调用 Zephyr 的 `west build`。
+命令行读取板级元数据，找到匹配的示例，再用验证过的目标调用 Zephyr 的 `west build`。
 
-> 如果你跳过了命令行安装，仓库内的回退方式是 `scripts/seeed-zephyr <命令>`。
+### 卸载
+
+删除 `seeed-zephyr` 命令，并按你的选择删除 Zephyr 工作区和 SDK:
+
+```sh
+bash uninstall.sh
+```
+
+它会先删除 `seeed-zephyr` CLI 符号链接，再询问是否删除 Zephyr 工作区(`~/zephyrproject`)和 SDK。通过 Homebrew 或 Linux 包管理器安装的共享构建工具，只会列出清单和删除命令，不会替你自动删除。加 `--yes` 可跳过询问直接删除工作区和 SDK，加 `--dry-run` 可预览。
 
 ## 命令行工作流
 
@@ -191,6 +187,24 @@ seeed-zephyr verify-hardware xiao_esp32c6  # 记录一次硬件观测结果
 **扩展板：** Grove Shield for XIAO · XIAO 扩展板 · XIAO 圆形显示屏
 
 完整的机器可读目录见 [`metadata/`](metadata/)。
+
+## 从源码构建
+
+想改示例、元数据或命令行本身？克隆仓库并直接运行 setup 脚本。这条路还能解锁维护者命令（`matrix`、`verify-hardware`）以及仓库内的 `scripts/seeed-zephyr` 启动器。
+
+```sh
+git clone https://github.com/limengdu/Seeed-Zephyr-Project.git
+cd Seeed-Zephyr-Project
+bash scripts/setup-macos.sh        # 或 scripts/setup-linux.sh
+```
+
+Windows（WSL2）：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+```
+
+setup 会准备 Zephyr 工作区、安装 Python 虚拟环境与 `west`、下载 Zephyr v4.4.0 和 SDK、获取各板所需的烧录工具，并询问你是否安装 `seeed-zephyr` 命令行。加 `--board <目标>` 可只下载单块板子的依赖。
 
 ## 仓库结构
 
