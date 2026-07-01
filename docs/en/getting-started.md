@@ -210,6 +210,12 @@ Record a hardware observation:
 seeed-zephyr verify-hardware xiao_esp32c6
 ```
 
+Refresh the CLI, examples, and metadata:
+
+```sh
+seeed-zephyr update
+```
+
 One-sentence summary: the CLI is the normal entry point for operating repository
 examples.
 

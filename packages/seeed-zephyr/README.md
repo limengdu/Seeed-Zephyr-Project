@@ -38,6 +38,9 @@ seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 
 # Open serial monitor
 seeed-zephyr monitor
+
+# Update the CLI, examples, and metadata
+seeed-zephyr update
 ```
 
 ## Prerequisites

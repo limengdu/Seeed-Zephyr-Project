@@ -277,6 +277,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     create.set_defaults(func=cmd_create)
 
+    update = subparsers.add_parser(
+        "update", help="Update seeed-zephyr and bundled repository assets."
+    )
+    update.set_defaults(func=cmd_update)
+
     validate_parser = subparsers.add_parser("validate", help="Validate repository assets.")
     validate_subparsers = validate_parser.add_subparsers(dest="asset", required=True)
     validate_metadata = validate_subparsers.add_parser("metadata", help="Validate all metadata.")
@@ -475,6 +480,76 @@ def run_command_capture(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+
+
+def require_path_command(command: str, install_hint: str) -> None:
+    # Verifies that a command is available before running an update command.
+    # 执行更新命令前，确认指定命令已经在 PATH 中可用。
+    if shutil.which(command) is None:
+        raise CliError(f"{command} was not found. {install_hint}")
+
+
+def update_repo_checkout(repo_root: Path) -> None:
+    # Updates a local repository checkout that supplies metadata and examples.
+    # 更新提供 metadata 和 examples 的本地仓库签出。
+    require_path_command("git", "Install Git, then rerun 'seeed-zephyr update'.")
+    result = run_command_capture(
+        ["git", "-C", str(repo_root), "rev-parse", "--is-inside-work-tree"]
+    )
+    if result.returncode != 0 or result.stdout.strip() != "true":
+        raise CliError(f"Repository root is not a Git checkout: {repo_root}")
+
+    print(f"Updating repository assets in {repo_root}...", flush=True)
+    run_command(["git", "-C", str(repo_root), "pull", "--no-ff"])
+    print("Update complete.", flush=True)
+    print("Run 'seeed-zephyr list examples' to view the refreshed examples.", flush=True)
+
+
+def path_parts(path: Path) -> set[str]:
+    # Normalizes path parts for installation-source detection.
+    # 归一化路径片段，用于判断安装来源。
+    try:
+        resolved = path.resolve()
+    except OSError:
+        resolved = path
+    return {part.lower() for part in resolved.parts}
+
+
+def is_homebrew_install() -> bool:
+    parts = path_parts(Path(sys.executable)) | path_parts(Path(sys.prefix))
+    return "cellar" in parts and "seeed-zephyr" in parts
+
+
+def is_pipx_install() -> bool:
+    parts = path_parts(Path(sys.executable)) | path_parts(Path(sys.prefix))
+    return "pipx" in parts and "seeed-zephyr" in parts
+
+
+def installed_package_update_commands() -> tuple[str, list[list[str]]]:
+    # Selects the package-manager command that should refresh this installation.
+    # 选择应刷新当前安装的包管理器命令。
+    if is_homebrew_install():
+        require_path_command(
+            "brew", "Add Homebrew to PATH, then rerun 'seeed-zephyr update'."
+        )
+        return "Homebrew", [["brew", "update"], ["brew", "upgrade", "seeed-zephyr"]]
+
+    if is_pipx_install():
+        require_path_command(
+            "pipx", "Install pipx or add it to PATH, then rerun 'seeed-zephyr update'."
+        )
+        return "pipx", [["pipx", "upgrade", "seeed-zephyr"]]
+
+    return "pip", [[sys.executable, "-m", "pip", "install", "--upgrade", "seeed-zephyr"]]
+
+
+def update_installed_package() -> None:
+    source, commands = installed_package_update_commands()
+    print(f"Updating seeed-zephyr with {source}...", flush=True)
+    for command in commands:
+        print(f"$ {' '.join(command)}", flush=True)
+        run_command(command)
+    print("Update complete.", flush=True)
 
 
 def west_path() -> Path:
@@ -1626,6 +1701,16 @@ def cmd_monitor(args: argparse.Namespace) -> None:
     print(f"\nOpening serial monitor: {port} @ {baud} baud", flush=True)
     print("Press Ctrl+] to exit.\n", flush=True)
     run_command([str(python), "-m", "serial.tools.miniterm", port, str(baud)])
+
+
+def cmd_update(_args: argparse.Namespace) -> None:
+    # Updates the current CLI installation or the repository checkout it uses.
+    # 更新当前 CLI 安装，或更新它正在使用的仓库签出。
+    if _REPO_ROOT is not None:
+        update_repo_checkout(_REPO_ROOT)
+        return
+
+    update_installed_package()
 
 
 def cmd_validate_metadata(_args: argparse.Namespace) -> None:

@@ -22,11 +22,14 @@ Build, flash, and monitor actions call the `seeed-zephyr` CLI. Install it with
 `pip install seeed-zephyr`, and for the full Zephyr toolchain (SDK + `west`
 workspace) use the one-line installer in the
 [project README](https://github.com/limengdu/Seeed-Zephyr-Project#quick-start).
+Use **Update Repository** in the Catalog title bar to refresh repository
+examples and metadata from the editor.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
 **Seeed XIAO Zephyr** 安装,或从
 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 构建/烧录/监视会调用 `seeed-zephyr` CLI,用 `pip install seeed-zephyr` 安装即可。
+在 Catalog 标题栏点击 **Update Repository**，即可从编辑器刷新仓库示例和 metadata。
 
 ## Develop
 
@@ -56,7 +59,7 @@ targets both the VS Code Marketplace and Open VSX. Bump `version` in
 `package.json`, commit, then push to `main`:
 
 ```sh
-git commit -am "release: extension 0.1.1" && git push
+git commit -am "release: extension 0.1.2" && git push
 ```
 
 The workflow reads the new `version`, sees it is not on Open VSX yet, and

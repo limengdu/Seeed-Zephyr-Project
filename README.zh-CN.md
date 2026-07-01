@@ -93,11 +93,19 @@ pipx install seeed-zephyr
 brew install limengdu/seeed/seeed-zephyr        # macOS / Linux
 ```
 
+后续更新 CLI、内置示例和 metadata，统一运行：
+
+```sh
+seeed-zephyr update
+```
+
 Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里的 PowerShell 步骤配置。
 
 ### 2. 安装编辑器插件
 
 **Seeed XIAO Zephyr Assistant** 插件可浏览带验证徽章的开发板与示例,并在编辑器内直接构建 / 烧录 / 监视。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
+
+在 Catalog 标题栏点击 **Update Repository**，即可刷新插件读取的示例和 metadata。
 
 ### 3. 构建你的第一个示例
 
@@ -160,6 +168,14 @@ seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 seeed-zephyr list boards
 seeed-zephyr list examples
 ```
+
+### 更新
+
+```sh
+seeed-zephyr update
+```
+
+这个命令会刷新当前 CLI 安装，或刷新提供示例和 metadata 的本地仓库。
 
 ### 无需指定板子的串口监视
 

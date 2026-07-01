@@ -781,6 +781,87 @@ class CreateCommandTests(unittest.TestCase):
                     )
 
 
+class UpdateCommandTests(unittest.TestCase):
+    def test_update_repo_checkout_runs_git_pull_no_ff(self) -> None:
+        repo = Path("/tmp/seeed-zephyr-base")
+        result = seeed_zephyr.subprocess.CompletedProcess([], 0, "true\n")
+
+        with mock.patch.object(seeed_zephyr, "require_path_command") as require:
+            with mock.patch.object(seeed_zephyr, "run_command_capture", return_value=result) as capture:
+                with mock.patch.object(seeed_zephyr, "run_command") as run:
+                    seeed_zephyr.update_repo_checkout(repo)
+
+        require.assert_called_once_with(
+            "git", "Install Git, then rerun 'seeed-zephyr update'."
+        )
+        capture.assert_called_once_with(
+            ["git", "-C", str(repo), "rev-parse", "--is-inside-work-tree"]
+        )
+        run.assert_called_once_with(["git", "-C", str(repo), "pull", "--no-ff"])
+
+    def test_update_repo_checkout_rejects_non_git_dir(self) -> None:
+        repo = Path("/tmp/seeed-zephyr-base")
+        result = seeed_zephyr.subprocess.CompletedProcess([], 128, "false\n")
+
+        with mock.patch.object(seeed_zephyr, "require_path_command"):
+            with mock.patch.object(seeed_zephyr, "run_command_capture", return_value=result):
+                with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                    seeed_zephyr.update_repo_checkout(repo)
+
+        self.assertIn("not a Git checkout", str(ctx.exception))
+
+    def test_installed_package_update_prefers_homebrew(self) -> None:
+        with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=True):
+            with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=True):
+                with mock.patch.object(seeed_zephyr.shutil, "which", return_value="/opt/homebrew/bin/brew"):
+                    source, commands = seeed_zephyr.installed_package_update_commands()
+
+        self.assertEqual(source, "Homebrew")
+        self.assertEqual(commands, [["brew", "update"], ["brew", "upgrade", "seeed-zephyr"]])
+
+    def test_installed_package_update_uses_pipx_when_detected(self) -> None:
+        def fake_which(command: str) -> str | None:
+            return "/Users/test/.local/bin/pipx" if command == "pipx" else None
+
+        with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=False):
+            with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=True):
+                with mock.patch.object(seeed_zephyr.shutil, "which", side_effect=fake_which):
+                    source, commands = seeed_zephyr.installed_package_update_commands()
+
+        self.assertEqual(source, "pipx")
+        self.assertEqual(commands, [["pipx", "upgrade", "seeed-zephyr"]])
+
+    def test_installed_package_update_falls_back_to_pip(self) -> None:
+        with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=False):
+            with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=False):
+                source, commands = seeed_zephyr.installed_package_update_commands()
+
+        self.assertEqual(source, "pip")
+        self.assertEqual(
+            commands,
+            [[seeed_zephyr.sys.executable, "-m", "pip", "install", "--upgrade", "seeed-zephyr"]],
+        )
+
+    def test_cmd_update_uses_repo_root_when_available(self) -> None:
+        repo = Path("/tmp/seeed-zephyr-base")
+        with mock.patch.object(seeed_zephyr, "_REPO_ROOT", repo):
+            with mock.patch.object(seeed_zephyr, "update_repo_checkout") as update_repo:
+                with mock.patch.object(seeed_zephyr, "update_installed_package") as update_package:
+                    seeed_zephyr.cmd_update(mock.MagicMock())
+
+        update_repo.assert_called_once_with(repo)
+        update_package.assert_not_called()
+
+    def test_cmd_update_uses_package_update_without_repo_root(self) -> None:
+        with mock.patch.object(seeed_zephyr, "_REPO_ROOT", None):
+            with mock.patch.object(seeed_zephyr, "update_repo_checkout") as update_repo:
+                with mock.patch.object(seeed_zephyr, "update_installed_package") as update_package:
+                    seeed_zephyr.cmd_update(mock.MagicMock())
+
+        update_repo.assert_not_called()
+        update_package.assert_called_once_with()
+
+
 class JsonOutputTests(unittest.TestCase):
     def _run_json(self, func, **args) -> object:
         ns = mock.MagicMock()

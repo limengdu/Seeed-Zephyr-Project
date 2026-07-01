@@ -93,11 +93,19 @@ pipx install seeed-zephyr
 brew install limengdu/seeed/seeed-zephyr        # macOS / Linux
 ```
 
+Keep the CLI, bundled examples, and metadata current with one command:
+
+```sh
+seeed-zephyr update
+```
+
 On Windows without WSL2, follow the PowerShell setup in the [Getting Started guide](docs/en/getting-started.md).
 
 ### 2. Install the editor extension
 
 The **Seeed XIAO Zephyr Assistant** browses boards and examples with validation badges and runs Build / Flash / Monitor from the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
+
+Use **Update Repository** in the Catalog title bar to refresh the examples and metadata read by the extension.
 
 ### 3. Build your first example
 
@@ -160,6 +168,14 @@ seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 seeed-zephyr list boards
 seeed-zephyr list examples
 ```
+
+### Update
+
+```sh
+seeed-zephyr update
+```
+
+This refreshes the current CLI installation or the local repository checkout that supplies examples and metadata.
 
 ### Serial monitor, no board required
 

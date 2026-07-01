@@ -4,6 +4,7 @@ import { DetailPanel, DetailTarget } from "./panels/detailPanel";
 import { BoardNode, ExampleNode } from "./views/treeItems";
 import { createProject } from "./commands/createProject";
 import { openGenerated } from "./commands/openGenerated";
+import { updateRepository } from "./commands/updateRepository";
 import { Action, runAction, runProjectAction } from "./cli/terminalRunner";
 import { ProjectStatusBar } from "./statusBar";
 
@@ -19,6 +20,9 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("seeedZephyrCatalog", catalog),
     vscode.commands.registerCommand("seeedZephyr.refreshCatalog", () => catalog.refresh()),
+    vscode.commands.registerCommand("seeedZephyr.updateRepository", () =>
+      updateRepository(catalog.getRepoRoot(), () => catalog.refresh()),
+    ),
     vscode.commands.registerCommand("seeedZephyr.setRepoRoot", () => setRepoRoot(catalog)),
     vscode.commands.registerCommand("seeedZephyr.showDetail", (target: DetailTarget) =>
       DetailPanel.show(target),

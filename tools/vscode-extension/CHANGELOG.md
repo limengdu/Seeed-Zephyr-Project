@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- Add an Update Repository action to refresh catalog examples and metadata from the editor.
+
 ## 0.1.1
 
 - Add the marketplace icon shown on the extension listing.

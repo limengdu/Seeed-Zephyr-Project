@@ -208,6 +208,12 @@ seeed-zephyr matrix
 seeed-zephyr verify-hardware xiao_esp32c6
 ```
 
+更新 CLI、示例和 metadata：
+
+```sh
+seeed-zephyr update
+```
+
 一句话总结：CLI 是操作本仓库示例的默认入口。
 
 ## 5. 当前开发板 demo 矩阵
