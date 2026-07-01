@@ -58,16 +58,19 @@ the version is edited in exactly one place.
 
 ## Automated Releases (GitHub Actions)
 
-Two workflows publish on a version tag or from a manual run:
+Releases are driven by the version number, not by tags. Each workflow runs on
+every push to `main` (or from a manual run), reads the version in the code, and
+publishes only when that version has not been released yet:
 
-| Workflow | Trigger | Publishes |
-|----------|---------|-----------|
-| `.github/workflows/release-pypi.yml` | tag `cli-v*` or manual run | PyPI, then the Homebrew tap |
-| `.github/workflows/release-vscode.yml` | tag `ext-v*` or manual run | VS Code Marketplace + Open VSX |
+| Workflow | Trigger | Release condition | Publishes |
+|----------|---------|-------------------|-----------|
+| `.github/workflows/release-pypi.yml` | push to `main` or manual run | `__init__.py` version not on PyPI | PyPI, then the Homebrew tap |
+| `.github/workflows/release-vscode.yml` | push to `main` or manual run | `package.json` version not on Open VSX | VS Code Marketplace + Open VSX |
 
-Both workflows verify that the tag matches the version in the code
-(`__init__.py` for the CLI, `package.json` for the extension) before
-publishing.
+Because PyPI, Open VSX, and the VS Code Marketplace all refuse to overwrite an
+existing version, the version number is a safe release switch: bump it and the
+new release goes out; leave it unchanged and the workflow finds the version
+already published and exits without doing anything.
 
 The extension workflow packages one `.vsix` and publishes it to each registry
 whose token secret is configured. A registry with no token is skipped, so the
@@ -95,12 +98,16 @@ run succeeds even when only one marketplace is set up.
 
 **Cutting a release:**
 
-```sh
-# CLI: bump packages/seeed-zephyr/src/seeed_zephyr/__init__.py, commit, then:
-git tag cli-v0.2.0 && git push origin cli-v0.2.0
+Bump the version, commit, and push to `main`. The matching workflow detects the
+new version and publishes it automatically.
 
-# Extension: bump tools/vscode-extension/package.json version, commit, then:
-git tag ext-v0.1.1 && git push origin ext-v0.1.1
+```sh
+# CLI: bump the version in
+# packages/seeed-zephyr/src/seeed_zephyr/__init__.py, then:
+git commit -am "release: seeed-zephyr 0.2.0" && git push
+
+# Extension: bump the version in tools/vscode-extension/package.json, then:
+git commit -am "release: extension 0.1.1" && git push
 ```
 
 ## Manual Build (fallback)

@@ -1,14 +1,17 @@
 name: Release VS Code extension
 
-# Publishes the VS Code extension when an ext-v* tag is pushed, or when run
-# manually from the Actions tab. The extension is packaged once and published to
-# both the VS Code Marketplace and Open VSX. Each registry publishes only when
-# its token secret is set, so a missing token skips that registry instead of
-# failing the run.
+# Publishes the VS Code extension automatically when the version in package.json
+# changes on main. The version number is the release trigger: if that version is
+# already on Open VSX the run skips publishing, otherwise it packages one .vsix
+# and publishes it to every registry whose token secret is set. A missing token
+# skips that registry instead of failing the run. Can also be run manually from
+# the Actions tab.
 on:
   push:
-    tags:
-      - 'ext-v*'
+    branches: [main]
+    paths:
+      - 'tools/vscode-extension/**'
+      - '.github/workflows/release-vscode.yml'
   workflow_dispatch:
 
 jobs:
@@ -27,30 +30,35 @@ jobs:
         with:
           node-version: '20'
 
-      # Fails the release when the tag does not match package.json version.
-      - name: Verify tag matches package.json version
-        if: startsWith(github.ref, 'refs/tags/')
+      # Reads package.json version and asks Open VSX whether it is already
+      # published, using it as the source of truth for "have we released this".
+      - name: Determine whether this version needs publishing
+        id: check
         run: |
-          tag_version="${GITHUB_REF_NAME#ext-v}"
-          pkg_version="$(node -p "require('./package.json').version")"
-          echo "tag version: $tag_version"
-          echo "package version: $pkg_version"
-          if [ "$tag_version" != "$pkg_version" ]; then
-            echo "::error::Tag ext-v$tag_version does not match package.json version $pkg_version."
-            exit 1
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          status="$(curl -sS -o /dev/null -w '%{http_code}' "https://open-vsx.org/api/seeed-studio/seeed-xiao-zephyr-assistant/${version}" || true)"
+          if [ "$status" = "200" ]; then
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+            echo "Extension ${version} is already on Open VSX; nothing to publish."
+          else
+            echo "new_version=true" >> "$GITHUB_OUTPUT"
+            echo "Extension ${version} is not on Open VSX; packaging and publishing."
           fi
 
       - name: Install dependencies
+        if: steps.check.outputs.new_version == 'true'
         run: npm ci
 
       # Build one .vsix and reuse it for every registry below.
       - name: Package extension
+        if: steps.check.outputs.new_version == 'true'
         run: npx --yes @vscode/vsce package -o extension.vsix
 
       - name: Publish to VS Code Marketplace
-        if: env.VSCE_PAT != ''
+        if: steps.check.outputs.new_version == 'true' && env.VSCE_PAT != ''
         run: npx --yes @vscode/vsce publish --packagePath extension.vsix --pat "$VSCE_PAT"
 
       - name: Publish to Open VSX
-        if: env.OVSX_PAT != ''
+        if: steps.check.outputs.new_version == 'true' && env.OVSX_PAT != ''
         run: npx --yes ovsx publish extension.vsix --pat "$OVSX_PAT"

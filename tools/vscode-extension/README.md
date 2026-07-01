@@ -53,11 +53,14 @@ npm run package       # produce a .vsix with vsce
 
 Publishing runs from GitHub Actions (`.github/workflows/release-vscode.yml`) and
 targets both the VS Code Marketplace and Open VSX. Bump `version` in
-`package.json`, commit, then push a matching tag:
+`package.json`, commit, then push to `main`:
 
 ```sh
-git tag ext-v0.1.1 && git push origin ext-v0.1.1
+git commit -am "release: extension 0.1.1" && git push
 ```
+
+The workflow reads the new `version`, sees it is not on Open VSX yet, and
+publishes it. An unchanged version is detected as already released and skipped.
 
 The workflow publishes to each registry whose token secret is set: `VSCE_PAT`
 for the VS Code Marketplace and `OVSX_PAT` for Open VSX. A missing token skips
