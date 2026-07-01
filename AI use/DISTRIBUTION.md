@@ -9,7 +9,7 @@ install it with a single command on any platform — no repository clone require
 |---------|---------|-----------|
 | **PyPI** | `pip install seeed-zephyr` | macOS, Linux, Windows |
 | **curl script** | `curl -fsSL .../install.sh \| bash` | macOS, Linux |
-| **Homebrew** | `brew install seeed-studio/seeed/seeed-zephyr` | macOS, Linux |
+| **Homebrew** | `brew install limengdu/seeed/seeed-zephyr` | macOS, Linux |
 
 ## Architecture
 
@@ -62,7 +62,7 @@ Two workflows publish on a version tag or from a manual run:
 
 | Workflow | Trigger | Publishes |
 |----------|---------|-----------|
-| `.github/workflows/release-pypi.yml` | tag `cli-v*` or manual run | PyPI |
+| `.github/workflows/release-pypi.yml` | tag `cli-v*` or manual run | PyPI, then the Homebrew tap |
 | `.github/workflows/release-vscode.yml` | tag `ext-v*` or manual run | VS Code Marketplace + Open VSX |
 
 Both workflows verify that the tag matches the version in the code
@@ -77,7 +77,7 @@ run succeeds even when only one marketplace is set up.
 
 - **PyPI (Trusted Publishing):** on PyPI, open the `seeed-zephyr` project →
   Publishing → add a GitHub Actions trusted publisher with repository
-  `Seeed-Projects/seeed-zephyr-base` and workflow `release-pypi.yml`. No token
+  `limengdu/Seeed-Zephyr-Project` and workflow `release-pypi.yml`. No token
   is stored in GitHub.
 - **VS Code Marketplace:** create a Marketplace personal access token for the
   `seeed-studio` publisher, then add it to the GitHub repository as a secret
@@ -86,6 +86,12 @@ run succeeds even when only one marketplace is set up.
   [open-vsx.org](https://open-vsx.org) with GitHub, sign the Eclipse publisher
   agreement, create the `seeed-studio` namespace, generate an access token, and
   add it to the GitHub repository as a secret named `OVSX_PAT`.
+- **Homebrew tap (auto-update):** create a fine-grained GitHub token with
+  contents write access to `limengdu/homebrew-seeed`, then add it to the GitHub
+  repository as a secret named `HOMEBREW_TAP_TOKEN`. After a PyPI release, the
+  workflow reads the new wheel's URL and SHA256 and commits them to the tap's
+  `Formula/seeed-zephyr.rb`. Without this secret the step is skipped, and the
+  formula can be updated by hand instead.
 
 **Cutting a release:**
 
@@ -109,8 +115,23 @@ python -m build --sdist
 python -m twine upload dist/*
 ```
 
-Homebrew stays manual: after a PyPI release, update `Formula/seeed-zephyr.rb`
-with the new sdist URL and SHA256.
+## Homebrew Tap
+
+The tap lives in a separate repository, `limengdu/homebrew-seeed`, so users
+install with:
+
+```sh
+brew install limengdu/seeed/seeed-zephyr
+```
+
+The formula installs the published PyPI **wheel** into an isolated virtualenv
+(the CLI is pure Python, so the universal `py3-none-any` wheel works on every
+platform). The `release-pypi.yml` workflow keeps the tap current: after each
+PyPI release it reads the new wheel's `url` and `sha256` (from
+`https://pypi.org/pypi/seeed-zephyr/<version>/json`) and commits them to the
+tap's `Formula/seeed-zephyr.rb`. This requires the `HOMEBREW_TAP_TOKEN` secret;
+without it the tap can be updated by editing those two lines by hand. The
+`Formula/seeed-zephyr.rb` kept in this repository is the reference copy.
 
 ## Status
 
@@ -126,3 +147,5 @@ with the new sdist URL and SHA256.
 - [x] Automated VS Code Marketplace release workflow (`release-vscode.yml`)
 - [x] Open VSX publishing added to the extension workflow
 - [x] First Open VSX publish (`seeed-studio.seeed-xiao-zephyr-assistant` v0.1.0)
+- [x] Homebrew tap live (`limengdu/homebrew-seeed`, installs the PyPI wheel)
+- [x] Homebrew tap auto-updated by `release-pypi.yml` after each PyPI release

@@ -47,3 +47,67 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/seeed-zephyr/dist
+
+  # Points the Homebrew tap at the freshly published wheel. Runs only when a
+  # HOMEBREW_TAP_TOKEN secret with write access to the tap repo is configured;
+  # otherwise it skips so the PyPI release still succeeds on its own.
+  update-homebrew-tap:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+    steps:
+      - name: Check for tap token
+        id: gate
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -n "$HOMEBREW_TAP_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "HOMEBREW_TAP_TOKEN not set; skipping Homebrew tap update."
+          fi
+
+      - name: Check out Homebrew tap
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: limengdu/homebrew-seeed
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update formula to the published version
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          version="${GITHUB_REF_NAME#cli-v}"
+          # PyPI indexing can lag a few seconds after publish; retry until the
+          # wheel for this version is available, then read its url and sha256.
+          url=""
+          sha=""
+          for _ in $(seq 1 30); do
+            if curl -fsS "https://pypi.org/pypi/seeed-zephyr/${version}/json" -o pypi.json; then
+              values="$(python3 -c 'import json; d=json.load(open("pypi.json")); w=[u for u in d["urls"] if u["packagetype"]=="bdist_wheel"]; print(w[0]["url"], w[0]["digests"]["sha256"]) if w else print("")' 2>/dev/null || true)"
+              if [ -n "$values" ]; then
+                url="${values%% *}"
+                sha="${values##* }"
+                break
+              fi
+            fi
+            sleep 10
+          done
+          if [ -z "$url" ] || [ -z "$sha" ]; then
+            echo "::error::Wheel for seeed-zephyr ${version} not found on PyPI."
+            exit 1
+          fi
+          echo "wheel url: $url"
+          echo "wheel sha256: $sha"
+          sed -i -E "s|^  url .*|  url \"${url}\", using: :nounzip|" Formula/seeed-zephyr.rb
+          sed -i -E "s|^  sha256 .*|  sha256 \"${sha}\"|" Formula/seeed-zephyr.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- Formula/seeed-zephyr.rb; then
+            echo "Formula already up to date."
+          else
+            git add Formula/seeed-zephyr.rb
+            git commit -m "chore: update seeed-zephyr to ${version}"
+            git push
+          fi
