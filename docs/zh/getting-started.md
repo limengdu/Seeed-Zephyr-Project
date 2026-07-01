@@ -60,7 +60,7 @@ pipx install seeed-zephyr
 同时安装 CLI **和** Zephyr 环境，一步到位：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 ```
 
 完成后直接跳到[第 3 节](#3-构建一块板子的-demo)。
@@ -68,8 +68,8 @@ curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/ma
 ### 方式 C：Homebrew（macOS / Linux）
 
 ```sh
-brew tap seeed-studio/seeed
-brew install seeed-studio/seeed/seeed-zephyr
+brew tap limengdu/seeed
+brew install limengdu/seeed/seeed-zephyr
 ```
 
 通过 Homebrew 安装 CLI 后，还需要 Zephyr 工具链。见下方
@@ -131,7 +131,7 @@ Install seeed-zephyr CLI? [Y/n]
 Zephyr 包、SDK 和板级 blobs。克隆仓库并运行对应系统的 setup 脚本来安装：
 
 ```sh
-git clone https://github.com/Seeed-Projects/seeed-zephyr-base.git ~/.seeed-zephyr-base
+git clone https://github.com/limengdu/Seeed-Zephyr-Project.git ~/.seeed-zephyr-base
 
 # macOS
 bash ~/.seeed-zephyr-base/scripts/setup-macos.sh

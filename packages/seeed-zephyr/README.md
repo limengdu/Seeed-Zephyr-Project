@@ -47,10 +47,10 @@ after installation:
 
 ```bash
 # macOS
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 
 # Or set up manually — see the full guide:
-# https://github.com/Seeed-Projects/seeed-zephyr-base/blob/main/docs/en/getting-started.md
+# https://github.com/limengdu/Seeed-Zephyr-Project/blob/main/docs/en/getting-started.md
 ```
 
 ## Supported Boards

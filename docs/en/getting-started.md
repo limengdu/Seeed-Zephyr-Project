@@ -55,7 +55,7 @@ After installing the CLI via pip, you still need the Zephyr toolchain. See
 This installs the CLI **and** sets up the Zephyr environment in one step:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 ```
 
 After this completes, skip to [Section 3](#3-build-one-board-demo).
@@ -63,8 +63,8 @@ After this completes, skip to [Section 3](#3-build-one-board-demo).
 ### Option C: Homebrew (macOS / Linux)
 
 ```sh
-brew tap seeed-studio/seeed
-brew install seeed-studio/seeed/seeed-zephyr
+brew tap limengdu/seeed
+brew install limengdu/seeed/seeed-zephyr
 ```
 
 After installing the CLI via Homebrew, you still need the Zephyr toolchain.
@@ -128,7 +128,7 @@ Zephyr v4.4.0, Zephyr packages, the SDK, and board-specific blobs. Set it up
 by cloning the repository and running the setup script for your OS:
 
 ```sh
-git clone https://github.com/Seeed-Projects/seeed-zephyr-base.git ~/.seeed-zephyr-base
+git clone https://github.com/limengdu/Seeed-Zephyr-Project.git ~/.seeed-zephyr-base
 
 # macOS
 bash ~/.seeed-zephyr-base/scripts/setup-macos.sh

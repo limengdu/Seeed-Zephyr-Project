@@ -25,8 +25,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Seeed-Projects/seeed-zephyr-base"
-Issues = "https://github.com/Seeed-Projects/seeed-zephyr-base/issues"
+Homepage = "https://github.com/limengdu/Seeed-Zephyr-Project"
+Issues = "https://github.com/limengdu/Seeed-Zephyr-Project/issues"
 
 [project.scripts]
 seeed-zephyr = "seeed_zephyr.cli:main"

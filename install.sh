@@ -2,14 +2,14 @@
 # One-line installer for seeed-zephyr CLI + Zephyr development environment.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 #
 # Pass arguments (e.g. --board) through the pipe:
-#   curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash -s -- --board xiao_esp32c6
+#   curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash -s -- --board xiao_esp32c6
 set -euo pipefail
 
 INSTALL_DIR="${SEEED_ZEPHYR_DIR:-$HOME/.seeed-zephyr-base}"
-REPO_URL="https://github.com/Seeed-Projects/seeed-zephyr-base.git"
+REPO_URL="https://github.com/limengdu/Seeed-Zephyr-Project.git"
 
 echo "=== seeed-zephyr installer ==="
 echo "Install directory: $INSTALL_DIR"

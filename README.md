@@ -76,13 +76,13 @@ You don't need to clone this repository to use the tools — install everything 
 The one-line installer sets up the `seeed-zephyr` CLI **and** the full Zephyr toolchain (SDK, `west` workspace, and per-board flash tools). It runs on macOS and Linux (use it inside WSL2 on Windows):
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 ```
 
 Set up a single board by passing `--board` through the pipe:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash -s -- --board xiao_esp32c6
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash -s -- --board xiao_esp32c6
 ```
 
 Prefer to install just the CLI? Use PyPI, [pipx](https://pipx.pypa.io/), or [Homebrew](https://brew.sh/), then set up the Zephyr toolchain from the [Getting Started guide](docs/en/getting-started.md#2b-zephyr-environment-setup):
@@ -90,7 +90,7 @@ Prefer to install just the CLI? Use PyPI, [pipx](https://pipx.pypa.io/), or [Hom
 ```sh
 pip install seeed-zephyr                        # all platforms
 pipx install seeed-zephyr
-brew install seeed-studio/seeed/seeed-zephyr    # macOS / Linux
+brew install limengdu/seeed/seeed-zephyr        # macOS / Linux
 ```
 
 On Windows without WSL2, follow the PowerShell setup in the [Getting Started guide](docs/en/getting-started.md).

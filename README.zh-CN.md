@@ -76,13 +76,13 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 一行安装脚本会同时装好 `seeed-zephyr` 命令行**和**完整的 Zephyr 工具链（SDK、`west` 工作区、各板烧录工具）。支持 macOS 与 Linux（Windows 请在 WSL2 内运行）：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 ```
 
 只想安装单块板子的依赖时，把 `--board` 通过管道传进去：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/main/install.sh | bash -s -- --board xiao_esp32c6
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash -s -- --board xiao_esp32c6
 ```
 
 只想单独装命令行？用 PyPI、[pipx](https://pipx.pypa.io/) 或 [Homebrew](https://brew.sh/) 安装,再照[入门指南](docs/zh/getting-started.md)准备 Zephyr 工具链：
@@ -90,7 +90,7 @@ curl -fsSL https://raw.githubusercontent.com/Seeed-Projects/seeed-zephyr-base/ma
 ```sh
 pip install seeed-zephyr                        # 全平台
 pipx install seeed-zephyr
-brew install seeed-studio/seeed/seeed-zephyr    # macOS / Linux
+brew install limengdu/seeed/seeed-zephyr        # macOS / Linux
 ```
 
 Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里的 PowerShell 步骤配置。
