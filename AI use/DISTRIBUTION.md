@@ -104,10 +104,10 @@ new version and publishes it automatically.
 ```sh
 # CLI: bump the version in
 # packages/seeed-zephyr/src/seeed_zephyr/__init__.py, then:
-git commit -am "release: seeed-zephyr 0.2.1" && git push
+git commit -am "release: seeed-zephyr 0.3.0" && git push
 
 # Extension: bump the version in tools/vscode-extension/package.json, then:
-git commit -am "release: extension 0.1.2" && git push
+git commit -am "release: extension 0.2.0" && git push
 ```
 
 ## Manual Build (fallback)
@@ -158,3 +158,6 @@ without it the tap can be updated by editing those two lines by hand. The
 - [x] Homebrew tap auto-updated by `release-pypi.yml` after each PyPI release
 - [x] Unified CLI update command (`seeed-zephyr update`)
 - [x] Extension Update Repository action
+- [x] CLI traceability command (`seeed-zephyr info`)
+- [x] CLI version selection (`seeed-zephyr update --version <version>`)
+- [x] Extension first-run environment actions and managed CLI version selection

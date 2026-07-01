@@ -102,7 +102,18 @@ export class MessageNode extends vscode.TreeItem {
   }
 }
 
+export class ActionNode extends vscode.TreeItem {
+  constructor(label: string, command: string, icon: string, description?: string) {
+    super(label, vscode.TreeItemCollapsibleState.None);
+    this.contextValue = "welcomeAction";
+    this.description = description;
+    this.iconPath = new vscode.ThemeIcon(icon);
+    this.command = { command, title: label };
+  }
+}
+
 export type CatalogNode =
+  | ActionNode
   | GroupNode
   | BoardNode
   | ExampleNode

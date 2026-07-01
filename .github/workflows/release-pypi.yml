@@ -52,6 +52,16 @@ jobs:
         if: steps.check.outputs.new_version == 'true'
         run: |
           python -m pip install --upgrade build
+          python - <<'PY'
+          from pathlib import Path
+          import os
+
+          commit = os.environ.get("GITHUB_SHA", "unknown")
+          Path("packages/seeed-zephyr/src/seeed_zephyr/build_info.py").write_text(
+              f'GIT_COMMIT = "{commit}"\n',
+              encoding="utf-8",
+          )
+          PY
           cd packages/seeed-zephyr
           # Build each artifact directly from the source tree so the
           # force-included files above the package resolve.

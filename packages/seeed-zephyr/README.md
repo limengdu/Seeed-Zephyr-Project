@@ -41,6 +41,12 @@ seeed-zephyr monitor
 
 # Update the CLI, examples, and metadata
 seeed-zephyr update
+
+# Show version and traceability information
+seeed-zephyr info
+
+# Select a published CLI version
+seeed-zephyr update --version 0.3.0
 ```
 
 ## Prerequisites

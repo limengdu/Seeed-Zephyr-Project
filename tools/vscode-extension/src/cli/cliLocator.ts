@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { commandAvailable } from "../env/environment";
 
 // How to invoke the seeed-zephyr CLI: a command plus fixed leading arguments.
 // 如何调用 seeed-zephyr CLI:一个命令加上固定的前置参数。
@@ -22,7 +23,7 @@ export function locateCli(repoRoot: string | undefined): CliInvocation {
 
   // 1. Explicit override from settings.
   const override = config.get<string>("cliPath");
-  if (override) {
+  if (override && commandAvailable(override)) {
     return { command: override, baseArgs: [], env, display: override };
   }
 

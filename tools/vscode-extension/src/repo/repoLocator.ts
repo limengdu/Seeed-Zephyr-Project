@@ -1,4 +1,5 @@
 import * as fs from "fs";
+import * as os from "os";
 import * as path from "path";
 import * as vscode from "vscode";
 
@@ -36,5 +37,18 @@ export function locateRepoRoot(): string | undefined {
       return folder.uri.fsPath;
     }
   }
+
+  for (const candidate of defaultRepoRoots()) {
+    if (isRepoRoot(candidate)) {
+      return candidate;
+    }
+  }
   return undefined;
+}
+
+function defaultRepoRoots(): string[] {
+  return [
+    path.join(os.homedir(), ".seeed-zephyr-base"),
+    path.join(os.homedir(), "seeed-zephyr-base"),
+  ];
 }

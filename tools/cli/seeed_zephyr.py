@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import importlib
+import importlib.metadata as importlib_metadata
 import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -240,6 +243,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     monitor.set_defaults(func=cmd_monitor)
 
+    info = subparsers.add_parser("info", help="Show CLI version and data source.")
+    add_json_flag(info)
+    info.set_defaults(func=cmd_info)
+
     matrix = subparsers.add_parser("matrix", help="Run the full board build matrix.")
     matrix.set_defaults(func=cmd_matrix)
 
@@ -279,6 +286,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     update = subparsers.add_parser(
         "update", help="Update seeed-zephyr and bundled repository assets."
+    )
+    update.add_argument(
+        "--version",
+        default=None,
+        help="Install or select a specific seeed-zephyr version, tag, or commit.",
     )
     update.set_defaults(func=cmd_update)
 
@@ -489,6 +501,106 @@ def require_path_command(command: str, install_hint: str) -> None:
         raise CliError(f"{command} was not found. {install_hint}")
 
 
+def read_repo_cli_version() -> str | None:
+    # Reads the repository package version without importing package build code.
+    # 直接读取仓库包版本，避免导入打包代码。
+    if _REPO_ROOT is None:
+        return None
+    version_file = _REPO_ROOT / "packages" / "seeed-zephyr" / "src" / "seeed_zephyr" / "__init__.py"
+    if not version_file.is_file():
+        return None
+    match = re.search(r'__version__\s*=\s*"([^"]+)"', version_file.read_text(encoding="utf-8"))
+    return match.group(1) if match else None
+
+
+def cli_version() -> str:
+    if _REPO_ROOT is not None:
+        return read_repo_cli_version() or "unknown"
+    try:
+        return importlib_metadata.version("seeed-zephyr")
+    except importlib_metadata.PackageNotFoundError:
+        return "unknown"
+
+
+def package_build_commit() -> str | None:
+    try:
+        build_info = importlib.import_module("seeed_zephyr.build_info")
+    except Exception:
+        return None
+    commit = getattr(build_info, "GIT_COMMIT", None)
+    return commit if commit and commit != "unknown" else None
+
+
+def git_output(repo_root: Path, args: list[str]) -> str | None:
+    if shutil.which("git") is None:
+        return None
+    result = run_command_capture(["git", "-C", str(repo_root), *args])
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def repo_git_commit(repo_root: Path) -> str | None:
+    return git_output(repo_root, ["rev-parse", "HEAD"])
+
+
+def repo_git_branch(repo_root: Path) -> str | None:
+    return git_output(repo_root, ["branch", "--show-current"]) or None
+
+
+def repo_is_clean(repo_root: Path) -> bool:
+    status = git_output(repo_root, ["status", "--porcelain"])
+    return status == ""
+
+
+def package_source() -> str:
+    if _REPO_ROOT is not None:
+        return "repo"
+    if is_homebrew_install():
+        return "homebrew"
+    if is_pipx_install():
+        return "pipx"
+    try:
+        importlib_metadata.distribution("seeed-zephyr")
+    except importlib_metadata.PackageNotFoundError:
+        return "unknown"
+    return "pip"
+
+
+def current_info() -> dict[str, str | None]:
+    repo_root = str(_REPO_ROOT) if _REPO_ROOT else None
+    commit = repo_git_commit(_REPO_ROOT) if _REPO_ROOT else package_build_commit()
+    return {
+        "cli_version": cli_version(),
+        "install_mode": "repo" if _REPO_ROOT else "package",
+        "package_source": package_source(),
+        "data_source": "repo" if _REPO_ROOT else "bundled",
+        "repo_root": repo_root,
+        "git_branch": repo_git_branch(_REPO_ROOT) if _REPO_ROOT else None,
+        "git_commit": commit,
+        "git_dirty": str(not repo_is_clean(_REPO_ROOT)).lower() if _REPO_ROOT else None,
+        "zephyr_baseline": ZEPHYR_BASELINE,
+        "python": sys.executable,
+    }
+
+
+def print_info(info: dict[str, str | None]) -> None:
+    labels = [
+        ("CLI version", "cli_version"),
+        ("Install mode", "install_mode"),
+        ("Package source", "package_source"),
+        ("Data source", "data_source"),
+        ("Repository root", "repo_root"),
+        ("Git branch", "git_branch"),
+        ("Git commit", "git_commit"),
+        ("Git dirty", "git_dirty"),
+        ("Zephyr baseline", "zephyr_baseline"),
+        ("Python", "python"),
+    ]
+    for label, key in labels:
+        print(f"{label}: {info.get(key) or 'unknown'}")
+
+
 def update_repo_checkout(repo_root: Path) -> None:
     # Updates a local repository checkout that supplies metadata and examples.
     # 更新提供 metadata 和 examples 的本地仓库签出。
@@ -503,6 +615,38 @@ def update_repo_checkout(repo_root: Path) -> None:
     run_command(["git", "-C", str(repo_root), "pull", "--no-ff"])
     print("Update complete.", flush=True)
     print("Run 'seeed-zephyr list examples' to view the refreshed examples.", flush=True)
+
+
+def checkout_repo_version(repo_root: Path, version: str) -> None:
+    # Selects a repository tag, branch, or commit after confirming local cleanliness.
+    # 在确认本地干净后，选择仓库 tag、分支或 commit。
+    require_path_command("git", "Install Git, then rerun 'seeed-zephyr update'.")
+    if not repo_is_clean(repo_root):
+        raise CliError(
+            "Repository has local changes. Commit or stash them before selecting a version."
+        )
+
+    print(f"Fetching tags for {repo_root}...", flush=True)
+    run_command(["git", "-C", str(repo_root), "fetch", "--tags", "--force"])
+
+    candidates = [version]
+    if not version.startswith("v"):
+        candidates.append(f"v{version}")
+    candidates.append(f"seeed-zephyr-{version}")
+
+    for candidate in candidates:
+        result = run_command_capture(
+            ["git", "-C", str(repo_root), "rev-parse", "--verify", f"{candidate}^{{commit}}"]
+        )
+        if result.returncode == 0:
+            run_command(["git", "-C", str(repo_root), "checkout", candidate])
+            print(f"Repository selected: {candidate}", flush=True)
+            return
+
+    raise CliError(
+        f"Version, tag, branch, or commit not found: {version}. "
+        "Use a published package version in package mode, or a Git ref in repo mode."
+    )
 
 
 def path_parts(path: Path) -> set[str]:
@@ -525,10 +669,15 @@ def is_pipx_install() -> bool:
     return "pipx" in parts and "seeed-zephyr" in parts
 
 
-def installed_package_update_commands() -> tuple[str, list[list[str]]]:
+def installed_package_update_commands(version: str | None = None) -> tuple[str, list[list[str]]]:
     # Selects the package-manager command that should refresh this installation.
     # 选择应刷新当前安装的包管理器命令。
     if is_homebrew_install():
+        if version is not None:
+            raise CliError(
+                "Homebrew-managed CLI version selection is not automatic. "
+                "Use the editor extension managed CLI for older package versions."
+            )
         require_path_command(
             "brew", "Add Homebrew to PATH, then rerun 'seeed-zephyr update'."
         )
@@ -538,13 +687,16 @@ def installed_package_update_commands() -> tuple[str, list[list[str]]]:
         require_path_command(
             "pipx", "Install pipx or add it to PATH, then rerun 'seeed-zephyr update'."
         )
+        if version is not None:
+            return "pipx", [["pipx", "install", "--force", f"seeed-zephyr=={version}"]]
         return "pipx", [["pipx", "upgrade", "seeed-zephyr"]]
 
-    return "pip", [[sys.executable, "-m", "pip", "install", "--upgrade", "seeed-zephyr"]]
+    package = f"seeed-zephyr=={version}" if version else "seeed-zephyr"
+    return "pip", [[sys.executable, "-m", "pip", "install", "--upgrade", package]]
 
 
-def update_installed_package() -> None:
-    source, commands = installed_package_update_commands()
+def update_installed_package(version: str | None = None) -> None:
+    source, commands = installed_package_update_commands(version)
     print(f"Updating seeed-zephyr with {source}...", flush=True)
     for command in commands:
         print(f"$ {' '.join(command)}", flush=True)
@@ -1703,14 +1855,25 @@ def cmd_monitor(args: argparse.Namespace) -> None:
     run_command([str(python), "-m", "serial.tools.miniterm", port, str(baud)])
 
 
-def cmd_update(_args: argparse.Namespace) -> None:
+def cmd_info(args: argparse.Namespace) -> None:
+    info = current_info()
+    if args.as_json:
+        print(json.dumps(info, indent=2))
+        return
+    print_info(info)
+
+
+def cmd_update(args: argparse.Namespace) -> None:
     # Updates the current CLI installation or the repository checkout it uses.
     # 更新当前 CLI 安装，或更新它正在使用的仓库签出。
     if _REPO_ROOT is not None:
-        update_repo_checkout(_REPO_ROOT)
+        if args.version:
+            checkout_repo_version(_REPO_ROOT, args.version)
+        else:
+            update_repo_checkout(_REPO_ROOT)
         return
 
-    update_installed_package()
+    update_installed_package(args.version)
 
 
 def cmd_validate_metadata(_args: argparse.Namespace) -> None:

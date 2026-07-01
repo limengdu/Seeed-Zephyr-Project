@@ -99,11 +99,19 @@ brew install limengdu/seeed/seeed-zephyr        # macOS / Linux
 seeed-zephyr update
 ```
 
+查看当前 CLI 版本、安装来源、仓库提交和 Zephyr 基线：
+
+```sh
+seeed-zephyr info
+```
+
 Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里的 PowerShell 步骤配置。
 
 ### 2. 安装编辑器插件
 
 **Seeed XIAO Zephyr Assistant** 插件可浏览带验证徽章的开发板与示例,并在编辑器内直接构建 / 烧录 / 监视。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
+
+首次使用时，插件会显示环境入口，可选择 setup、检测已有 CLI、安装插件托管 CLI、选择 CLI 版本、选择 CLI 路径和选择仓库目录。
 
 在 Catalog 标题栏点击 **Update Repository**，即可刷新插件读取的示例和 metadata。
 
@@ -173,9 +181,11 @@ seeed-zephyr list examples
 
 ```sh
 seeed-zephyr update
+seeed-zephyr update --version 0.3.0
+seeed-zephyr info
 ```
 
-这个命令会刷新当前 CLI 安装，或刷新提供示例和 metadata 的本地仓库。
+这个命令会刷新当前 CLI 安装，或刷新提供示例和 metadata 的本地仓库。使用 `--version` 可以选择已发布的 CLI 包版本；在源码仓库模式下也可以选择 Git tag 或 commit。
 
 ### 无需指定板子的串口监视
 

@@ -214,6 +214,8 @@ Refresh the CLI, examples, and metadata:
 
 ```sh
 seeed-zephyr update
+seeed-zephyr update --version 0.3.0
+seeed-zephyr info
 ```
 
 One-sentence summary: the CLI is the normal entry point for operating repository

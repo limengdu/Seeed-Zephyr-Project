@@ -2,7 +2,7 @@
   "name": "seeed-xiao-zephyr-assistant",
   "displayName": "Seeed XIAO Zephyr Assistant",
   "description": "Discover and create XIAO + Grove Zephyr examples, then hand build/flash to Zephyr tooling.",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "publisher": "seeed-studio",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -52,6 +52,42 @@
         "title": "Update Repository",
         "category": "Seeed XIAO",
         "icon": "$(sync)"
+      },
+      {
+        "command": "seeedZephyr.setupEnvironment",
+        "title": "Set Up Environment",
+        "category": "Seeed XIAO",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "seeedZephyr.useExistingCli",
+        "title": "Use Existing CLI",
+        "category": "Seeed XIAO",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "seeedZephyr.installManagedCli",
+        "title": "Install Managed CLI",
+        "category": "Seeed XIAO",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "seeedZephyr.selectCliVersion",
+        "title": "Select CLI Version",
+        "category": "Seeed XIAO",
+        "icon": "$(versions)"
+      },
+      {
+        "command": "seeedZephyr.selectCliPath",
+        "title": "Select CLI Path",
+        "category": "Seeed XIAO",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "seeedZephyr.recheckEnvironment",
+        "title": "Recheck Environment",
+        "category": "Seeed XIAO",
+        "icon": "$(refresh)"
       },
       {
         "command": "seeedZephyr.setRepoRoot",
@@ -120,7 +156,13 @@
         { "command": "seeedZephyr.build", "when": "false" },
         { "command": "seeedZephyr.flash", "when": "false" },
         { "command": "seeedZephyr.monitor", "when": "false" },
-        { "command": "seeedZephyr.debug", "when": "false" }
+        { "command": "seeedZephyr.debug", "when": "false" },
+        { "command": "seeedZephyr.setupEnvironment" },
+        { "command": "seeedZephyr.useExistingCli" },
+        { "command": "seeedZephyr.installManagedCli" },
+        { "command": "seeedZephyr.selectCliVersion" },
+        { "command": "seeedZephyr.selectCliPath" },
+        { "command": "seeedZephyr.recheckEnvironment" }
       ],
       "view/title": [
         {
@@ -199,6 +241,11 @@
           "type": "string",
           "default": "",
           "description": "Override the seeed-zephyr CLI command used for create and execute actions."
+        },
+        "seeedZephyr.managedCliVersion": {
+          "type": "string",
+          "default": "",
+          "description": "Version of the extension-managed seeed-zephyr CLI."
         },
         "seeedZephyr.pythonPath": {
           "type": "string",

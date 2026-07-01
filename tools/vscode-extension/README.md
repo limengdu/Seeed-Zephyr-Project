@@ -22,6 +22,9 @@ Build, flash, and monitor actions call the `seeed-zephyr` CLI. Install it with
 `pip install seeed-zephyr`, and for the full Zephyr toolchain (SDK + `west`
 workspace) use the one-line installer in the
 [project README](https://github.com/limengdu/Seeed-Zephyr-Project#quick-start).
+The first-run Catalog view provides setup actions for existing CLI detection,
+extension-managed CLI installation, CLI version selection, manual CLI path
+selection, and repository folder selection.
 Use **Update Repository** in the Catalog title bar to refresh repository
 examples and metadata from the editor.
 
@@ -29,6 +32,8 @@ examples and metadata from the editor.
 **Seeed XIAO Zephyr** 安装,或从
 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 构建/烧录/监视会调用 `seeed-zephyr` CLI,用 `pip install seeed-zephyr` 安装即可。
+首次打开 Catalog 时，可通过插件入口检测已有 CLI、安装插件托管 CLI、选择 CLI
+版本、手动选择 CLI 路径和选择仓库目录。
 在 Catalog 标题栏点击 **Update Repository**，即可从编辑器刷新仓库示例和 metadata。
 
 ## Develop
@@ -59,7 +64,7 @@ targets both the VS Code Marketplace and Open VSX. Bump `version` in
 `package.json`, commit, then push to `main`:
 
 ```sh
-git commit -am "release: extension 0.1.2" && git push
+git commit -am "release: extension 0.2.0" && git push
 ```
 
 The workflow reads the new `version`, sees it is not on Open VSX yet, and
@@ -76,4 +81,5 @@ users automatically.
 | --- | --- |
 | `seeedZephyr.repoRoot` | Repository path (auto-detected from the workspace when empty). |
 | `seeedZephyr.cliPath` | Override the `seeed-zephyr` CLI command. |
+| `seeedZephyr.managedCliVersion` | Version of the extension-managed CLI. |
 | `seeedZephyr.pythonPath` | Python interpreter used to run the CLI from source. |

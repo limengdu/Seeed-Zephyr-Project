@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+- Add a first-run environment screen with setup, CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository selection actions.
+- Add extension-managed CLI installation so users can choose older published `seeed-zephyr` versions from the editor.
+
 ## 0.1.2
 
 - Add an Update Repository action to refresh catalog examples and metadata from the editor.

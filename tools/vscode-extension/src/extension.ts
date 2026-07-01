@@ -5,11 +5,17 @@ import { BoardNode, ExampleNode } from "./views/treeItems";
 import { createProject } from "./commands/createProject";
 import { openGenerated } from "./commands/openGenerated";
 import { updateRepository } from "./commands/updateRepository";
+import {
+  installManagedCli,
+  selectCliPath,
+  setupEnvironment,
+  useExistingCli,
+} from "./commands/environmentCommands";
 import { Action, runAction, runProjectAction } from "./cli/terminalRunner";
 import { ProjectStatusBar } from "./statusBar";
 
 export function activate(context: vscode.ExtensionContext): void {
-  const catalog = new CatalogTreeProvider();
+  const catalog = new CatalogTreeProvider(context);
   const statusBar = new ProjectStatusBar(context);
   statusBar.refresh();
 
@@ -23,6 +29,20 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.updateRepository", () =>
       updateRepository(catalog.getRepoRoot(), () => catalog.refresh()),
     ),
+    vscode.commands.registerCommand("seeedZephyr.setupEnvironment", () => setupEnvironment()),
+    vscode.commands.registerCommand("seeedZephyr.useExistingCli", () =>
+      useExistingCli(() => catalog.refresh()),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.installManagedCli", () =>
+      installManagedCli(context, () => catalog.refresh()),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.selectCliVersion", () =>
+      installManagedCli(context, () => catalog.refresh()),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.selectCliPath", () =>
+      selectCliPath(() => catalog.refresh()),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.recheckEnvironment", () => catalog.refresh()),
     vscode.commands.registerCommand("seeedZephyr.setRepoRoot", () => setRepoRoot(catalog)),
     vscode.commands.registerCommand("seeedZephyr.showDetail", (target: DetailTarget) =>
       DetailPanel.show(target),

@@ -212,6 +212,8 @@ seeed-zephyr verify-hardware xiao_esp32c6
 
 ```sh
 seeed-zephyr update
+seeed-zephyr update --version 0.3.0
+seeed-zephyr info
 ```
 
 一句话总结：CLI 是操作本仓库示例的默认入口。

@@ -1,8 +1,10 @@
 import * as vscode from "vscode";
+import { detectEnvironment, EnvironmentState } from "../env/environment";
 import { readCatalog } from "../repo/dataReader";
 import { locateRepoRoot } from "../repo/repoLocator";
 import { Catalog } from "../model/types";
 import {
+  ActionNode,
   BoardNode,
   CatalogNode,
   ExampleNode,
@@ -18,8 +20,9 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
 
   private repoRoot: string | undefined;
   private catalog: Catalog | undefined;
+  private environment: EnvironmentState | undefined;
 
-  constructor() {
+  constructor(private readonly context: vscode.ExtensionContext) {
     this.load();
   }
 
@@ -42,8 +45,15 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
     return this.catalog;
   }
 
+  // Returns the current environment state used by the welcome screen.
+  // 返回欢迎页使用的当前环境状态。
+  getEnvironment(): EnvironmentState | undefined {
+    return this.environment;
+  }
+
   private load(): void {
     this.repoRoot = locateRepoRoot();
+    this.environment = detectEnvironment(this.repoRoot, this.context.globalStorageUri.fsPath);
     try {
       this.catalog = this.repoRoot ? readCatalog(this.repoRoot) : undefined;
     } catch (error) {
@@ -57,6 +67,9 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
   }
 
   getChildren(node?: CatalogNode): CatalogNode[] {
+    if (!this.environment?.ready) {
+      return this.welcomeNodes();
+    }
     if (!this.catalog) {
       return [
         new MessageNode(
@@ -84,5 +97,27 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
       return node.board.examples.map((example) => new ExampleNode(example, node.board));
     }
     return [];
+  }
+
+  private welcomeNodes(): CatalogNode[] {
+    const nodes: CatalogNode[] = [
+      new MessageNode("Set up Seeed XIAO Zephyr before using build and flash actions."),
+    ];
+    if (this.environment) {
+      nodes.push(
+        new MessageNode(`Repository: ${this.environment.repoRoot ?? "not selected"}`),
+        new MessageNode(`CLI: ${this.environment.cli.display}`),
+      );
+    }
+    nodes.push(
+      new ActionNode("Set Up Environment", "seeedZephyr.setupEnvironment", "rocket"),
+      new ActionNode("Use Existing CLI", "seeedZephyr.useExistingCli", "terminal"),
+      new ActionNode("Install Managed CLI", "seeedZephyr.installManagedCli", "cloud-download"),
+      new ActionNode("Select CLI Version", "seeedZephyr.selectCliVersion", "versions"),
+      new ActionNode("Select CLI Path", "seeedZephyr.selectCliPath", "folder-opened"),
+      new ActionNode("Select Repository Folder", "seeedZephyr.setRepoRoot", "repo"),
+      new ActionNode("Recheck Environment", "seeedZephyr.recheckEnvironment", "refresh"),
+    );
+    return nodes;
   }
 }

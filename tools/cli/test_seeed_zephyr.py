@@ -810,6 +810,33 @@ class UpdateCommandTests(unittest.TestCase):
 
         self.assertIn("not a Git checkout", str(ctx.exception))
 
+    def test_checkout_repo_version_requires_clean_tree(self) -> None:
+        repo = Path("/tmp/seeed-zephyr-base")
+
+        with mock.patch.object(seeed_zephyr, "require_path_command"):
+            with mock.patch.object(seeed_zephyr, "repo_is_clean", return_value=False):
+                with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                    seeed_zephyr.checkout_repo_version(repo, "0.2.0")
+
+        self.assertIn("local changes", str(ctx.exception))
+
+    def test_checkout_repo_version_accepts_matching_ref(self) -> None:
+        repo = Path("/tmp/seeed-zephyr-base")
+        missing = seeed_zephyr.subprocess.CompletedProcess([], 1, "")
+        found = seeed_zephyr.subprocess.CompletedProcess([], 0, "abc123\n")
+
+        with mock.patch.object(seeed_zephyr, "require_path_command"):
+            with mock.patch.object(seeed_zephyr, "repo_is_clean", return_value=True):
+                with mock.patch.object(
+                    seeed_zephyr, "run_command_capture", side_effect=[missing, found]
+                ) as capture:
+                    with mock.patch.object(seeed_zephyr, "run_command") as run:
+                        seeed_zephyr.checkout_repo_version(repo, "0.2.0")
+
+        run.assert_any_call(["git", "-C", str(repo), "fetch", "--tags", "--force"])
+        run.assert_any_call(["git", "-C", str(repo), "checkout", "v0.2.0"])
+        self.assertEqual(capture.call_count, 2)
+
     def test_installed_package_update_prefers_homebrew(self) -> None:
         with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=True):
             with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=True):
@@ -831,6 +858,22 @@ class UpdateCommandTests(unittest.TestCase):
         self.assertEqual(source, "pipx")
         self.assertEqual(commands, [["pipx", "upgrade", "seeed-zephyr"]])
 
+    def test_installed_package_update_uses_pipx_for_specific_version(self) -> None:
+        with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=False):
+            with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=True):
+                with mock.patch.object(seeed_zephyr.shutil, "which", return_value="/usr/bin/pipx"):
+                    source, commands = seeed_zephyr.installed_package_update_commands("0.2.0")
+
+        self.assertEqual(source, "pipx")
+        self.assertEqual(commands, [["pipx", "install", "--force", "seeed-zephyr==0.2.0"]])
+
+    def test_homebrew_specific_version_raises(self) -> None:
+        with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=True):
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.installed_package_update_commands("0.2.0")
+
+        self.assertIn("Homebrew-managed", str(ctx.exception))
+
     def test_installed_package_update_falls_back_to_pip(self) -> None:
         with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=False):
             with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=False):
@@ -842,24 +885,86 @@ class UpdateCommandTests(unittest.TestCase):
             [[seeed_zephyr.sys.executable, "-m", "pip", "install", "--upgrade", "seeed-zephyr"]],
         )
 
+    def test_installed_package_update_falls_back_to_pip_specific_version(self) -> None:
+        with mock.patch.object(seeed_zephyr, "is_homebrew_install", return_value=False):
+            with mock.patch.object(seeed_zephyr, "is_pipx_install", return_value=False):
+                source, commands = seeed_zephyr.installed_package_update_commands("0.2.0")
+
+        self.assertEqual(source, "pip")
+        self.assertEqual(
+            commands,
+            [
+                [
+                    seeed_zephyr.sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--upgrade",
+                    "seeed-zephyr==0.2.0",
+                ]
+            ],
+        )
+
     def test_cmd_update_uses_repo_root_when_available(self) -> None:
         repo = Path("/tmp/seeed-zephyr-base")
+        args = mock.MagicMock()
+        args.version = None
         with mock.patch.object(seeed_zephyr, "_REPO_ROOT", repo):
             with mock.patch.object(seeed_zephyr, "update_repo_checkout") as update_repo:
                 with mock.patch.object(seeed_zephyr, "update_installed_package") as update_package:
-                    seeed_zephyr.cmd_update(mock.MagicMock())
+                    seeed_zephyr.cmd_update(args)
 
         update_repo.assert_called_once_with(repo)
         update_package.assert_not_called()
 
+    def test_cmd_update_uses_repo_version_when_requested(self) -> None:
+        repo = Path("/tmp/seeed-zephyr-base")
+        args = mock.MagicMock()
+        args.version = "0.2.0"
+        with mock.patch.object(seeed_zephyr, "_REPO_ROOT", repo):
+            with mock.patch.object(seeed_zephyr, "checkout_repo_version") as checkout:
+                seeed_zephyr.cmd_update(args)
+
+        checkout.assert_called_once_with(repo, "0.2.0")
+
     def test_cmd_update_uses_package_update_without_repo_root(self) -> None:
+        args = mock.MagicMock()
+        args.version = None
         with mock.patch.object(seeed_zephyr, "_REPO_ROOT", None):
             with mock.patch.object(seeed_zephyr, "update_repo_checkout") as update_repo:
                 with mock.patch.object(seeed_zephyr, "update_installed_package") as update_package:
-                    seeed_zephyr.cmd_update(mock.MagicMock())
+                    seeed_zephyr.cmd_update(args)
 
         update_repo.assert_not_called()
-        update_package.assert_called_once_with()
+        update_package.assert_called_once_with(None)
+
+
+class InfoCommandTests(unittest.TestCase):
+    def test_current_info_contains_traceability_fields(self) -> None:
+        with mock.patch.object(seeed_zephyr, "cli_version", return_value="0.3.0"):
+            with mock.patch.object(seeed_zephyr, "package_source", return_value="pip"):
+                with mock.patch.object(seeed_zephyr, "_REPO_ROOT", None):
+                    with mock.patch.object(seeed_zephyr, "package_build_commit", return_value="abc123"):
+                        data = seeed_zephyr.current_info()
+
+        self.assertEqual(data["cli_version"], "0.3.0")
+        self.assertEqual(data["install_mode"], "package")
+        self.assertEqual(data["package_source"], "pip")
+        self.assertEqual(data["data_source"], "bundled")
+        self.assertEqual(data["git_commit"], "abc123")
+        self.assertEqual(data["zephyr_baseline"], seeed_zephyr.ZEPHYR_BASELINE)
+
+    def test_cmd_info_json_outputs_machine_readable_data(self) -> None:
+        args = mock.MagicMock()
+        args.as_json = True
+        payload = {"cli_version": "0.3.0", "install_mode": "package"}
+        buffer = io.StringIO()
+
+        with mock.patch.object(seeed_zephyr, "current_info", return_value=payload):
+            with contextlib.redirect_stdout(buffer):
+                seeed_zephyr.cmd_info(args)
+
+        self.assertEqual(json.loads(buffer.getvalue()), payload)
 
 
 class JsonOutputTests(unittest.TestCase):
