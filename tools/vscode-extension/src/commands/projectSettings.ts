@@ -17,6 +17,12 @@ interface SerialPortInfo {
   description: string;
 }
 
+interface PortPick extends vscode.QuickPickItem {
+  autoDetect?: boolean;
+  port?: string;
+  portDescription?: string;
+}
+
 const STORAGE_PREFIX = "seeedZephyr.projectSettings:";
 
 export function getProjectSettings(
@@ -89,7 +95,7 @@ export async function resolveProjectPort(
   }
   const current = getEffectivePort(context, project);
 
-  if (ports.length === 0) {
+  if (ports.length === 0 && !options.forcePick) {
     await updateProjectSettings(context, project, {
       port: undefined,
       portDescription: undefined,
@@ -105,7 +111,7 @@ export async function resolveProjectPort(
     return currentPort.device;
   }
 
-  if (ports.length === 1) {
+  if (ports.length === 1 && !options.forcePick) {
     await updateProjectSettings(context, project, {
       port: ports[0].device,
       portDescription: ports[0].description,
@@ -114,19 +120,39 @@ export async function resolveProjectPort(
     return ports[0].device;
   }
 
-  const pick = await vscode.window.showQuickPick(
-    ports.map((port) => ({
+  const choices: PortPick[] = [
+    {
+      label: "Auto Detector",
+      description: "detect at upload or monitor time",
+      autoDetect: true,
+      picked: !current,
+    },
+    ...ports.map((port) => ({
       label: port.device,
       description: port.description,
       port: port.device,
       portDescription: port.description,
       picked: port.device === current,
     })),
+  ];
+
+  const pick = await vscode.window.showQuickPick(
+    choices,
     {
+      title: "Select Serial Port",
       placeHolder: "Select the connected board serial port",
     },
   );
   if (!pick) {
+    return undefined;
+  }
+
+  if (pick.autoDetect) {
+    await updateProjectSettings(context, project, {
+      port: undefined,
+      portDescription: undefined,
+    });
+    void vscode.window.showInformationMessage("Serial port set to Auto Port.");
     return undefined;
   }
 
