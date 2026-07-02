@@ -30,7 +30,7 @@ seeed-zephyr list projects
 ```bash
 seeed-zephyr show board xiao_esp32c6
 seeed-zephyr show example boards/xiao_esp32c6/blinky
-seeed-zephyr show project xiao_esp32c6_grove_as5600_display
+seeed-zephyr show project xiao_esp32c6_grove_scd41_lcd_dashboard
 ```
 
 一句话总结: CLI 应解释一个资产需要什么、验证状态是什么。
@@ -41,7 +41,7 @@ seeed-zephyr show project xiao_esp32c6_grove_as5600_display
 seeed-zephyr build xiao_esp32c6
 seeed-zephyr flash xiao_esp32c6
 seeed-zephyr flash xiao_esp32c6 --monitor
-seeed-zephyr build-project xiao_esp32c6_grove_as5600_display
+seeed-zephyr build-project xiao_esp32c6_grove_scd41_lcd_dashboard
 ```
 
 build、flash、monitor 和 debug 的执行应委托给 Zephyr 的 `west` 命令或 Zephyr 模块自带工具。
@@ -53,8 +53,8 @@ CLI 应选择仓库资产和已验证 metadata，再交给 Zephyr 工具执行�
 
 ```bash
 seeed-zephyr validate metadata
-seeed-zephyr validate example examples/grove/grove_as5600/basic_read
-seeed-zephyr validate project projects/xiao_esp32c6_grove_as5600_display
+seeed-zephyr validate example examples/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+seeed-zephyr validate project projects/xiao_esp32c6_grove_scd41_lcd_dashboard
 ```
 
 一句话总结: 社区示例和项目需要自动结构检查和构建检查。
@@ -63,9 +63,9 @@ seeed-zephyr validate project projects/xiao_esp32c6_grove_as5600_display
 
 ```bash
 seeed-zephyr create \
-  --from example/grove/grove_as5600/basic_read \
+  --from example/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read \
   --board xiao_esp32c6 \
-  --output ./my-as5600-project
+  --output ./my-scd41-project
 ```
 
 生成应复制和改造已知可用资产。driver、引脚路由和源代码应来自已验证模板、示例或
@@ -96,7 +96,7 @@ overlay、引脚和配置的权威。
 ```json
 {
   "generator": "seeed-zephyr",
-  "source_asset": "examples/grove/grove_as5600/basic_read",
+  "source_asset": "examples/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read",
   "board": "xiao_esp32c6",
   "zephyr_version": "v4.4.0",
   "validation_status": "build-only"

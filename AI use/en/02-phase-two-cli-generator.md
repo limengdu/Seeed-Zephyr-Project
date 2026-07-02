@@ -33,7 +33,7 @@ anything.
 ```bash
 seeed-zephyr show board xiao_esp32c6
 seeed-zephyr show example boards/xiao_esp32c6/blinky
-seeed-zephyr show project xiao_esp32c6_grove_as5600_display
+seeed-zephyr show project xiao_esp32c6_grove_scd41_lcd_dashboard
 ```
 
 One-sentence summary: the CLI should explain what an asset needs and what its
@@ -45,7 +45,7 @@ validation status is.
 seeed-zephyr build xiao_esp32c6
 seeed-zephyr flash xiao_esp32c6
 seeed-zephyr flash xiao_esp32c6 --monitor
-seeed-zephyr build-project xiao_esp32c6_grove_as5600_display
+seeed-zephyr build-project xiao_esp32c6_grove_scd41_lcd_dashboard
 ```
 
 Build, flash, monitor, and debug execution should be delegated to Zephyr `west`
@@ -59,8 +59,8 @@ the CLI should use Zephyr tooling for execution.
 
 ```bash
 seeed-zephyr validate metadata
-seeed-zephyr validate example examples/grove/grove_as5600/basic_read
-seeed-zephyr validate project projects/xiao_esp32c6_grove_as5600_display
+seeed-zephyr validate example examples/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+seeed-zephyr validate project projects/xiao_esp32c6_grove_scd41_lcd_dashboard
 ```
 
 One-sentence summary: community examples and projects need automated structure
@@ -70,9 +70,9 @@ and build checks.
 
 ```bash
 seeed-zephyr create \
-  --from example/grove/grove_as5600/basic_read \
+  --from example/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read \
   --board xiao_esp32c6 \
-  --output ./my-as5600-project
+  --output ./my-scd41-project
 ```
 
 Generation should copy and adapt known-good assets. Drivers, pin routing, and
@@ -107,7 +107,7 @@ Every generated or copied project should include a snapshot such as:
 ```json
 {
   "generator": "seeed-zephyr",
-  "source_asset": "examples/grove/grove_as5600/basic_read",
+  "source_asset": "examples/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read",
   "board": "xiao_esp32c6",
   "zephyr_version": "v4.4.0",
   "validation_status": "build-only"

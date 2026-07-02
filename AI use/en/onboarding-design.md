@@ -19,7 +19,7 @@ projects as quickly as possible.
 The repository should support four entry points:
 
 - board-first: "I have XIAO ESP32C6. What can I run?"
-- Grove-first: "I have Grove AS5600. Which examples exist?"
+- Grove-first: "I have Grove DHT20. Which examples exist?"
 - capability-first: "I need I2C, BLE, Wi-Fi, ADC, display, or low power."
 - project-first: "I want a complete sensor/display/wireless project."
 

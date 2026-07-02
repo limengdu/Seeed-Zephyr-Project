@@ -1,0 +1,17 @@
+# Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
+id: grove_temperature_humidity_sensor_v2_dht20
+sku: "101020932"
+display_name: Grove - Temperature & Humidity Sensor V2.0 (DHT20)
+category: sensor
+interface: i2c
+default_address: "0x38"
+default_baud: null
+power_rail: 3v3
+zephyr_support: sensor_driver
+zephyr_compatible: aosong,dht20
+zephyr_driver: dht20
+required_configs:
+  - CONFIG_SENSOR=y
+  - CONFIG_I2C=y
+  - CONFIG_DHT20=y
+supported_templates: []

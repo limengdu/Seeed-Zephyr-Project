@@ -228,7 +228,7 @@ seeed-zephyr verify-hardware xiao_esp32c6  # 记录一次硬件观测结果
 
 能力目录同样收录了与 XIAO 搭配的 Grove 模块和扩展板，包含它们的接口、默认地址、供电轨，以及所需的 Zephyr 驱动和 Kconfig 选项。
 
-**Grove 模块：** AS5600 磁旋转编码器 · GPS（Air530） · GSR 传感器 · 超声波测距
+**Grove 模块：** Grove - Ultrasonic Distance Sensor · Grove - Soil Moisture Sensor · Grove - Temperature & Humidity Sensor V2.0 (DHT20) · Grove - CO2 & Temperature & Humidity Sensor (SCD41) · 1.47inch LCD Display Module
 
 **扩展板：** Grove Shield for XIAO · XIAO 扩展板 · XIAO 圆形显示屏
 

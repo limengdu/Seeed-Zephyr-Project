@@ -313,12 +313,19 @@ def read_flat_yaml(path: Path) -> dict[str, str]:
             continue
 
         key, value = line.split(":", 1)
-        value = value.strip()
-        if value in {"[]", "null"}:
-            value = ""
-        values[key.strip()] = value
+        values[key.strip()] = read_flat_yaml_scalar(value.strip())
 
     return values
+
+
+def read_flat_yaml_scalar(value: str) -> str:
+    # Normalizes the flat scalar syntax used by repository metadata.
+    # 规范化仓库元数据使用的扁平标量语法。
+    if value in {"[]", "null"}:
+        return ""
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
 
 
 def board_records() -> list[dict[str, str]]:

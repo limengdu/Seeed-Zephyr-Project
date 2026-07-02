@@ -1,15 +1,15 @@
 # Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
-id: grove_ultrasonic_ranger
-sku: "101020010"
-display_name: Grove - Ultrasonic Ranger
+id: grove_soil_moisture_sensor
+sku: "101020008"
+display_name: Grove - Soil Moisture Sensor
 category: sensor
-interface: gpio
+interface: analog
 default_address: null
 default_baud: null
 power_rail: 3v3
-zephyr_support: custom
+zephyr_support: adc
 zephyr_compatible: null
 zephyr_driver: null
 required_configs:
-  - CONFIG_GPIO=y
+  - CONFIG_ADC=y
 supported_templates: []

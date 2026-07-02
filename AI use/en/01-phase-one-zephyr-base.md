@@ -96,7 +96,7 @@ Projects combine multiple parts into a real scenario.
 
 Examples:
 
-- XIAO ESP32C6 + Grove AS5600 + display knob UI
+- XIAO ESP32C6 + Grove SCD41 + 1.47inch LCD dashboard
 - XIAO nRF52840 + sensor + BLE broadcaster
 - XIAO MG24 + button + low-power wake flow
 - XIAO ESP32S3 + display + Wi-Fi dashboard
@@ -145,14 +145,14 @@ examples/
       blinky/
       i2c_scan/
   grove/
-    grove_as5600/
+    grove_scd41_co2_temperature_humidity_sensor/
       basic_read/
   expansion_boards/
     xiao_expansion_board/
       display_basic/
 
 projects/
-  xiao_esp32c6_grove_as5600_display/
+  xiao_esp32c6_grove_scd41_lcd_dashboard/
 
 metadata/
   boards/

@@ -228,7 +228,7 @@ For the complete walk-through, see the [Getting Started guide](docs/en/getting-s
 
 The capability catalog also tracks the Grove modules and expansion boards that pair with XIAO, including their interface, default address, power rail, and the Zephyr driver and Kconfig options they need.
 
-**Grove modules:** AS5600 magnetic rotary encoder · GPS (Air530) · GSR sensor · Ultrasonic Ranger
+**Grove modules:** Grove - Ultrasonic Distance Sensor · Grove - Soil Moisture Sensor · Grove - Temperature & Humidity Sensor V2.0 (DHT20) · Grove - CO2 & Temperature & Humidity Sensor (SCD41) · 1.47inch LCD Display Module
 
 **Expansion boards:** Grove Shield for XIAO · XIAO Expansion Board · XIAO Round Display
 

@@ -1,15 +1,15 @@
 # Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
-id: grove_gsr
-sku: "101020052"
-display_name: Grove - GSR Sensor
+id: grove_ultrasonic_distance_sensor
+sku: "101020010"
+display_name: Grove - Ultrasonic Distance Sensor
 category: sensor
-interface: analog
+interface: gpio
 default_address: null
 default_baud: null
 power_rail: 3v3
-zephyr_support: adc
+zephyr_support: custom
 zephyr_compatible: null
 zephyr_driver: null
 required_configs:
-  - CONFIG_ADC=y
+  - CONFIG_GPIO=y
 supported_templates: []

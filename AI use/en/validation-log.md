@@ -30,6 +30,7 @@ Tool: `tools/validate_metadata/validate.py` (requires `pyyaml`).
 | 2026-06-19 | 18 passed, 0 failed, 18 total | 11 boards, 4 Grove modules, 3 expansion boards |
 | 2026-06-20 | 18 passed, 0 failed, 18 total | Re-run through `~/zephyrproject/.venv/bin/python`; host `python3` lacks `pyyaml` |
 | 2026-06-20 | 29 passed, 0 failed, 29 total | 18 metadata files plus 11 repository example descriptors |
+| 2026-07-02 | 30 passed, 0 failed, 30 total | 11 boards, 5 Grove modules, 3 expansion boards, 11 repository example descriptors |
 
 ## Toolchain Setup
 

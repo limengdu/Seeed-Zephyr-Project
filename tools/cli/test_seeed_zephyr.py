@@ -1007,7 +1007,20 @@ class JsonOutputTests(unittest.TestCase):
 
     def test_list_grove_json(self) -> None:
         data = self._run_json(seeed_zephyr.cmd_list_grove)
-        self.assertGreaterEqual(len(data), 4)
+        ids = {module["id"] for module in data}
+        self.assertEqual(
+            ids,
+            {
+                "grove_ultrasonic_distance_sensor",
+                "grove_soil_moisture_sensor",
+                "grove_temperature_humidity_sensor_v2_dht20",
+                "grove_scd41_co2_temperature_humidity_sensor",
+                "lcd_1_47inch_display_module",
+            },
+        )
+        skus = {module["id"]: module["sku"] for module in data}
+        self.assertEqual(skus["grove_scd41_co2_temperature_humidity_sensor"], "101020952")
+        self.assertEqual(skus["lcd_1_47inch_display_module"], "104990803")
         self.assertTrue(all("interface" in module for module in data))
 
     def test_list_expansion_json(self) -> None:

@@ -1,0 +1,17 @@
+# Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
+id: lcd_1_47inch_display_module
+sku: "104990803"
+display_name: 1.47inch LCD Display Module, Rounded Corners, 172x320 Resolution, SPI Interface
+category: display
+interface: spi
+default_address: null
+default_baud: null
+power_rail: 3v3
+zephyr_support: display_driver
+zephyr_compatible: sitronix,st7789v
+zephyr_driver: st7789v
+required_configs:
+  - CONFIG_DISPLAY=y
+  - CONFIG_SPI=y
+  - CONFIG_ST7789V=y
+supported_templates: []

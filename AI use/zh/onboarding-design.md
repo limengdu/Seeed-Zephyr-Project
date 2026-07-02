@@ -17,7 +17,7 @@
 仓库应支持四种入口:
 
 - 开发板优先: "我有 XIAO ESP32C6，可以跑什么？"
-- Grove 优先: "我有 Grove AS5600，有哪些示例？"
+- Grove 优先: "我有 Grove DHT20，有哪些示例？"
 - 能力优先: "我需要 I2C、BLE、Wi-Fi、ADC、display 或 low power。"
 - 项目优先: "我想要完整的 sensor/display/wireless 项目。"
 

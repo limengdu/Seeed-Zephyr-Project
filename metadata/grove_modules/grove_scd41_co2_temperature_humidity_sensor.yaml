@@ -1,0 +1,17 @@
+# Authored Grove module metadata (product layer). Derived status lives in metadata/status/.
+id: grove_scd41_co2_temperature_humidity_sensor
+sku: "101020952"
+display_name: Grove - CO2 & Temperature & Humidity Sensor (SCD41)
+category: sensor
+interface: i2c
+default_address: "0x62"
+default_baud: null
+power_rail: 3v3
+zephyr_support: sensor_driver
+zephyr_compatible: sensirion,scd41
+zephyr_driver: scd4x
+required_configs:
+  - CONFIG_SENSOR=y
+  - CONFIG_I2C=y
+  - CONFIG_SCD4X=y
+supported_templates: []
