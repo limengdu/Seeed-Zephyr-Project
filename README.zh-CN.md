@@ -215,7 +215,7 @@ seeed-zephyr list ports --json
 
 ```sh
 seeed-zephyr update
-seeed-zephyr update --version 0.3.0
+seeed-zephyr update --version 0.3.1
 seeed-zephyr info
 ```
 
