@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -63,6 +64,13 @@ GROVE_DIR = (_REPO_ROOT / "metadata" / "grove_modules") if _REPO_ROOT else (_PKG
 EXPANSION_DIR = (
     (_REPO_ROOT / "metadata" / "expansion_boards") if _REPO_ROOT else (_PKG_DATA / "expansion_boards")
 )
+FORM_FACTOR_DIR = (
+    (_REPO_ROOT / "metadata" / "form_factors") if _REPO_ROOT else (_PKG_DATA / "form_factors")
+)
+# Board-agnostic Grove examples live under examples/grove/<module_id>/<demo>/.
+# 与具体板子解耦的 Grove 示例位于 examples/grove/<module_id>/<demo>/。
+GROVE_EXAMPLES_DIR = (_REPO_ROOT / "examples" / "grove") if _REPO_ROOT else (_PKG_DATA / "grove_examples")
+STATUS_DIR = (_REPO_ROOT / "metadata" / "status") if _REPO_ROOT else (_PKG_DATA / "status")
 BUILD_MATRIX_SCRIPT = (_REPO_ROOT / "tools" / "build_matrix" / "run.sh") if _REPO_ROOT else None
 HARDWARE_LOG = (_REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md") if _REPO_ROOT else None
 # Zephyr baseline version recorded in generated project snapshots.
@@ -161,33 +169,59 @@ def build_parser() -> argparse.ArgumentParser:
     add_json_flag(show_board)
     show_board.set_defaults(func=cmd_show_board)
     show_example = show_subparsers.add_parser("example", help="Show example details.")
-    show_example.add_argument("board_id", help="Board id such as xiao_esp32c6.")
-    show_example.add_argument("demo", help="Demo name such as blinky.")
+    show_example.add_argument(
+        "board_id",
+        help="Board id (for a board example), or grove/<module>/<demo> for a Grove example.",
+    )
+    show_example.add_argument(
+        "demo",
+        nargs="?",
+        default=None,
+        help="Demo name for a board example, such as blinky.",
+    )
     add_json_flag(show_example)
     show_example.set_defaults(func=cmd_show_example)
+    show_pins = show_subparsers.add_parser(
+        "pins", help="Show pin states for a board and example (data source for the pinout diagram)."
+    )
+    show_pins.add_argument("board_id", help="Board id such as xiao_nrf52840.")
+    show_pins.add_argument(
+        "example_ref",
+        help="Example reference: grove/<module>/<demo>, or a board demo name such as blinky.",
+    )
+    add_json_flag(show_pins)
+    show_pins.set_defaults(func=cmd_show_pins)
 
-    build = subparsers.add_parser("build", help="Build a board example.")
+    build = subparsers.add_parser("build", help="Build a board or Grove example.")
     build.add_argument("board_id", help="Board id such as xiao_esp32c6.")
     build.add_argument(
         "example",
         nargs="?",
         default=None,
-        help="Example name such as blinky. Omit to select interactively.",
+        help="Board demo name (blinky) or grove/<module>/<demo>. Omit to select interactively.",
     )
     build.add_argument(
         "--app",
         default=None,
         help="Path to an external Zephyr application directory.",
     )
+    build.add_argument(
+        "--pin",
+        dest="pins",
+        action="append",
+        default=None,
+        metavar="Dn|role=Dn",
+        help="Grove pin assignment, e.g. --pin D2 or --pin data=D2. Repeatable per role.",
+    )
     build.set_defaults(func=cmd_build)
 
-    flash = subparsers.add_parser("flash", help="Build and flash a board example.")
+    flash = subparsers.add_parser("flash", help="Build and flash a board or Grove example.")
     flash.add_argument("board_id", help="Board id such as xiao_esp32c6.")
     flash.add_argument(
         "example",
         nargs="?",
         default=None,
-        help="Example name such as blinky. Omit to select interactively.",
+        help="Board demo name (blinky) or grove/<module>/<demo>. Omit to select interactively.",
     )
     flash.add_argument(
         "--app",
@@ -210,6 +244,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=115200,
         help="Serial baud rate for --monitor (default: 115200).",
     )
+    flash.add_argument(
+        "--pin",
+        dest="pins",
+        action="append",
+        default=None,
+        metavar="Dn|role=Dn",
+        help="Grove pin assignment, e.g. --pin D2 or --pin data=D2. Repeatable per role.",
+    )
     flash.set_defaults(func=cmd_flash)
 
     debug = subparsers.add_parser("debug", help="Build and start a board debug session.")
@@ -218,12 +260,20 @@ def build_parser() -> argparse.ArgumentParser:
         "example",
         nargs="?",
         default=None,
-        help="Example name such as blinky. Omit to select interactively.",
+        help="Board demo name (blinky) or grove/<module>/<demo>. Omit to select interactively.",
     )
     debug.add_argument(
         "--app",
         default=None,
         help="Path to an external Zephyr application directory.",
+    )
+    debug.add_argument(
+        "--pin",
+        dest="pins",
+        action="append",
+        default=None,
+        metavar="Dn|role=Dn",
+        help="Grove pin assignment, e.g. --pin D2 or --pin data=D2. Repeatable per role.",
     )
     debug.set_defaults(func=cmd_debug)
 
@@ -282,6 +332,14 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Write into the output directory even when it is not empty.",
     )
+    create.add_argument(
+        "--pin",
+        dest="pins",
+        action="append",
+        default=None,
+        metavar="Dn|role=Dn",
+        help="Grove pin assignment baked into the generated project, e.g. --pin D2.",
+    )
     create.set_defaults(func=cmd_create)
 
     update = subparsers.add_parser(
@@ -326,6 +384,256 @@ def read_flat_yaml_scalar(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         return value[1:-1]
     return value
+
+
+def parse_scalar_or_list(value: str) -> str | list[str]:
+    # Parses an inline YAML scalar or flow list such as "[D0, D1, D2]".
+    # 解析行内 YAML 标量或流式列表，如 "[D0, D1, D2]"。
+    value = value.strip()
+    if value == "[]":
+        return []
+    if value.startswith("[") and value.endswith("]"):
+        inner = value[1:-1].strip()
+        if not inner:
+            return []
+        return [read_flat_yaml_scalar(part.strip()) for part in inner.split(",")]
+    return read_flat_yaml_scalar(value)
+
+
+def read_structured_yaml(path: Path) -> dict[str, object]:
+    # Parses scalars, flow lists, block string lists, and one-level block list-of-mappings.
+    # Zero-dependency; covers grove example.yaml and board pin metadata.
+    # 解析标量、流式列表、块字符串列表和一层块映射列表；零依赖；覆盖 grove example.yaml 与板引脚 metadata。
+    values: dict[str, object] = {}
+    lines = path.read_text(encoding="utf-8").splitlines()
+    i = 0
+    n = len(lines)
+    while i < n:
+        raw = lines[i]
+        if not raw.strip() or raw.strip().startswith("#"):
+            i += 1
+            continue
+        if not raw[0].isspace() and ":" in raw:
+            key, rest = raw.split(":", 1)
+            key = key.strip()
+            rest = rest.strip()
+            if rest == "":
+                if i + 1 < n and lines[i + 1].lstrip().startswith("-"):
+                    # _parse_yaml_block_list returns i pointing at the next unprocessed line,
+                    # so the outer loop must continue from there without an extra increment.
+                    # _parse_yaml_block_list 返回的 i 已指向下一条未处理行,外层循环直接从该行继续。
+                    items, i = _parse_yaml_block_list(lines, i + 1)
+                    values[key] = items
+                else:
+                    values[key] = ""
+                    i += 1
+            else:
+                values[key] = parse_scalar_or_list(rest)
+                i += 1
+        else:
+            i += 1
+    return values
+
+
+def _parse_yaml_block_list(lines: list[str], start: int) -> tuple[list[object], int]:
+    items: list[object] = []
+    i = start
+    n = len(lines)
+    while i < n:
+        raw = lines[i]
+        if not raw.strip() or raw.strip().startswith("#"):
+            i += 1
+            continue
+        if not raw[0].isspace():
+            break
+        stripped = raw.strip()
+        if not stripped.startswith("-"):
+            break
+        after_dash = stripped[1:].strip()
+        dash_indent = len(raw) - len(raw.lstrip(" \t"))
+        if ":" in after_dash and not _starts_quoted(after_dash):
+            mapping: dict[str, object] = {}
+            k, v = after_dash.split(":", 1)
+            mapping[k.strip()] = parse_scalar_or_list(v)
+            i += 1
+            while i < n:
+                sub = lines[i]
+                if not sub.strip() or sub.strip().startswith("#"):
+                    i += 1
+                    continue
+                sub_indent = len(sub) - len(sub.lstrip(" \t"))
+                if sub_indent <= dash_indent:
+                    break
+                sub_stripped = sub.strip()
+                if sub_stripped.startswith("-"):
+                    break
+                if ":" in sub_stripped:
+                    sk, sv = sub_stripped.split(":", 1)
+                    mapping[sk.strip()] = parse_scalar_or_list(sv)
+                i += 1
+            items.append(mapping)
+        else:
+            items.append(read_flat_yaml_scalar(after_dash))
+            i += 1
+    return items, i
+
+
+def _starts_quoted(text: str) -> bool:
+    return bool(text) and text[0] in {"'", '"'}
+
+
+def _yaml_indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" \t"))
+
+
+def load_yaml_subset(text: str) -> object:
+    # Minimal YAML-subset parser: mappings, block lists (scalar and mapping items),
+    # flow lists, and scalars. Zero-dependency; used for the nested form-factor file.
+    # 极简 YAML 子集解析器:映射、块列表(标量项与映射项)、流式列表、标量。零依赖;用于嵌套的形态因子文件。
+    lines = [ln for ln in text.splitlines() if ln.strip() and not ln.strip().startswith("#")]
+    if not lines:
+        return {}
+    value, _ = _yaml_parse_block(lines, 0, -1)
+    return value if isinstance(value, dict) else {}
+
+
+def _yaml_parse_block(lines: list[str], i: int, parent_indent: int) -> tuple[object, int]:
+    indent = _yaml_indent(lines[i])
+    content = lines[i][indent:]
+    if content.lstrip().startswith("-"):
+        return _yaml_parse_list(lines, i, indent)
+    return _yaml_parse_mapping(lines, i, indent)
+
+
+def _yaml_parse_mapping(lines: list[str], i: int, indent: int) -> tuple[dict[str, object], int]:
+    mapping: dict[str, object] = {}
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        ind = _yaml_indent(line)
+        if ind < indent:
+            break
+        if ind != indent:
+            i += 1
+            continue
+        content = line[ind:]
+        if content.lstrip().startswith("-"):
+            break
+        key, rest = content.split(":", 1)
+        key = key.strip()
+        rest = rest.strip()
+        if rest:
+            mapping[key] = parse_scalar_or_list(rest)
+            i += 1
+        else:
+            j = i + 1
+            if j < n and _yaml_indent(lines[j]) > ind:
+                mapping[key], i = _yaml_parse_block(lines, j, ind)
+            else:
+                mapping[key] = ""
+                i += 1
+    return mapping, i
+
+
+def _yaml_parse_list(lines: list[str], i: int, indent: int) -> tuple[list[object], int]:
+    items: list[object] = []
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        ind = _yaml_indent(line)
+        if ind < indent:
+            break
+        if ind != indent:
+            i += 1
+            continue
+        content = line[ind:]
+        stripped = content.strip()
+        if not stripped.startswith("-"):
+            break
+        after = stripped[1:]
+        after_lstrip = after.lstrip()
+        if after_lstrip == "":
+            j = i + 1
+            if j < n and _yaml_indent(lines[j]) > ind:
+                value, i = _yaml_parse_block(lines, j, ind)
+                items.append(value)
+            else:
+                items.append("")
+                i += 1
+        elif ":" in after_lstrip and not _starts_quoted(after_lstrip):
+            k, v = after_lstrip.split(":", 1)
+            mapping: dict[str, object] = {}
+            if v.strip():
+                mapping[k.strip()] = parse_scalar_or_list(v)
+                i += 1
+            else:
+                j = i + 1
+                if j < n and _yaml_indent(lines[j]) > ind + 1:
+                    value, i = _yaml_parse_block(lines, j, ind)
+                    mapping[k.strip()] = value
+                else:
+                    mapping[k.strip()] = ""
+                    i += 1
+            # Consume subsequent deeper-indented lines as additional mapping entries.
+            # 继续消费更深缩进的行作为该映射项的其余字段。
+            while i < n:
+                nl = lines[i]
+                if not nl.strip():
+                    i += 1
+                    continue
+                ni = _yaml_indent(nl)
+                if ni <= ind:
+                    break
+                nc = nl[ni:]
+                if nc.lstrip().startswith("-"):
+                    break
+                if ":" in nc:
+                    nk, nv = nc.split(":", 1)
+                    if nv.strip():
+                        mapping[nk.strip()] = parse_scalar_or_list(nv)
+                        i += 1
+                    else:
+                        j = i + 1
+                        if j < n and _yaml_indent(lines[j]) > ni:
+                            value, i = _yaml_parse_block(lines, j, ni)
+                            mapping[nk.strip()] = value
+                        else:
+                            mapping[nk.strip()] = ""
+                            i += 1
+                else:
+                    i += 1
+            items.append(mapping)
+        else:
+            items.append(read_flat_yaml_scalar(after_lstrip))
+            i += 1
+    return items, i
+
+
+def load_form_factor(form_factor_id: str = "xiao") -> dict[str, object]:
+    path = FORM_FACTOR_DIR / f"{form_factor_id}.yaml"
+    if not path.is_file():
+        raise CliError(f"Form factor metadata not found: {path}")
+    data = load_yaml_subset(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise CliError(f"Form factor metadata is malformed: {path}")
+    return data
+
+
+def read_example_status(example_id: str) -> dict[str, str]:
+    # Reads the example x board status matrix from metadata/status/<example_id>.yaml.
+    # 从 metadata/status/<example_id>.yaml 读取"示例 x 板子"状态矩阵。
+    path = STATUS_DIR / f"{example_id}.yaml"
+    if not path.is_file():
+        return {}
+    values = read_structured_yaml(path)
+    boards = values.get("boards")
+    if not isinstance(boards, list):
+        return {}
+    statuses: dict[str, str] = {}
+    for entry in boards:
+        if isinstance(entry, dict) and entry.get("board_id") and entry.get("status"):
+            statuses[str(entry["board_id"])] = str(entry["status"])
+    return statuses
 
 
 def board_records() -> list[dict[str, str]]:
@@ -392,14 +700,24 @@ def resolve_board_examples(board_id: str) -> list[dict[str, str]]:
     return examples
 
 
-def select_example(board_id: str, example_name: str | None = None) -> dict[str, str]:
+def select_example(board_id: str, example_name: str | None = None) -> dict[str, object]:
     # Selects an example by name, or interactively when multiple are available.
-    # 按名称选择 example，多个可用时交互选择。
+    # Accepts a plain board demo name ("blinky") or a grove reference ("grove/<module>/<demo>").
+    # 按名称选择 example，多个可用时交互选择；接受板级 demo 名或 grove 引用。
     require_board(board_id)
+
+    if example_name is not None and example_name.startswith("grove/"):
+        return select_grove_example(board_id, example_name)
+
     examples = resolve_board_examples(board_id)
     supported = [e for e in examples if e.get("validation_status") != "unsupported"]
 
     if not examples:
+        if example_name is not None and GROVE_EXAMPLES_DIR.is_dir():
+            raise CliError(
+                f"No board example found for {board_id}. "
+                "Use a grove reference like grove/<module>/<demo> for a Grove module."
+            )
         raise CliError(f"No repository example found for {board_id}.")
     if not supported:
         raise CliError(f"{board_id} is unsupported in the selected Zephyr baseline.")
@@ -435,6 +753,204 @@ def select_example(board_id: str, example_name: str | None = None) -> dict[str, 
         print(f"  Enter a number between 1 and {len(supported)}.", flush=True)
 
 
+def select_grove_example(board_id: str, ref: str) -> dict[str, object]:
+    # Resolves a grove/<module>/<demo> reference for a specific board.
+    # 为指定板解析 grove/<module>/<demo> 引用。
+    module_id, demo = parse_grove_ref(ref)
+
+    if not demo:
+        demos = sorted(
+            p.parent.name
+            for p in grove_example_dirs()
+            if p.parent.parent.name == module_id
+        )
+        if not demos:
+            raise CliError(
+                f"Grove module '{module_id}' has no examples. "
+                "Run 'seeed-zephyr list grove' to see available modules."
+            )
+        if len(demos) == 1:
+            demo = demos[0]
+        else:
+            raise CliError(
+                f"Specify a demo for {module_id}. Available: {', '.join(demos)}."
+            )
+        ref = f"{module_id}/{demo}"
+
+    example = resolve_grove_example(module_id, demo)
+    if not grove_supports_board(example, board_id):
+        raise CliError(
+            f"Grove example {module_id}/{demo} excludes board '{board_id}'. "
+            f"Excluded boards: {', '.join(grove_excluded_boards(example)) or 'none'}."
+        )
+    return example
+
+
+# --- Grove pin assignment -----------------------------------------------------
+# A selectable Grove module declares pin roles (signal / data / clock ...). The CLI
+# computes the valid pin set per board (declared allowed minus board reserved pins)
+# and materializes a devicetree overlay from a template for the build.
+# 可选引脚的 Grove 模块声明引脚角色；CLI 按板计算有效引脚集合，并由模板生成 devicetree overlay。
+
+
+def pin_index(pin: str) -> int:
+    # Maps a physical pin name such as "D2" to its connector position index.
+    # 将物理引脚名（如 D2）映射为 connector 位置索引。
+    pin = pin.strip().upper()
+    match = re.fullmatch(r"D(\d+)", pin)
+    if not match:
+        raise CliError(f"Invalid pin '{pin}'. Use the form D0..D10.")
+    index = int(match.group(1))
+    if index < 0 or index > 15:
+        raise CliError(f"Pin '{pin}' is out of the XIAO connector range.")
+    return index
+
+
+def board_reserved_pins(board_id: str) -> dict[str, str]:
+    values = read_structured_yaml(BOARD_DIR / f"{board_id}.yaml")
+    reserved = values.get("reserved_pins")
+    if not isinstance(reserved, list):
+        return {}
+    result: dict[str, str] = {}
+    for entry in reserved:
+        if isinstance(entry, dict) and entry.get("pin") and entry.get("reason"):
+            result[str(entry["pin"])] = str(entry["reason"])
+    return result
+
+
+def board_analog_pins(board_id: str) -> set[str]:
+    values = read_structured_yaml(BOARD_DIR / f"{board_id}.yaml")
+    analog = values.get("analog_pins")
+    if isinstance(analog, list):
+        return {str(p) for p in analog}
+    return set()
+
+
+def board_pin_map(board_id: str) -> dict[str, str]:
+    # Official Dn -> chip pin name baseline from board metadata (audits upstream dtsi).
+    # 来自板 metadata 的官方 Dn -> 芯片引脚名基准表(用于审计上游 dtsi)。
+    values = read_structured_yaml(BOARD_DIR / f"{board_id}.yaml")
+    pin_map = values.get("pin_map")
+    if not isinstance(pin_map, list):
+        return {}
+    result: dict[str, str] = {}
+    for entry in pin_map:
+        if isinstance(entry, dict) and entry.get("pin") and entry.get("chip_pin"):
+            result[str(entry["pin"])] = str(entry["chip_pin"])
+    return result
+
+
+def resolve_pin_assignment(
+    example: dict[str, object], board_id: str, pins_arg: list[str] | None
+) -> dict[str, str]:
+    # Validates user-supplied --pin values against the example and board, then returns
+    # a {role: pin} map. fixed-bus examples reject --pin; selectable examples default
+    # any unassigned role.
+    # 校验 --pin 取值并返回 {role: pin}；fixed-bus 示例拒绝 --pin，selectable 示例对未指定角色用默认值。
+    policy = example.get("pin_policy")
+    if policy != "selectable":
+        if pins_arg:
+            raise CliError(
+                f"This example uses pin_policy={policy}; --pin is not applicable. "
+                "Fixed-bus modules connect to the XIAO I2C/SPI/UART pins directly."
+            )
+        return {}
+
+    declared = example.get("pins")
+    if not isinstance(declared, list) or not declared:
+        raise CliError("Example declares pin_policy=selectable but lists no pins.")
+    roles: dict[str, dict[str, object]] = {}
+    for spec in declared:
+        if isinstance(spec, dict) and spec.get("role"):
+            roles[str(spec["role"])] = spec
+    if not roles:
+        raise CliError("Example declares pin_policy=selectable but lists no pin roles.")
+
+    reserved = board_reserved_pins(board_id)
+    single_role: str | None = next(iter(roles)) if len(roles) == 1 else None
+    assignments: dict[str, str] = {}
+
+    for item in pins_arg or []:
+        if "=" in item:
+            role, pin = item.split("=", 1)
+            role, pin = role.strip(), pin.strip()
+        else:
+            if not single_role:
+                raise CliError(
+                    f"Use --pin role=Dn for this module. Roles: {', '.join(sorted(roles))}."
+                )
+            role, pin = single_role, item.strip()
+        if role not in roles:
+            raise CliError(f"Unknown pin role '{role}'. Roles: {', '.join(sorted(roles))}.")
+        spec = roles[role]
+        allowed = [str(p) for p in (spec.get("allowed") or [])]
+        if pin not in allowed:
+            raise CliError(
+                f"Pin '{pin}' is not allowed for role '{role}'. Allowed: {', '.join(allowed)}."
+            )
+        if pin in reserved:
+            available = [p for p in allowed if p not in reserved]
+            raise CliError(
+                f"Pin '{pin}' is reserved on {board_id} ({reserved[pin]}). "
+                f"Available for '{role}': {', '.join(available)}."
+            )
+        assignments[role] = pin
+
+    for role, spec in roles.items():
+        if role in assignments:
+            continue
+        default = str(spec.get("default", ""))
+        allowed = [str(p) for p in (spec.get("allowed") or [])]
+        if default in reserved:
+            available = [p for p in allowed if p not in reserved]
+            raise CliError(
+                f"Default pin '{default}' for role '{role}' is reserved on {board_id} "
+                f"({reserved[default]}). Specify --pin {role}=<Dn>. "
+                f"Available: {', '.join(available)}."
+            )
+        assignments[role] = default
+    return assignments
+
+
+def generate_pin_overlay(example: dict[str, object], assignments: dict[str, str]) -> str | None:
+    # Renders pins/pin.overlay.in with @PIN_<ROLE>@ placeholders into a temp overlay.
+    # 将 pins/pin.overlay.in 中的 @PIN_<ROLE>@ 占位符替换为引脚索引，写入临时 overlay。
+    if not assignments:
+        return None
+    example_dir = Path(str(example["path"]))
+    template = example_dir / "pins" / "pin.overlay.in"
+    if not template.is_file():
+        raise CliError(
+            f"Example declares selectable pins but has no pins/pin.overlay.in template at {template}."
+        )
+    text = template.read_text(encoding="utf-8")
+    for role, pin in assignments.items():
+        placeholder = f"@PIN_{role.upper()}@"
+        if placeholder not in text:
+            raise CliError(
+                f"Pin overlay template {template} is missing placeholder '{placeholder}' "
+                f"for role '{role}'."
+            )
+        text = text.replace(placeholder, str(pin_index(pin)))
+    fd, name = tempfile.mkstemp(prefix="grove_pin_", suffix=".overlay")
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(text)
+    return name
+
+
+def resolve_build_example(args: argparse.Namespace) -> tuple[dict[str, object], str | None]:
+    # Shared by build/flash/debug: resolves the example, applies --pin, returns the
+    # example dict and an optional extra devicetree overlay path.
+    # build/flash/debug 共用：解析示例、应用 --pin、返回示例与可选 overlay 路径。
+    if args.app:
+        example = resolve_app_example(args.board_id, args.app)
+        return example, None
+    example = select_example(args.board_id, args.example)
+    assignments = resolve_pin_assignment(example, args.board_id, getattr(args, "pins", None))
+    overlay = generate_pin_overlay(example, assignments) if assignments else None
+    return example, overlay
+
+
 def resolve_app_example(board_id: str, app_path: str) -> dict[str, str]:
     # Builds an example dict from an external Zephyr application directory.
     # 从外部 Zephyr 应用目录构造 example 字典。
@@ -456,6 +972,69 @@ def resolve_app_example(board_id: str, app_path: str) -> dict[str, str]:
         "zephyr_target": board["target"],
         "validation_status": "external",
     }
+
+
+# --- Grove example resolution -------------------------------------------------
+# Grove examples are board-agnostic: one source tree builds for every XIAO board
+# via the upstream seeed_xiao_connector abstraction.
+# Grove 示例与板子解耦：一份源码通过上游 seeed_xiao_connector 抽象适配所有 XIAO 板。
+
+
+def grove_example_dirs() -> list[Path]:
+    if not GROVE_EXAMPLES_DIR.is_dir():
+        return []
+    return sorted(GROVE_EXAMPLES_DIR.glob("*/*/example.yaml"))
+
+
+def resolve_grove_example(module_id: str, demo: str) -> dict[str, object]:
+    example_file = GROVE_EXAMPLES_DIR / module_id / demo / "example.yaml"
+    if not example_file.is_file():
+        raise CliError(
+            f"Grove example '{module_id}/{demo}' not found. "
+            "Run 'seeed-zephyr list grove' to see available examples."
+        )
+    values = read_structured_yaml(example_file)
+    values["path"] = str(example_file.parent)
+    values["kind"] = "grove"
+    return values
+
+
+def resolve_grove_examples() -> list[dict[str, object]]:
+    examples: list[dict[str, object]] = []
+    for example_file in grove_example_dirs():
+        values = read_structured_yaml(example_file)
+        values["path"] = str(example_file.parent)
+        values["kind"] = "grove"
+        examples.append(values)
+    return examples
+
+
+def grove_excluded_boards(example: dict[str, object]) -> list[str]:
+    excluded = example.get("excluded_boards")
+    if isinstance(excluded, list):
+        return [str(item) for item in excluded]
+    return []
+
+
+def grove_supports_board(example: dict[str, object], board_id: str) -> bool:
+    return board_id not in grove_excluded_boards(example)
+
+
+def parse_grove_ref(ref: str) -> tuple[str, str]:
+    # Accepts grove/<module>/<demo>, grove/<module>, or <module>/<demo>.
+    # 接受 grove/<module>/<demo>、grove/<module> 或 <module>/<demo>。
+    parts = [p for p in ref.strip().strip("/").split("/") if p]
+    if parts and parts[0] == "grove":
+        parts = parts[1:]
+    if len(parts) == 1:
+        # Single-segment ref: treat as module id, pick its first demo later by caller.
+        return parts[0], ""
+    if len(parts) == 2:
+        return parts[0], parts[1]
+    raise CliError(
+        f"Invalid grove example reference: {ref}. "
+        "Use grove/<module_id>/<demo>, such as grove/grove_scd41_co2_temperature_humidity_sensor/basic_read."
+    )
 
 
 def require_board(board_id: str) -> dict[str, str]:
@@ -1306,12 +1885,15 @@ def ensure_chip_blobs(board: dict[str, str]) -> None:
     run_west(["blobs", "fetch", module])
 
 
-def run_west_build(board_id: str, example: dict[str, str]) -> None:
+def run_west_build(
+    board_id: str, example: dict[str, object], extra_overlay: str | None = None
+) -> None:
     # Builds the selected example through Zephyr's west command.
-    # 通过 Zephyr 的 west 命令构建选中的示例。
+    # An optional extra devicetree overlay stacks on top of app.overlay (used for --pin).
+    # 通过 Zephyr 的 west 命令构建选中的示例；可选的额外 overlay 叠加在 app.overlay 之上（用于 --pin）。
     board = require_board(board_id)
     target = example.get("zephyr_target") or board["target"]
-    example_dir = Path(example["path"])
+    example_dir = Path(str(example["path"]))
     display_name = _display_path(example_dir)
     ensure_chip_blobs(board)
     print(f"Building {display_name} for {target}...", flush=True)
@@ -1319,6 +1901,8 @@ def run_west_build(board_id: str, example: dict[str, str]) -> None:
     if board["vendor"] == "raspberrypi":
         command.extend(["-S", RP2_BOOTLOADER_SNIPPET])
     command.append(str(example_dir))
+    if extra_overlay:
+        command.extend(["--", f"-DEXTRA_DTC_OVERLAY_FILE={extra_overlay}"])
     run_west(command)
     print(f"Build succeeded: {display_name}", flush=True)
 
@@ -1597,28 +2181,54 @@ def cmd_list_examples(args: argparse.Namespace) -> None:
 
 
 def cmd_list_grove(args: argparse.Namespace) -> None:
-    # Lists Grove modules from metadata. Scalar fields only; nested config lists
-    # are read by the YAML-aware consumers (the extension).
-    # 列出 Grove 模块元数据。仅标量字段;嵌套配置列表由能解析 YAML 的消费方(插件)读取。
+    # Lists Grove modules with their available examples and supported board counts.
+    # 列出 Grove 模块及其可用示例与支持板数量。
+    board_ids = [record["id"] for record in board_records()]
+    grove_examples = resolve_grove_examples()
     rows = []
     for module_file in sorted(GROVE_DIR.glob("*.yaml")):
         values = read_flat_yaml(module_file)
+        module_id = values.get("id", module_file.stem)
+        examples = [e for e in grove_examples if e.get("module_id") == module_id]
+        example_rows = []
+        for ex in examples:
+            excluded = set(grove_excluded_boards(ex))
+            supported = [b for b in board_ids if b not in excluded]
+            example_rows.append(
+                {
+                    "demo": ex.get("demo"),
+                    "interface": ex.get("interface"),
+                    "pin_policy": ex.get("pin_policy"),
+                    "supported_boards": len(supported),
+                    "excluded_boards": sorted(excluded),
+                }
+            )
         rows.append(
             {
-                "id": values.get("id", module_file.stem),
+                "id": module_id,
                 "sku": values.get("sku", ""),
                 "display_name": values.get("display_name", ""),
                 "category": values.get("category", ""),
                 "interface": values.get("interface", ""),
                 "zephyr_support": values.get("zephyr_support", ""),
+                "examples": example_rows,
             }
         )
     if getattr(args, "as_json", False):
         print(json.dumps(rows, indent=2))
         return
-    print("id\tinterface\tsupport\tdisplay_name")
+    print("id\tinterface\tsupport\texamples\tdisplay_name")
     for row in rows:
-        print(f"{row['id']}\t{row['interface']}\t{row['zephyr_support']}\t{row['display_name']}")
+        if row["examples"]:
+            ex_summary = "; ".join(
+                f"{e['demo']}({e['supported_boards']} boards)" for e in row["examples"]
+            )
+        else:
+            ex_summary = "-"
+        print(
+            f"{row['id']}\t{row['interface']}\t{row['zephyr_support']}\t"
+            f"{ex_summary}\t{row['display_name']}"
+        )
 
 
 def cmd_list_expansion(args: argparse.Namespace) -> None:
@@ -1670,7 +2280,14 @@ def cmd_show_board(args: argparse.Namespace) -> None:
 
 def cmd_show_example(args: argparse.Namespace) -> None:
     # Shows full metadata, file list, and README for one example.
-    # 显示某个示例的完整元数据、文件清单和 README。
+    # board_id may be a grove/<module>/<demo> reference for a Grove example.
+    # 显示某个示例的完整元数据、文件清单和 README;board_id 可为 grove/<module>/<demo> 引用。
+    if args.board_id.startswith("grove/"):
+        _cmd_show_grove_example(args)
+        return
+
+    if not args.demo:
+        raise CliError("Demo name is required for a board example, such as: show example xiao_esp32c6 blinky")
     require_board(args.board_id)
     src_dir = EXAMPLES_DIR / args.board_id / args.demo
     example_file = src_dir / "example.yaml"
@@ -1702,6 +2319,219 @@ def cmd_show_example(args: argparse.Namespace) -> None:
     print(f"files:\t{', '.join(files)}")
 
 
+def _cmd_show_grove_example(args: argparse.Namespace) -> None:
+    # Shows a Grove example: interface, pin policy, and per-board support matrix.
+    # 显示 Grove 示例:接口、引脚策略与按板支持矩阵。
+    module_id, demo = parse_grove_ref(args.board_id)
+    if not demo:
+        demos = sorted(
+            p.parent.name
+            for p in grove_example_dirs()
+            if p.parent.parent.name == module_id
+        )
+        if not demos:
+            raise CliError(
+                f"Grove module '{module_id}' has no examples. "
+                "Run 'seeed-zephyr list grove' to see available modules."
+            )
+        raise CliError(f"Specify a demo for {module_id}. Available: {', '.join(demos)}.")
+    example = resolve_grove_example(module_id, demo)
+    src_dir = Path(str(example["path"]))
+    excluded = set(grove_excluded_boards(example))
+    board_ids = [record["id"] for record in board_records()]
+    statuses = read_example_status(str(example.get("id", "")))
+    matrix = [
+        {
+            "board_id": bid,
+            "supported": bid not in excluded,
+            "status": statuses.get(bid, "pending" if bid not in excluded else "excluded"),
+        }
+        for bid in board_ids
+    ]
+    files = sorted(p.name for p in src_dir.iterdir() if p.is_file())
+    detail = {
+        "id": example.get("id"),
+        "kind": "grove",
+        "module_id": module_id,
+        "demo": demo,
+        "interface": example.get("interface"),
+        "connector": example.get("connector"),
+        "pin_policy": example.get("pin_policy"),
+        "excluded_boards": sorted(excluded),
+        "expected_behavior": example.get("expected_behavior"),
+        "path": _display_path(src_dir),
+        "files": files,
+        "board_matrix": matrix,
+    }
+    pins = example.get("pins")
+    if isinstance(pins, list):
+        detail["pins"] = pins
+    readme = src_dir / "README.md"
+    if readme.is_file():
+        detail["readme"] = readme.read_text(encoding="utf-8")
+    if getattr(args, "as_json", False):
+        print(json.dumps(detail, indent=2))
+        return
+    for key in ("id", "module_id", "demo", "interface", "connector", "pin_policy", "expected_behavior"):
+        print(f"{key}:\t{detail.get(key, '')}")
+    print(f"path:\t{detail['path']}")
+    print(f"files:\t{', '.join(files)}")
+    supported = [m["board_id"] for m in matrix if m["supported"]]
+    print(f"supported_boards:\t{', '.join(supported)}")
+    if excluded:
+        print(f"excluded_boards:\t{', '.join(sorted(excluded))}")
+
+
+def cmd_show_pins(args: argparse.Namespace) -> None:
+    # Returns the full pin diagram data for a board + example: form-factor layout,
+    # per-pin state, role assignments, and the module interface. Pure query, no build.
+    # 返回板+示例的完整引脚图数据:形态布局、每脚状态、角色分配与模块接口。纯查询,不构建。
+    require_board(args.board_id)
+    example_ref = args.example_ref
+    is_grove = example_ref.startswith("grove/")
+    if is_grove:
+        module_id, demo = parse_grove_ref(example_ref)
+        if not demo:
+            raise CliError("Provide a full Grove reference: grove/<module>/<demo>.")
+        example = resolve_grove_example(module_id, demo)
+        if not grove_supports_board(example, args.board_id):
+            raise CliError(
+                f"Grove example {module_id}/{demo} excludes board '{args.board_id}'."
+            )
+        interface = str(example.get("interface", ""))
+        pin_policy = str(example.get("pin_policy", ""))
+        declared_pins = example.get("pins") if isinstance(example.get("pins"), list) else []
+    else:
+        example = select_example(args.board_id, example_ref)
+        interface = ""
+        pin_policy = ""
+        declared_pins = []
+
+    form_factor = load_form_factor("xiao")
+    ff_pins = form_factor.get("pins", [])
+    layout = form_factor.get("layout", {})
+    buses = form_factor.get("buses", {})
+
+    reserved = board_reserved_pins(args.board_id)
+    analog = board_analog_pins(args.board_id)
+    chip_pins = board_pin_map(args.board_id)
+
+    # Resolve current role assignments from the example defaults (no --pin here).
+    # 由示例默认值解析当前角色分配(此处不带 --pin)。
+    roles: list[dict[str, object]] = []
+    allowed_by_pin: dict[str, str] = {}
+    assigned_by_pin: dict[str, str] = {}
+    if pin_policy == "selectable" and isinstance(declared_pins, list):
+        for spec in declared_pins:
+            if not isinstance(spec, dict) or not spec.get("role"):
+                continue
+            role = str(spec["role"])
+            default = str(spec.get("default", "")).upper()
+            allowed = spec.get("allowed")
+            allowed_list = [str(p).upper() for p in allowed] if isinstance(allowed, list) else []
+            roles.append(
+                {
+                    "role": role,
+                    "assigned": default,
+                    "default": default,
+                    "allowed": allowed_list,
+                }
+            )
+            if default:
+                assigned_by_pin[default] = role
+            for p in allowed_list:
+                if p not in allowed_by_pin:
+                    allowed_by_pin[p] = role
+
+    # Pins that the module's fixed bus occupies (wiring position, not selectable).
+    # 模块固定总线占用的引脚(接线位置,不可选)。
+    bus_pins: dict[str, str] = {}
+    if pin_policy == "fixed-bus" and interface and isinstance(buses, dict):
+        bus_def = buses.get(interface)
+        if isinstance(bus_def, dict):
+            for role_name, pin_id in bus_def.items():
+                bus_pins[str(pin_id)] = f"{interface}-{role_name}"
+
+    pin_rows: list[dict[str, object]] = []
+    for pin in ff_pins:
+        if not isinstance(pin, dict):
+            continue
+        pid = str(pin.get("id", ""))
+        ptype = str(pin.get("type", ""))
+        row: dict[str, object] = {"id": pid, "type": ptype}
+        if pin.get("bus"):
+            row["bus"] = pin.get("bus")
+        if pin.get("bus_role"):
+            row["bus_role"] = pin.get("bus_role")
+        if pin.get("rail"):
+            row["rail"] = pin.get("rail")
+        if pid in chip_pins:
+            row["chip_pin"] = chip_pins[pid]
+
+        if ptype == "power":
+            row["status"] = "power"
+        elif pid in reserved:
+            row["status"] = "reserved"
+            row["reason"] = reserved[pid]
+        elif pin_policy == "selectable":
+            if pid in assigned_by_pin:
+                row["status"] = "default"
+                row["role"] = assigned_by_pin[pid]
+            elif pid in allowed_by_pin:
+                if interface == "analog" and pid not in analog:
+                    row["status"] = "incompatible"
+                    row["reason"] = "no-adc"
+                else:
+                    row["status"] = "selectable"
+                    row["role"] = allowed_by_pin[pid]
+            else:
+                row["status"] = "free"
+        elif pin_policy == "fixed-bus":
+            if pid in bus_pins:
+                row["status"] = "bus"
+                row["reason"] = bus_pins[pid]
+            else:
+                row["status"] = "free"
+        else:
+            row["status"] = "free"
+        pin_rows.append(row)
+
+    payload = {
+        "board_id": args.board_id,
+        "form_factor": form_factor.get("id", "xiao"),
+        "example": {
+            "ref": example_ref,
+            "interface": interface,
+            "pin_policy": pin_policy,
+        },
+        "layout": layout,
+        "pins": pin_rows,
+        "roles": roles,
+    }
+    if getattr(args, "as_json", False):
+        print(json.dumps(payload, indent=2))
+        return
+
+    print(f"board:\t{args.board_id}")
+    print(f"example:\t{example_ref}")
+    print(f"interface:\t{interface or '-'}")
+    print(f"pin_policy:\t{pin_policy or '-'}")
+    print("pins:")
+    for row in pin_rows:
+        extra = ""
+        if row.get("reason"):
+            extra = f"  ({row['reason']})"
+        if row.get("role"):
+            extra += f"  role={row['role']}"
+        if row.get("chip_pin"):
+            extra += f"  chip={row['chip_pin']}"
+        print(f"  {row['id']}\t{row['type']}\t{row['status']}{extra}")
+    if roles:
+        print("roles:")
+        for r in roles:
+            print(f"  {r['role']}\tassigned={r['assigned']}\tallowed={','.join(r['allowed'])}")
+
+
 def _normalize_from_asset(from_asset: str) -> tuple[str, str]:
     """Parse a --from value into (board_id, demo).
     Accepts board/demo, boards/board/demo, or examples/boards/board/demo.
@@ -1720,9 +2550,29 @@ def _normalize_from_asset(from_asset: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
+def _is_grove_from_asset(from_asset: str) -> bool:
+    return from_asset.strip().lstrip("/").lower().startswith("grove/")
+
+
+def _board_overlay_name(board_id: str) -> str:
+    # Zephyr auto-applies boards/<target>.overlay where target uses underscores for slashes.
+    # Zephyr 会自动应用 boards/<target>.overlay,target 中的斜杠替换为下划线。
+    board = require_board(board_id)
+    return board["target"].replace("/", "_")
+
+
 def cmd_create(args: argparse.Namespace) -> None:
     # Creates a standalone project by copying a repository example.
-    # 通过复制仓库示例来创建一个独立项目。
+    # Board examples copy as-is; Grove examples are board-agnostic and may be generated
+    # for any supported board, with --pin baked into a per-board overlay.
+    # 通过复制仓库示例创建独立项目。板级示例原样复制;Grove 示例可跨板生成,--pin 固化进按板 overlay。
+    if _is_grove_from_asset(args.from_asset):
+        _cmd_create_grove(args)
+    else:
+        _cmd_create_board(args)
+
+
+def _cmd_create_board(args: argparse.Namespace) -> None:
     source_board, demo = _normalize_from_asset(args.from_asset)
     src_dir = EXAMPLES_DIR / source_board / demo
     example_file = src_dir / "example.yaml"
@@ -1741,31 +2591,21 @@ def cmd_create(args: argparse.Namespace) -> None:
     values = read_flat_yaml(example_file)
     example_board = values.get("board_id") or source_board
 
-    # The MVP copies an example as-is; retargeting to another board needs pin and
-    # overlay data the catalog does not carry yet.
-    # MVP 原样复制示例;改投到别的板子需要目录里还没有的引脚和 overlay 数据。
     if args.board_id != example_board:
         raise CliError(
             f"Example {source_board}/{demo} targets board '{example_board}', "
-            f"not '{args.board_id}'. Pass --board {example_board}."
+            f"not '{args.board_id}'. Pass --board {example_board}, "
+            "or use a Grove example with --from grove/<module>/<demo> for cross-board projects."
         )
+
+    if args.pins:
+        raise CliError("--pin applies to Grove examples only.")
 
     if values.get("validation_status") == "unsupported":
         reason = values.get("unsupported_reason") or "marked unsupported"
         raise CliError(f"Cannot create from an unsupported example: {reason}.")
 
-    out_dir = Path(args.output).expanduser().resolve()
-    if out_dir.is_file():
-        raise CliError(f"Output path is a file: {out_dir}.")
-    if out_dir.is_dir() and any(out_dir.iterdir()) and not args.force:
-        raise CliError(
-            f"Output directory is not empty: {out_dir}. Use --force to write anyway."
-        )
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    # Copy the whole example directory so optional files (such as app.overlay)
-    # come along without a hardcoded file list.
-    # 整目录复制示例,让可选文件(例如 app.overlay)无需硬编码清单就一并带上。
+    out_dir = _prepare_output_dir(args.output, args.force)
     shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
 
     snapshot = {
@@ -1784,19 +2624,94 @@ def cmd_create(args: argparse.Namespace) -> None:
     print(f"  seeed-zephyr build {args.board_id} --app {out_dir}", flush=True)
 
 
+def _cmd_create_grove(args: argparse.Namespace) -> None:
+    module_id, demo = parse_grove_ref(args.from_asset)
+    if not demo:
+        demos = sorted(
+            p.parent.name
+            for p in grove_example_dirs()
+            if p.parent.parent.name == module_id
+        )
+        if not demos:
+            raise CliError(
+                f"Grove module '{module_id}' has no examples. "
+                "Run 'seeed-zephyr list grove' to see available modules."
+            )
+        if len(demos) != 1:
+            raise CliError(f"Specify a demo for {module_id}. Available: {', '.join(demos)}.")
+        demo = demos[0]
+
+    example = resolve_grove_example(module_id, demo)
+    require_board(args.board_id)
+    if not grove_supports_board(example, args.board_id):
+        raise CliError(
+            f"Grove example {module_id}/{demo} excludes board '{args.board_id}'. "
+            f"Excluded boards: {', '.join(grove_excluded_boards(example)) or 'none'}."
+        )
+
+    assignments = resolve_pin_assignment(example, args.board_id, args.pins)
+
+    out_dir = _prepare_output_dir(args.output, args.force)
+    src_dir = Path(str(example["path"]))
+    shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
+
+    # Bake the chosen pins into a per-board overlay so the generated project is self-contained.
+    # 把选定引脚固化进按板 overlay,使生成的项目自包含。
+    if assignments:
+        boards_dir = out_dir / "boards"
+        boards_dir.mkdir(exist_ok=True)
+        template = src_dir / "pins" / "pin.overlay.in"
+        if not template.is_file():
+            raise CliError(
+                f"Example declares selectable pins but has no pins/pin.overlay.in template."
+            )
+        text = template.read_text(encoding="utf-8")
+        for role, pin in assignments.items():
+            placeholder = f"@PIN_{role.upper()}@"
+            if placeholder not in text:
+                raise CliError(
+                    f"Pin overlay template is missing placeholder '{placeholder}' for role '{role}'."
+                )
+            text = text.replace(placeholder, str(pin_index(pin)))
+        (boards_dir / f"{_board_overlay_name(args.board_id)}.overlay").write_text(
+            text, encoding="utf-8"
+        )
+
+    snapshot = {
+        "generator": "seeed-zephyr",
+        "source_asset": f"examples/grove/{module_id}/{demo}",
+        "board": args.board_id,
+        "zephyr_version": ZEPHYR_BASELINE,
+        "pins": assignments,
+    }
+    (out_dir / "snapshot.json").write_text(
+        json.dumps(snapshot, indent=2) + "\n", encoding="utf-8"
+    )
+
+    print(f"Created project at {out_dir}", flush=True)
+    print("Next step:", flush=True)
+    print(f"  seeed-zephyr build {args.board_id} --app {out_dir}", flush=True)
+
+
+def _prepare_output_dir(output: str, force: bool) -> Path:
+    out_dir = Path(output).expanduser().resolve()
+    if out_dir.is_file():
+        raise CliError(f"Output path is a file: {out_dir}.")
+    if out_dir.is_dir() and any(out_dir.iterdir()) and not force:
+        raise CliError(
+            f"Output directory is not empty: {out_dir}. Use --force to write anyway."
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return out_dir
+
+
 def cmd_build(args: argparse.Namespace) -> None:
-    if args.app:
-        example = resolve_app_example(args.board_id, args.app)
-    else:
-        example = select_example(args.board_id, args.example)
-    run_west_build(args.board_id, example)
+    example, overlay = resolve_build_example(args)
+    run_west_build(args.board_id, example, extra_overlay=overlay)
 
 
 def cmd_flash(args: argparse.Namespace) -> None:
-    if args.app:
-        example = resolve_app_example(args.board_id, args.app)
-    else:
-        example = select_example(args.board_id, args.example)
+    example, overlay = resolve_build_example(args)
 
     ra4m1_rom = None
     if args.board_id == RA4M1_BOARD_ID:
@@ -1810,10 +2725,10 @@ def cmd_flash(args: argparse.Namespace) -> None:
             "Building app image for DFU offset recovery flash...",
             flush=True,
         )
-        run_west_build(args.board_id, example)
+        run_west_build(args.board_id, example, extra_overlay=overlay)
         port = run_ra4m1_rom_flash(ra4m1_rom)
     else:
-        run_west_build(args.board_id, example)
+        run_west_build(args.board_id, example, extra_overlay=overlay)
         port = run_west_flash(args.board_id, port=args.port)
 
     if args.monitor:
@@ -1832,11 +2747,8 @@ def cmd_flash(args: argparse.Namespace) -> None:
 
 
 def cmd_debug(args: argparse.Namespace) -> None:
-    if args.app:
-        example = resolve_app_example(args.board_id, args.app)
-    else:
-        example = select_example(args.board_id, args.example)
-    run_west_build(args.board_id, example)
+    example, overlay = resolve_build_example(args)
+    run_west_build(args.board_id, example, extra_overlay=overlay)
     try:
         run_west(["debug"])
     except CliError as error:

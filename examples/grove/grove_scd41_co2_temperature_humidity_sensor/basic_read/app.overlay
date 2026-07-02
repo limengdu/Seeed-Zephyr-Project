@@ -1,0 +1,20 @@
+/*
+ * Board-agnostic Grove SCD41 devicetree overlay.
+ * References the upstream XIAO connector label xiao_i2c, which each XIAO board
+ * maps to its own I2C controller. The same overlay builds for every XIAO board.
+ *
+ * 板级无关的 Grove SCD41 devicetree overlay。
+ * 引用上游 XIAO connector 标签 xiao_i2c,每块 XIAO 板将其映射到自身的 I2C 控制器。
+ * 同一份 overlay 可在所有 XIAO 板上构建。
+ */
+&xiao_i2c {
+	status = "okay";
+
+	scd41: scd41@62 {
+		compatible = "sensirion,scd41";
+		reg = <0x62>;
+		/* mode 0: normal periodic measurement, 5 s interval. */
+		/* mode 0:正常周期测量,5 秒间隔。 */
+		mode = <0>;
+	};
+};

@@ -44,4 +44,7 @@ packages = ["src/seeed_zephyr"]
 "../../metadata/boards" = "src/seeed_zephyr/data/boards"
 "../../metadata/grove_modules" = "src/seeed_zephyr/data/grove_modules"
 "../../metadata/expansion_boards" = "src/seeed_zephyr/data/expansion_boards"
+"../../metadata/form_factors" = "src/seeed_zephyr/data/form_factors"
+"../../metadata/status" = "src/seeed_zephyr/data/status"
 "../../examples/boards" = "src/seeed_zephyr/data/examples"
+"../../examples/grove" = "src/seeed_zephyr/data/grove_examples"

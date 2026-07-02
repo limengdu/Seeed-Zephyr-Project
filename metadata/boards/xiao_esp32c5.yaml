@@ -7,3 +7,5 @@ soc: esp32-c5
 form_factor: xiao
 also_known_as: []
 version_policy: latest_stable
+reserved_pins: []
+analog_pins: []

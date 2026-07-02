@@ -172,6 +172,24 @@ fallback is `scripts/seeed-zephyr <command>`.
 One-sentence summary: the installed command works outside the repository, while
 Zephyr still performs the actual firmware build.
 
+### Build a Grove example on any board
+
+Grove module examples live under `examples/grove/` and are board-agnostic: one source
+tree builds for every XIAO board through the upstream `seeed_xiao_connector` abstraction.
+Pass the board, then the `grove/<module>/<demo>` reference:
+
+```sh
+seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+```
+
+The same source builds on both boards unchanged. Inspect the per-pin state that drives
+the editor extension's interactive pinout with:
+
+```sh
+seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+```
+
 ## 4. Useful CLI Commands
 
 List boards and examples:

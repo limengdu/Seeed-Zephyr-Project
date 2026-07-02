@@ -1,0 +1,83 @@
+# Authored form-factor metadata (product layer).
+# Physical layout of the Seeed XIAO footprint, shared by all XIAO boards.
+# XIAO 系列开发板共用的物理封装定义。
+id: xiao
+display_name: Seeed XIAO form factor
+pin_count: 14
+pins:
+  - id: 5V
+    type: power
+    rail: 5v
+  - id: GND
+    type: power
+    rail: gnd
+  - id: 3V3
+    type: power
+    rail: 3v3
+  - id: D0
+    type: gpio
+  - id: D1
+    type: gpio
+  - id: D2
+    type: gpio
+  - id: D3
+    type: gpio
+  - id: D4
+    type: gpio
+    bus: i2c
+    bus_role: sda
+  - id: D5
+    type: gpio
+    bus: i2c
+    bus_role: scl
+  - id: D6
+    type: gpio
+    bus: uart
+    bus_role: tx
+  - id: D7
+    type: gpio
+    bus: uart
+    bus_role: rx
+  - id: D8
+    type: gpio
+    bus: spi
+    bus_role: sck
+  - id: D9
+    type: gpio
+    bus: spi
+    bus_role: miso
+  - id: D10
+    type: gpio
+    bus: spi
+    bus_role: mosi
+# Physical pad order with the USB-C connector oriented at the top.
+# USB-C 朝上时的焊盘排列顺序。
+layout:
+  orientation: usb-top
+  left:
+    - 5V
+    - GND
+    - 3V3
+    - D0
+    - D1
+    - D2
+    - D3
+  right:
+    - D10
+    - D9
+    - D8
+    - D7
+    - D6
+    - D5
+    - D4
+buses:
+  i2c:
+    sda: D4
+    scl: D5
+  uart:
+    tx: D6
+    rx: D7
+  spi:
+    sck: D8
+    miso: D9
+    mosi: D10

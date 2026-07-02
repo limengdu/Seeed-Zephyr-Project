@@ -7,3 +7,34 @@ soc: esp32-c6
 form_factor: xiao
 also_known_as: []
 version_policy: latest_stable
+reserved_pins: []
+analog_pins: []
+
+# Provisional baseline derived from the upstream Zephyr connector dtsi.
+# Replace with official Seeed schematic values and update pin_map_source to the Wiki URL.
+# 过渡基线,派生自上游 Zephyr connector dtsi。
+# 请以 Seeed 官方原理图为准替换,并将 pin_map_source 更新为 Wiki 链接。
+pin_map_source: zephyr/boards/seeed/xiao_esp32c6/seeed_xiao_connector.dtsi
+pin_map:
+  - pin: D0
+    chip_pin: gpio0.0
+  - pin: D1
+    chip_pin: gpio0.1
+  - pin: D2
+    chip_pin: gpio0.2
+  - pin: D3
+    chip_pin: gpio0.21
+  - pin: D4
+    chip_pin: gpio0.22
+  - pin: D5
+    chip_pin: gpio0.23
+  - pin: D6
+    chip_pin: gpio0.16
+  - pin: D7
+    chip_pin: gpio0.17
+  - pin: D8
+    chip_pin: gpio0.19
+  - pin: D9
+    chip_pin: gpio0.20
+  - pin: D10
+    chip_pin: gpio0.18

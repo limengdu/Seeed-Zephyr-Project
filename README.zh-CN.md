@@ -36,6 +36,7 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 ## 核心亮点
 
 - **🧩 每块板一个示例** —— 为每块在册的 XIAO 板提供最小、可构建的示例，开箱即可烧录。
+- **🔌 一份 Grove 示例，全板通用** —— Grove 模块示例板级无关，一份源码通过 `seeed_xiao_connector` 抽象在所有 XIAO 板上构建。
 - **⚡ 单命令工作流** —— 安装后 `seeed-zephyr build | flash | monitor | debug <板子>` 在任意目录都能用。
 - **🔌 板级细节自动处理** —— UF2 模式进入、DFU、PyOCD、1200 波特率 bootloader 请求等都按板子自动完成，你无需记住每家厂商的烧录步骤。
 - **📇 能力目录** —— 为 XIAO 开发板、Grove 模块和扩展板提供结构化元数据。
@@ -171,6 +172,29 @@ seeed-zephyr flash xiao_esp32c6 --monitor
 seeed-zephyr build xiao_esp32c6 blinky
 ```
 
+### 在任意板上构建 Grove 示例
+
+Grove 模块示例位于 `examples/grove/`，板级无关：一份源码通过上游 `seeed_xiao_connector`
+抽象在所有 XIAO 板上构建。先写板子，再写 Grove 引用：
+
+```sh
+seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read   # 同一份源码，换块板
+```
+
+查看引脚图（编辑器插件交互式引脚图的数据源）：
+
+```sh
+seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read --json
+```
+
+从 Grove 示例在任意支持的板上生成独立项目，可选 `--pin` 会固化进按板 overlay：
+
+```sh
+seeed-zephyr create --from grove/grove_scd41_co2_temperature_humidity_sensor/basic_read \
+                    --board xiao_nrf52840 --output ./my-scd41
+```
+
 ### 构建外部应用
 
 把命令行指向任意一个 Zephyr 应用目录（含 `CMakeLists.txt` 和 `prj.conf` 的目录）：
@@ -228,6 +252,8 @@ seeed-zephyr verify-hardware xiao_esp32c6  # 记录一次硬件观测结果
 
 能力目录同样收录了与 XIAO 搭配的 Grove 模块和扩展板，包含它们的接口、默认地址、供电轨，以及所需的 Zephyr 驱动和 Kconfig 选项。
 
+Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过上游 `seeed_xiao_connector` 抽象在所有 XIAO 板上构建。SCD41 `basic_read` 示例已用同一份源码在 ESP32-C6、nRF52840、RP2040 上验证通过，其余板子的矩阵状态记录在 [`metadata/status/`](metadata/status/)。运行 `seeed-zephyr show pins <板子> grove/<模块>/<demo> --json` 可获得每脚状态（selectable / reserved / bus / power），驱动编辑器插件的交互式引脚图。
+
 **Grove 模块：** Grove - Ultrasonic Distance Sensor · Grove - Soil Moisture Sensor · Grove - Temperature & Humidity Sensor V2.0 (DHT20) · Grove - CO2 & Temperature & Humidity Sensor (SCD41) · 1.47inch LCD Display Module
 
 **扩展板：** Grove Shield for XIAO · XIAO 扩展板 · XIAO 圆形显示屏
@@ -256,15 +282,20 @@ setup 会准备 Zephyr 工作区、安装 Python 虚拟环境与 `west`、下载
 
 ```text
 Seeed-Zephyr-Project/
-├── examples/boards/      # 每块 XIAO 板的最小可构建示例
-├── metadata/             # 开发板、Grove 模块、扩展板目录
-│   ├── boards/
+├── examples/
+│   ├── boards/          # 每块 XIAO 板的最小可构建示例
+│   └── grove/           # 板级无关的 Grove 模块示例（一份源码，全板通用）
+├── metadata/            # 开发板、Grove 模块、扩展板目录
+│   ├── boards/          # 含按板 reserved_pins、analog_pins、pin_map
 │   ├── grove_modules/
-│   └── expansion_boards/
-├── scripts/              # 跨平台 setup + seeed-zephyr 启动器
+│   ├── expansion_boards/
+│   ├── form_factors/    # XIAO 14 脚物理排布（引脚图数据源）
+│   └── status/          # Grove 示例 × 板子 构建/硬件状态矩阵
+├── scripts/             # 跨平台 setup + seeed-zephyr 启动器
 ├── tools/
-│   ├── cli/              # seeed-zephyr 命令行实现
-│   ├── build_matrix/     # 完整的板级示例构建验证
+│   ├── cli/             # seeed-zephyr 命令行实现
+│   ├── build_matrix/    # 板级矩阵(run.sh) + Grove 矩阵(run_grove.py)
+│   ├── pin_map/         # 从上游 connector dtsi 派生板级 pin_map
 │   └── validate_metadata/# 元数据 schema 校验（CI 中运行）
 ├── docs/                 # 面向用户的指南与板级说明（英文 + 中文）
 └── .github/workflows/    # CI：元数据校验

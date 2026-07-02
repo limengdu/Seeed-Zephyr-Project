@@ -8,3 +8,46 @@ form_factor: xiao
 also_known_as:
   - Seeed Studio XIAO nRF52840 Sense
 version_policy: latest_stable
+# uart0 (xiao_serial) is pinned to D6/D7 and enabled for the console line.
+# uart0（xiao_serial）固定在 D6/D7 并启用为控制台。
+reserved_pins:
+  - pin: D6
+    reason: console-uart
+  - pin: D7
+    reason: console-uart
+analog_pins:
+  - D0
+  - D1
+  - D2
+  - D3
+  - D4
+  - D5
+
+# Provisional baseline derived from the upstream Zephyr connector dtsi.
+# Replace with official Seeed schematic values and update pin_map_source to the Wiki URL.
+# 过渡基线,派生自上游 Zephyr connector dtsi。
+# 请以 Seeed 官方原理图为准替换,并将 pin_map_source 更新为 Wiki 链接。
+pin_map_source: zephyr/boards/seeed/xiao_ble/seeed_xiao_connector.dtsi
+pin_map:
+  - pin: D0
+    chip_pin: gpio0.2
+  - pin: D1
+    chip_pin: gpio0.3
+  - pin: D2
+    chip_pin: gpio0.28
+  - pin: D3
+    chip_pin: gpio0.29
+  - pin: D4
+    chip_pin: gpio0.4
+  - pin: D5
+    chip_pin: gpio0.5
+  - pin: D6
+    chip_pin: gpio1.11
+  - pin: D7
+    chip_pin: gpio1.12
+  - pin: D8
+    chip_pin: gpio1.13
+  - pin: D9
+    chip_pin: gpio1.14
+  - pin: D10
+    chip_pin: gpio1.15

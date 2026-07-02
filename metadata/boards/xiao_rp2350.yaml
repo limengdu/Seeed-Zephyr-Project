@@ -7,3 +7,44 @@ soc: rp2350
 form_factor: xiao
 also_known_as: []
 version_policy: latest_stable
+# Console uses uart0, which is the xiao_serial bus on D6/D7.
+# 控制台使用 uart0，即 D6/D7 上的 xiao_serial 总线。
+reserved_pins:
+  - pin: D6
+    reason: console-uart
+  - pin: D7
+    reason: console-uart
+analog_pins:
+  - D0
+  - D1
+  - D2
+  - D3
+
+# Provisional baseline derived from the upstream Zephyr connector dtsi.
+# Replace with official Seeed schematic values and update pin_map_source to the Wiki URL.
+# 过渡基线,派生自上游 Zephyr connector dtsi。
+# 请以 Seeed 官方原理图为准替换,并将 pin_map_source 更新为 Wiki 链接。
+pin_map_source: zephyr/boards/seeed/xiao_rp2350/seeed_xiao_connector.dtsi
+pin_map:
+  - pin: D0
+    chip_pin: gpio0.26
+  - pin: D1
+    chip_pin: gpio0.27
+  - pin: D2
+    chip_pin: gpio0.28
+  - pin: D3
+    chip_pin: gpio0.5
+  - pin: D4
+    chip_pin: gpio0.6
+  - pin: D5
+    chip_pin: gpio0.7
+  - pin: D6
+    chip_pin: gpio0.0
+  - pin: D7
+    chip_pin: gpio0.1
+  - pin: D8
+    chip_pin: gpio0.2
+  - pin: D9
+    chip_pin: gpio0.4
+  - pin: D10
+    chip_pin: gpio0.3

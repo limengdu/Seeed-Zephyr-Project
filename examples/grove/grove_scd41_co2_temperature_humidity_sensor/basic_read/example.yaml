@@ -1,0 +1,12 @@
+id: grove_scd41_basic_read
+kind: grove
+module_id: grove_scd41_co2_temperature_humidity_sensor
+demo: basic_read
+interface: i2c
+connector: xiao
+pin_policy: fixed-bus
+# xiao_esp32c5 has no upstream Zephyr board target in the v4.4.0 baseline.
+# xiao_esp32c5 在 v4.4.0 基线中没有上游 Zephyr 板 target。
+excluded_boards:
+  - xiao_esp32c5
+expected_behavior: Prints CO2 (ppm), temperature (C), and relative humidity (%) every five seconds.

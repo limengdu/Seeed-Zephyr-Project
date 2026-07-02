@@ -36,6 +36,7 @@ You get the smallest verified example for each supported board, board and Grove 
 ## Highlights
 
 - **🧩 One example per board** — minimal, buildable demos for every tracked XIAO board, ready to flash.
+- **🔌 One Grove example, every board** — Grove module examples are board-agnostic; a single source tree builds on all XIAO boards via the `seeed_xiao_connector` abstraction.
 - **⚡ Single-command workflow** — `seeed-zephyr build | flash | monitor | debug <board>` works from any directory after setup.
 - **🔌 Auto board handling** — UF2 mode entry, DFU, PyOCD, and 1200-baud bootloader requests are handled per board, so you don't memorize each vendor's flash dance.
 - **📇 Capability catalog** — structured metadata for XIAO boards, Grove modules, and expansion boards.
@@ -171,6 +172,31 @@ When a board has more than one example, the CLI lists them and lets you pick. Na
 seeed-zephyr build xiao_esp32c6 blinky
 ```
 
+### Build a Grove example on any board
+
+Grove module examples live under `examples/grove/` and are board-agnostic: one source tree
+builds for every XIAO board through the upstream `seeed_xiao_connector` abstraction. Pass
+the board, then the Grove reference:
+
+```sh
+seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read   # same source, another board
+```
+
+Inspect the pin diagram (the data source for the editor extension's interactive pinout):
+
+```sh
+seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read --json
+```
+
+Generate a standalone project from a Grove example on any supported board, baking an
+optional `--pin` choice into a per-board overlay:
+
+```sh
+seeed-zephyr create --from grove/grove_scd41_co2_temperature_humidity_sensor/basic_read \
+                    --board xiao_nrf52840 --output ./my-scd41
+```
+
 ### Build an external application
 
 Point the CLI at any Zephyr app folder (one with `CMakeLists.txt` and `prj.conf`):
@@ -228,6 +254,8 @@ For the complete walk-through, see the [Getting Started guide](docs/en/getting-s
 
 The capability catalog also tracks the Grove modules and expansion boards that pair with XIAO, including their interface, default address, power rail, and the Zephyr driver and Kconfig options they need.
 
+Grove module examples are **board-agnostic**: one source tree under `examples/grove/` builds for every XIAO board through the upstream `seeed_xiao_connector` abstraction. The SCD41 `basic_read` example is verified on ESP32-C6, nRF52840, and RP2040 from a single source; the rest of the board matrix is recorded in [`metadata/status/`](metadata/status/). Use `seeed-zephyr show pins <board> grove/<module>/<demo> --json` to get the per-pin state (selectable / reserved / bus / power) that drives the editor extension's interactive pinout.
+
 **Grove modules:** Grove - Ultrasonic Distance Sensor · Grove - Soil Moisture Sensor · Grove - Temperature & Humidity Sensor V2.0 (DHT20) · Grove - CO2 & Temperature & Humidity Sensor (SCD41) · 1.47inch LCD Display Module
 
 **Expansion boards:** Grove Shield for XIAO · XIAO Expansion Board · XIAO Round Display
@@ -256,18 +284,23 @@ Setup prepares the Zephyr workspace, installs the Python venv and `west`, downlo
 
 ```text
 Seeed-Zephyr-Project/
-├── examples/boards/      # Minimal, buildable demo per XIAO board
-├── metadata/             # Board, Grove module, and expansion-board catalog
-│   ├── boards/
+├── examples/
+│   ├── boards/          # Minimal, buildable demo per XIAO board
+│   └── grove/           # Board-agnostic Grove module examples (one source, all boards)
+├── metadata/            # Board, Grove module, and expansion-board catalog
+│   ├── boards/          # Includes per-board reserved_pins, analog_pins, and pin_map
 │   ├── grove_modules/
-│   └── expansion_boards/
-├── scripts/              # Cross-platform setup + the seeed-zephyr launcher
+│   ├── expansion_boards/
+│   ├── form_factors/    # XIAO 14-pin physical layout (pinout diagram data source)
+│   └── status/          # Grove example x board build/hardware status matrix
+├── scripts/             # Cross-platform setup + the seeed-zephyr launcher
 ├── tools/
-│   ├── cli/              # seeed-zephyr CLI implementation
-│   ├── build_matrix/     # Full board-demo build verification
-│   └── validate_metadata/# Metadata schema checks (run in CI)
-├── docs/                 # User-facing guides and per-board notes (EN + 中文)
-└── .github/workflows/    # CI: metadata validation
+│   ├── cli/             # seeed-zephyr CLI implementation
+│   ├── build_matrix/    # Board matrix (run.sh) + Grove matrix (run_grove.py)
+│   ├── pin_map/         # Seeds board pin_map from the upstream connector dtsi
+│   └── validate_metadata/  # Metadata schema checks (run in CI)
+├── docs/                # User-facing guides and per-board notes (EN + 中文)
+└── .github/workflows/   # CI: metadata validation
 ```
 
 ## Roadmap

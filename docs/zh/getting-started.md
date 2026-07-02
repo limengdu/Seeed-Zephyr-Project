@@ -170,6 +170,22 @@ target 和示例路径交给 Zephyr 的 `west build`。
 
 一句话总结：安装后的命令可以离开仓库目录使用，但真正构建固件的仍然是 Zephyr。
 
+### 在任意板上构建 Grove 示例
+
+Grove 模块示例位于 `examples/grove/`，板级无关：一份源码通过上游 `seeed_xiao_connector`
+抽象在所有 XIAO 板上构建。先写板子，再写 `grove/<模块>/<demo>` 引用：
+
+```sh
+seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+```
+
+同一份源码在两块板上都能构建，无需修改。查看驱动编辑器插件交互式引脚图的每脚状态：
+
+```sh
+seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
+```
+
 ## 4. 常用 CLI 命令
 
 列出开发板和示例：

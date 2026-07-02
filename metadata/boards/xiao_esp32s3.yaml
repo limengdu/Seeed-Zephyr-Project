@@ -8,3 +8,40 @@ form_factor: xiao
 also_known_as:
   - Seeed Studio XIAO ESP32-S3 Sense
 version_policy: latest_stable
+reserved_pins: []
+analog_pins:
+  - D0
+  - D1
+  - D2
+  - D3
+  - D4
+  - D5
+
+# Provisional baseline derived from the upstream Zephyr connector dtsi.
+# Replace with official Seeed schematic values and update pin_map_source to the Wiki URL.
+# 过渡基线,派生自上游 Zephyr connector dtsi。
+# 请以 Seeed 官方原理图为准替换,并将 pin_map_source 更新为 Wiki 链接。
+pin_map_source: zephyr/boards/seeed/xiao_esp32s3/seeed_xiao_connector.dtsi
+pin_map:
+  - pin: D0
+    chip_pin: gpio0.1
+  - pin: D1
+    chip_pin: gpio0.2
+  - pin: D2
+    chip_pin: gpio0.3
+  - pin: D3
+    chip_pin: gpio0.4
+  - pin: D4
+    chip_pin: gpio0.5
+  - pin: D5
+    chip_pin: gpio0.6
+  - pin: D6
+    chip_pin: gpio1.11
+  - pin: D7
+    chip_pin: gpio1.12
+  - pin: D8
+    chip_pin: gpio0.7
+  - pin: D9
+    chip_pin: gpio0.8
+  - pin: D10
+    chip_pin: gpio0.9

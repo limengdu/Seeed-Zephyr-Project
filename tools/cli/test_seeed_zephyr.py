@@ -428,7 +428,7 @@ class MonitorCommandTests(unittest.TestCase):
                                 seeed_zephyr.cmd_flash(args)
 
         req_tools.assert_called_once_with("xiao_ra4m1", rom_boot=True)
-        build.assert_called_once_with("xiao_ra4m1", {"path": "example"})
+        build.assert_called_once_with("xiao_ra4m1", {"path": "example"}, extra_overlay=None)
         rom_flash.assert_called_once_with("/dev/cu.usbmodem1101")
         west_flash.assert_not_called()
 
@@ -465,7 +465,7 @@ class MonitorCommandTests(unittest.TestCase):
                                 seeed_zephyr.cmd_flash(args)
 
         req_tools.assert_called_once_with("xiao_ra4m1", rom_boot=False)
-        build.assert_called_once_with("xiao_ra4m1", {"path": "example"})
+        build.assert_called_once_with("xiao_ra4m1", {"path": "example"}, extra_overlay=None)
         west_flash.assert_called_once_with("xiao_ra4m1", port=None)
         rom_flash.assert_not_called()
 
@@ -701,6 +701,7 @@ class CreateCommandTests(unittest.TestCase):
         args.board_id = kwargs.get("board_id", "xiao_rp2040")
         args.output = kwargs["output"]
         args.force = kwargs.get("force", False)
+        args.pins = kwargs.get("pins", None)
         return args
 
     def test_create_copies_example_and_writes_snapshot(self) -> None:
@@ -1090,7 +1091,7 @@ class JsonOutputTests(unittest.TestCase):
             with mock.patch.object(seeed_zephyr, "run_west_build") as build:
                 seeed_zephyr.cmd_build(args)
         resolve.assert_called_once_with("xiao_esp32c6", "/tmp/my_app")
-        build.assert_called_once_with("xiao_esp32c6", ext_example)
+        build.assert_called_once_with("xiao_esp32c6", ext_example, extra_overlay=None)
 
 
 if __name__ == "__main__":
