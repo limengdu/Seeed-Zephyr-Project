@@ -268,7 +268,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 ### 左侧栏布局
 
 - **Welcome** —— 安装最新版 CLI、创建/打开项目、更新仓库内容等常用入口。
-- **Projects** —— 创建项目、打开生成项目或 Zephyr app，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Monitor。
+- **Projects** —— 创建项目、打开生成项目或 Zephyr app，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Upload & Monitor / Monitor。
 - **Environment** —— 按状态、仓库、CLI 三组管理环境。
 - **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。Catalog 默认显示，内部分类默认收起，需要时再展开。
 - **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
@@ -281,7 +281,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 - **Repository**：包含 **Select Repository Folder**、**Update Repository**、**Refresh Environment Status**，用于管理示例、metadata 和 catalog 数据。
 - **CLI**：包含 **Install Latest CLI**（联网安装最新版 `seeed-zephyr`，并自动切换插件使用它）、**Reinstall CLI**（强制重新安装最新版）、**Verify CLI**（检查当前 CLI 版本和插件依赖的基础命令）、**Choose CLI Version**（选择指定发布版本）、**Use System CLI**（使用系统 `PATH` 里的命令）、**Select CLI Path**（手动选择 CLI 文件），用于管理插件实际调用的 `seeed-zephyr` 命令。
 
-插件创建项目、检测串口和运行操作时会调用所选 CLI；没有手动选择串口时，**Auto Port** 会使用检测到的串口；点击 **Select Port** 会打开检测结果选择框，其中 **Auto Detector** 会保持自动检测，选择具体端口则会保存给后续 Upload 和 Monitor 使用。插件托管 CLI 会使用 Python 3.12 或更新版本，插件会先查找可用 Python 再创建 venv。安装和重新安装会先验证 `info --json`、`list ports --json` 和 `create --help`，通过后才保存托管 CLI 版本。从源码测试插件时，建议在 **Select CLI Path** 里选择同一仓库下的 `scripts/seeed-zephyr`，让编辑器使用当前 checkout 里的 CLI。
+插件创建项目、检测串口和运行操作时会调用所选 CLI；没有手动选择串口时，**Auto Port** 会使用检测到的串口；点击 **Select Port** 会打开检测结果选择框，其中 **Auto Detector** 会保持自动检测，选择具体端口则会保存给后续 Upload 和 Monitor 使用。**Upload & Monitor** 会先上传项目，上传后直接打开串口监视器。插件托管 CLI 会使用 Python 3.12 或更新版本，插件会先查找可用 Python 再创建 venv。安装和重新安装会先验证 `info --json`、`list ports --json` 和 `create --help`，通过后才保存托管 CLI 版本。从源码测试插件时，建议在 **Select CLI Path** 里选择同一仓库下的 `scripts/seeed-zephyr`，让编辑器使用当前 checkout 里的 CLI。
 真正的固件构建、烧录、监视和调试仍由 Zephyr 工具链完成。
 
 ### 常见编辑器流程
@@ -293,7 +293,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 5. Grove 示例会先让你选择目标开发板。
 6. 使用 **Open Project** 打开生成项目或 Zephyr app 示例，可选择新窗口打开或加入当前工作区。
 7. 在 **Projects** 或状态栏里选择项目开发板和串口。
-8. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project** 和 **Monitor Project** 操作。
+8. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project**、**Upload & Monitor** 和 **Monitor Project** 操作。
 
 生成项目会把来源仓库路径写进 `.vscode/settings.json`，后续重新打开项目时，状态栏也能找到同一套 CLI 和 metadata 上下文。
 

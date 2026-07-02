@@ -40,6 +40,7 @@ export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode
         new ActionNode("Build Project", "seeedZephyr.projectBuild", "check"),
         new ActionNode("Upload Project", "seeedZephyr.projectFlash", "arrow-up"),
         new ActionNode("Select Port", "seeedZephyr.selectProjectPort", "plug", port),
+        new ActionNode("Upload and Monitor Project", "seeedZephyr.projectFlashMonitor", "run-all"),
         new ActionNode("Monitor Project", "seeedZephyr.projectMonitor", "terminal"),
       ];
     }

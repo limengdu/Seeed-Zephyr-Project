@@ -27,8 +27,9 @@ workspace) use the one-line installer in the
 The sidebar is organized into **Welcome**, **Projects**, **Environment**, and
 **Catalog** views. Use **Welcome** for common setup and project actions. Use
 **Projects** to create or open a project, select the project board and serial
-port, and run project actions. Use **Environment** to check **Status**, update
-repository content from the **Repository** group, and manage the selected
+port, and run project actions including **Upload & Monitor**. Use
+**Environment** to check **Status**, update repository content from the
+**Repository** group, and manage the selected
 `seeed-zephyr` command from the **CLI** group. **Install Latest CLI** installs
 the newest published CLI into extension storage and selects it automatically;
 **Reinstall CLI** force-installs the newest package again; **Verify CLI** checks
@@ -41,6 +42,7 @@ provided by the selected CLI; **Auto Port** uses the detected serial port when
 no port has been selected yet, and **Select Port** opens the detected-port
 picker. In that picker, **Auto Detector** keeps automatic detection enabled, and
 a concrete port saves the user's selection for later upload and monitor actions.
+**Upload & Monitor** flashes the project and opens the serial monitor after upload.
 When testing from a source checkout, select the checkout's `scripts/seeed-zephyr`
 command. **Catalog** is visible by default, with Boards, Grove Modules, and
 Expansion Boards collapsed until opened.
@@ -59,7 +61,8 @@ Expansion Boards collapsed until opened.
 `list ports --json` 和 `create --help`，通过后才保存托管 CLI 版本。串口检测由当前选择的
 CLI 提供；没有手动选择串口时，**Auto Port** 会使用检测到的串口；点击 **Select Port**
 会打开检测结果选择框，其中 **Auto Detector** 会保持自动检测，选择具体端口则会保存给后续
-Upload 和 Monitor 使用。从源码测试时，选择当前仓库里的 `scripts/seeed-zephyr`。
+Upload 和 Monitor 使用。**Upload & Monitor** 会先上传项目，上传后直接打开串口监视器。
+从源码测试时，选择当前仓库里的 `scripts/seeed-zephyr`。
 **Catalog** 默认显示，Boards、Grove Modules、Expansion Boards 默认收起。
 
 ## Develop

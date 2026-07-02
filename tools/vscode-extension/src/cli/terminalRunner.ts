@@ -34,7 +34,7 @@ export function runProjectAction(
   action: Action,
   board: string,
   appDir: string,
-  options: { port?: string } = {},
+  options: { port?: string; monitorAfterFlash?: boolean } = {},
 ): void {
   const cli = locateCli(repoRoot);
   const parts = [cli.command, ...cli.baseArgs, action, board];
@@ -45,6 +45,9 @@ export function runProjectAction(
   }
   if ((action === "flash" || action === "monitor") && options.port) {
     parts.push("--port", options.port);
+  }
+  if (action === "flash" && options.monitorAfterFlash) {
+    parts.push("--monitor");
   }
   const commandLine = parts.map(quoteArg).join(" ");
 

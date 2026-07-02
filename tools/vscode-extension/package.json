@@ -187,6 +187,12 @@
         "category": "Seeed XIAO"
       },
       {
+        "command": "seeedZephyr.projectFlashMonitor",
+        "title": "Upload and Monitor Project",
+        "category": "Seeed XIAO",
+        "icon": "$(rocket)"
+      },
+      {
         "command": "seeedZephyr.projectMonitor",
         "title": "Monitor Project",
         "category": "Seeed XIAO"
@@ -203,6 +209,7 @@
         { "command": "seeedZephyr.openGenerated" },
         { "command": "seeedZephyr.selectProjectBoard" },
         { "command": "seeedZephyr.selectProjectPort" },
+        { "command": "seeedZephyr.projectFlashMonitor" },
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },
         { "command": "seeedZephyr.installManagedCli" },

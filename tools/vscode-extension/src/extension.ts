@@ -99,6 +99,11 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand("seeedZephyr.projectBuild", projectAction("build")),
     vscode.commands.registerCommand("seeedZephyr.projectFlash", projectAction("flash")),
+    vscode.commands.registerCommand("seeedZephyr.projectFlashMonitor", () =>
+      runProjectActionCmd(catalog, projects, statusBar, context, "flash", {
+        monitorAfterFlash: true,
+      }),
+    ),
     vscode.commands.registerCommand("seeedZephyr.projectMonitor", projectAction("monitor")),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       refreshAll();
@@ -114,6 +119,7 @@ async function runProjectActionCmd(
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
   name: Action,
+  options: { monitorAfterFlash?: boolean } = {},
 ): Promise<void> {
   const project = statusBar.getProject();
   if (!project) {
@@ -133,7 +139,10 @@ async function runProjectActionCmd(
   }
   projects.refresh();
   statusBar.refresh();
-  runProjectAction(projectRepoRoot(catalog), name, board, project.appDir, { port });
+  runProjectAction(projectRepoRoot(catalog), name, board, project.appDir, {
+    port,
+    monitorAfterFlash: options.monitorAfterFlash,
+  });
 }
 
 // Resolves the project board from snapshot or saved selection, then prompts from catalog.

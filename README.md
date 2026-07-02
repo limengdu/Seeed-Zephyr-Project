@@ -270,7 +270,7 @@ The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front e
 ### Sidebar Layout
 
 - **Welcome** — install the latest CLI, create/open a project, or refresh repository content.
-- **Projects** — create a project, open a generated project or Zephyr app, select the target board and serial port, and run Build / Upload / Monitor for the current workspace project.
+- **Projects** — create a project, open a generated project or Zephyr app, select the target board and serial port, and run Build / Upload / Upload & Monitor / Monitor for the current workspace project.
 - **Environment** — review environment status, manage the repository checkout, and manage the CLI tool version from separate groups.
 - **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices. The Catalog view is visible by default, with its categories collapsed until opened.
 - **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
@@ -283,7 +283,7 @@ The **Environment** view is grouped by task:
 - **Repository** contains repository actions: **Select Repository Folder**, **Update Repository**, and **Refresh Environment Status**. These actions affect examples, metadata, and catalog data.
 - **CLI** contains CLI actions: **Install Latest CLI** installs the newest published `seeed-zephyr` package into extension storage and selects it automatically, **Reinstall CLI** force-installs the newest package again, **Verify CLI** checks the selected CLI version and required plugin commands, **Choose CLI Version** installs a specific published version, **Use System CLI** selects `seeed-zephyr` from `PATH`, and **Select CLI Path** selects a CLI executable manually. These actions affect the `seeed-zephyr` command used by the extension.
 
-The extension calls the selected CLI for project creation, serial port detection, and run actions. **Auto Port** uses the detected serial port when no port has been selected yet; **Select Port** opens the detected-port picker, where **Auto Detector** keeps automatic detection enabled and a concrete port saves the user's selection for later upload and monitor actions. Managed CLI installation uses Python 3.12 or newer and the extension searches for a suitable Python before creating its venv. Install and reinstall actions verify `info --json`, `list ports --json`, and `create --help` before saving the managed CLI version. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
+The extension calls the selected CLI for project creation, serial port detection, and run actions. **Auto Port** uses the detected serial port when no port has been selected yet; **Select Port** opens the detected-port picker, where **Auto Detector** keeps automatic detection enabled and a concrete port saves the user's selection for later upload and monitor actions. **Upload & Monitor** flashes the project and opens the serial monitor after upload. Managed CLI installation uses Python 3.12 or newer and the extension searches for a suitable Python before creating its venv. Install and reinstall actions verify `info --json`, `list ports --json`, and `create --help` before saving the managed CLI version. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
 Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
 
 ### Common editor workflow
@@ -295,7 +295,7 @@ Zephyr still performs the firmware build, flash, monitor, and debug operations u
 5. Grove examples ask for a target board before generation.
 6. Use **Open Project** to open a generated project or Zephyr app example, either in a new window or in the current workspace.
 7. Select the project board and serial port from **Projects** or the status bar.
-8. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, and **Monitor Project**.
+8. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, **Upload & Monitor**, and **Monitor Project**.
 
 Generated projects record the source repository path in `.vscode/settings.json`, so the status bar can find the same CLI and metadata context when the project is opened later.
 

@@ -45,6 +45,11 @@ export class ProjectStatusBar {
         "seeedZephyr.selectProjectPort",
         "Select serial port",
       ],
+      [
+        "$(rocket) Upload & Monitor",
+        "seeedZephyr.projectFlashMonitor",
+        "Build, flash, and open the serial monitor",
+      ],
       ["$(terminal) Monitor", "seeedZephyr.projectMonitor", "Open the serial monitor"],
     ];
     buttons.forEach(([text, command, tooltip], index) => {
