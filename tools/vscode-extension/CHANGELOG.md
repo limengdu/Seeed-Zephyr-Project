@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Keep environment setup, CLI selection, CLI version selection, and repository selection actions available from the Catalog title bar More Actions menu after setup.
+
 ## 0.2.0
 
 - Add a first-run environment screen with setup, CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository selection actions.

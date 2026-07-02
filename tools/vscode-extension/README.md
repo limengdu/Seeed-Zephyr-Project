@@ -27,6 +27,8 @@ extension-managed CLI installation, CLI version selection, manual CLI path
 selection, and repository folder selection.
 Use **Update Repository** in the Catalog title bar to refresh repository
 examples and metadata from the editor.
+After setup, the same environment actions stay available from the Catalog
+title bar **More Actions** menu.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
 **Seeed XIAO Zephyr** 安装,或从
@@ -35,6 +37,8 @@ examples and metadata from the editor.
 首次打开 Catalog 时，可通过插件入口检测已有 CLI、安装插件托管 CLI、选择 CLI
 版本、手动选择 CLI 路径和选择仓库目录。
 在 Catalog 标题栏点击 **Update Repository**，即可从编辑器刷新仓库示例和 metadata。
+完成配置后，仍可从 Catalog 标题栏的 **More Actions** 菜单重新选择 CLI、CLI
+版本或仓库目录。
 
 ## Develop
 
