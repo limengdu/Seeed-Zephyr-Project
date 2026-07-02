@@ -42,6 +42,11 @@ seeed-zephyr monitor
 # Update the CLI, examples, and metadata
 seeed-zephyr update
 
+# Bootstrap older installed CLIs to the update flow
+python3 -m pip install --upgrade seeed-zephyr
+pipx upgrade seeed-zephyr
+brew update && brew upgrade seeed-zephyr
+
 # Show version and traceability information
 seeed-zephyr info
 

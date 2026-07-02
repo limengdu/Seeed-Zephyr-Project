@@ -99,6 +99,15 @@ brew install limengdu/seeed/seeed-zephyr        # macOS / Linux
 seeed-zephyr update
 ```
 
+旧版安装先用原安装渠道引导到这套更新流程，执行一次即可：
+
+```sh
+brew update && brew upgrade seeed-zephyr
+python3 -m pip install --upgrade seeed-zephyr
+pipx upgrade seeed-zephyr
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
+```
+
 查看当前 CLI 版本、安装来源、仓库提交和 Zephyr 基线：
 
 ```sh
@@ -186,6 +195,17 @@ seeed-zephyr info
 ```
 
 这个命令会刷新当前 CLI 安装，或刷新提供示例和 metadata 的本地仓库。使用 `--version` 可以选择已发布的 CLI 包版本；在源码仓库模式下也可以选择 Git tag 或 commit。
+
+如果本机 CLI 还没有 `update` 子命令，先按原安装渠道升级一次：
+
+```sh
+brew update && brew upgrade seeed-zephyr          # Homebrew
+python3 -m pip install --upgrade seeed-zephyr     # pip
+pipx upgrade seeed-zephyr                         # pipx
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
+```
+
+完成这次引导升级后，后续统一使用 `seeed-zephyr update`。
 
 ### 无需指定板子的串口监视
 

@@ -99,6 +99,15 @@ Keep the CLI, bundled examples, and metadata current with one command:
 seeed-zephyr update
 ```
 
+Bootstrap older installations to this update flow with the original install channel once:
+
+```sh
+brew update && brew upgrade seeed-zephyr
+python3 -m pip install --upgrade seeed-zephyr
+pipx upgrade seeed-zephyr
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
+```
+
 Show the active CLI version, install source, repository commit, and Zephyr baseline:
 
 ```sh
@@ -186,6 +195,17 @@ seeed-zephyr info
 ```
 
 This refreshes the current CLI installation or the local repository checkout that supplies examples and metadata. Use `--version` to select a published CLI package version, or a Git tag/commit when running from a repository checkout.
+
+For older installed CLIs that predate `seeed-zephyr update`, run the matching installer channel once:
+
+```sh
+brew update && brew upgrade seeed-zephyr          # Homebrew
+python3 -m pip install --upgrade seeed-zephyr     # pip
+pipx upgrade seeed-zephyr                         # pipx
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
+```
+
+After that bootstrap step, use `seeed-zephyr update` for normal updates.
 
 ### Serial monitor, no board required
 

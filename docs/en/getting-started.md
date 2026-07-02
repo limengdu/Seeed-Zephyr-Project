@@ -218,6 +218,15 @@ seeed-zephyr update --version 0.3.0
 seeed-zephyr info
 ```
 
+Bootstrap older installations with the original install channel once:
+
+```sh
+brew update && brew upgrade seeed-zephyr
+python3 -m pip install --upgrade seeed-zephyr
+pipx upgrade seeed-zephyr
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
+```
+
 One-sentence summary: the CLI is the normal entry point for operating repository
 examples.
 

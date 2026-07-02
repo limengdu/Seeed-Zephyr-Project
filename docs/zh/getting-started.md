@@ -216,6 +216,15 @@ seeed-zephyr update --version 0.3.0
 seeed-zephyr info
 ```
 
+旧版安装先按原安装渠道引导升级一次：
+
+```sh
+brew update && brew upgrade seeed-zephyr
+python3 -m pip install --upgrade seeed-zephyr
+pipx upgrade seeed-zephyr
+curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
+```
+
 一句话总结：CLI 是操作本仓库示例的默认入口。
 
 ## 5. 当前开发板 demo 矩阵
