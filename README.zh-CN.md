@@ -262,14 +262,14 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 
 ## 编辑器插件
 
-[Seeed XIAO Zephyr Assistant](tools/vscode-extension/) 是这个仓库的编辑器入口。它读取和 CLI 相同的 metadata 与示例，所以点击 **Update Repository** 之后，Catalog 视图会跟随仓库内容更新。
+[Seeed XIAO Zephyr Assistant](tools/vscode-extension/) 是这个仓库的编辑器入口。它读取和 CLI 相同的 metadata 与示例，所以点击 **Update Repository** 之后，左侧栏会跟随仓库内容更新。
 
-### Catalog 里能看到什么
+### 左侧栏布局
 
-- **开发板** —— XIAO 开发板、验证徽章、Zephyr target、烧录方式说明和板级示例。
-- **Grove 模块** —— 当前选定的 Grove 模块、驱动/配置 metadata、可用 Grove 示例，以及来自 `metadata/status/` 的“示例 x 板子”状态矩阵。
-- **扩展板** —— XIAO 兼容扩展板、Grove 端口、板载外设和 shield metadata。
-- **详情页** —— 点击开发板、示例、模块、Grove 示例或扩展板，会在侧边面板显示对应命令和 metadata。
+- **Projects** —— 创建项目、打开生成项目或 Zephyr app，并对当前工作区项目执行 Build / Upload / Monitor。
+- **Extension Setup** —— 查看仓库和 CLI 状态，安装或选择 CLI，选择仓库目录，更新仓库内容，并刷新环境状态。
+- **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。
+- **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
 
 ### 插件里的 CLI 选择
 
@@ -285,18 +285,19 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 
 ### 常见编辑器流程
 
-1. 从 Seeed XIAO Zephyr 活动栏打开 Catalog。
-2. 通过 setup 入口选择或安装 CLI。
-3. 如果没有自动识别仓库，就选择仓库目录。
-4. 浏览板级示例或 Grove 示例。
-5. 执行 **Create Project from Example**。Grove 示例会先让你选择目标开发板。
-6. 打开生成的项目，用状态栏的 **Build Project**、**Upload Project** 和 **Monitor Project** 操作。
+1. 从活动栏打开 Seeed XIAO Zephyr 左侧栏。
+2. 在 **Extension Setup** 里选择或安装 CLI；如果没有自动识别仓库，就选择仓库目录。
+3. 在 **Projects** 里执行 **Create Project** 或 **Open Project**。
+4. 在 **Catalog** 里浏览板级示例或 Grove 示例。
+5. Grove 示例会先让你选择目标开发板。
+6. 使用 **Open Project** 打开生成项目或 Zephyr app 示例，可选择新窗口打开或加入当前工作区。
+7. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project** 和 **Monitor Project** 操作。
 
 生成项目会把来源仓库路径写进 `.vscode/settings.json`，后续重新打开项目时，状态栏也能找到同一套 CLI 和 metadata 上下文。
 
 ### 在编辑器里更新
 
-Catalog 标题栏的 **Update Repository** 会拉取最新示例、metadata、状态矩阵、文档和插件可读取的目录数据。文件已经更新、只想重新加载视图时，使用 **Refresh Catalog**。
+**Extension Setup** 或左侧栏标题栏里的 **Update Repository** 会拉取最新示例、metadata、状态矩阵、文档和插件可读取的目录数据。文件已经更新、只想重新加载视图时，使用 **Refresh Catalog**。
 
 ## 从源码构建
 

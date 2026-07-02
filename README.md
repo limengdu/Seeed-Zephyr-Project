@@ -264,14 +264,14 @@ See [`metadata/`](metadata/) for the full, machine-readable catalog.
 
 ## Editor Extension
 
-The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front end for this repository. It reads the same metadata and examples as the CLI, so the Catalog view stays aligned with the repository content after **Update Repository**.
+The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front end for this repository. It reads the same metadata and examples as the CLI, so the sidebar stays aligned with the repository content after **Update Repository**.
 
-### What the Catalog shows
+### Sidebar Layout
 
-- **Boards** — XIAO boards with validation badges, Zephyr targets, flash method notes, and board examples.
-- **Grove Modules** — selected Grove modules, driver/config metadata, available Grove examples, and the example x board status matrix from `metadata/status/`.
-- **Expansion Boards** — XIAO-compatible expansion boards, Grove ports, onboard peripherals, and shield metadata.
-- **Details** — clicking a board, example, module, Grove example, or expansion board opens a side panel with the relevant commands and metadata.
+- **Projects** — create a project, open a generated project or Zephyr app, and run Build / Upload / Monitor for the current workspace project.
+- **Extension Setup** — check the repository and CLI state, install or select a CLI, select the repository folder, update repository content, and refresh the environment.
+- **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices.
+- **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
 
 ### CLI selection inside the extension
 
@@ -287,18 +287,19 @@ The extension calls the CLI for project creation and run actions. Zephyr still p
 
 ### Common editor workflow
 
-1. Open the Catalog from the Seeed XIAO Zephyr activity bar.
-2. Select or install a CLI from the setup actions.
-3. Choose the repository folder if it is not auto-detected.
-4. Browse a board example or Grove example.
-5. Run **Create Project from Example**. Grove examples ask for a target board before generation.
-6. Open the generated project and use the status bar actions: **Build Project**, **Upload Project**, and **Monitor Project**.
+1. Open the Seeed XIAO Zephyr sidebar from the activity bar.
+2. Use **Extension Setup** to select or install a CLI and choose the repository folder if it is not auto-detected.
+3. Use **Projects** to run **Create Project** or **Open Project**.
+4. Browse a board example or Grove example under **Catalog**.
+5. Grove examples ask for a target board before generation.
+6. Use **Open Project** to open a generated project or Zephyr app example, either in a new window or in the current workspace.
+7. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, and **Monitor Project**.
 
 Generated projects record the source repository path in `.vscode/settings.json`, so the status bar can find the same CLI and metadata context when the project is opened later.
 
 ### Updating from the editor
 
-Use **Update Repository** in the Catalog title bar to pull the latest examples, metadata, status matrices, docs, and plugin-readable catalog data. Use **Refresh Catalog** when the files on disk already changed and you only need the view to reload.
+Use **Update Repository** under **Extension Setup** or in the sidebar title bar to pull the latest examples, metadata, status matrices, docs, and plugin-readable catalog data. Use **Refresh Catalog** when the files on disk already changed and you only need the view to reload.
 
 ## Build From Source
 

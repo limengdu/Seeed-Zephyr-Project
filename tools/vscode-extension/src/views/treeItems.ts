@@ -9,8 +9,15 @@ import {
   ValidationStatus,
 } from "../model/types";
 import type { DetailTarget } from "../panels/detailPanel";
+import type { ProjectInfo } from "../statusBar";
 
-export type GroupKind = "boards" | "modules" | "expansions";
+export type GroupKind =
+  | "projects"
+  | "setup"
+  | "catalog"
+  | "boards"
+  | "modules"
+  | "expansions";
 
 // Maps a validation status to a VS Code theme icon id.
 // 把验证状态映射到 VS Code 主题图标 id。
@@ -41,11 +48,26 @@ export class GroupNode extends vscode.TreeItem {
   constructor(
     label: string,
     public readonly group: GroupKind,
-    count: number,
+    count?: number | string,
   ) {
     super(label, vscode.TreeItemCollapsibleState.Expanded);
-    this.description = `${count}`;
+    if (count !== undefined) {
+      this.description = `${count}`;
+    }
     this.contextValue = "group";
+  }
+}
+
+export class ProjectNode extends vscode.TreeItem {
+  constructor(
+    label: string,
+    public readonly project: ProjectInfo,
+  ) {
+    super(label, vscode.TreeItemCollapsibleState.Expanded);
+    this.description = project.board ?? "board not selected";
+    this.iconPath = new vscode.ThemeIcon("folder-active");
+    this.tooltip = project.appDir;
+    this.contextValue = "project";
   }
 }
 
@@ -142,6 +164,7 @@ export class ActionNode extends vscode.TreeItem {
 export type CatalogNode =
   | ActionNode
   | GroupNode
+  | ProjectNode
   | BoardNode
   | ExampleNode
   | ModuleNode

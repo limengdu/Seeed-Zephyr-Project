@@ -1,18 +1,18 @@
 # Seeed XIAO Zephyr Assistant (VS Code extension)
 
-Browse XIAO boards, Grove modules, and expansion boards; preview verified
-examples; create a project from an example; then hand build/flash/monitor/debug
-to Zephyr tooling.
+Create and open XIAO Zephyr projects, manage the extension environment, browse
+XIAO boards, Grove modules, and expansion boards, then hand build/flash/monitor
+actions to Zephyr tooling.
 
 The extension reads repository metadata directly, so browsing works offline
 without a Zephyr toolchain installed. Create and execute actions call the
 `seeed-zephyr` CLI. Grove modules expand to the examples and board matrix
 recorded in the repository.
 
-浏览 XIAO 板子、Grove 模块和扩展板;预览验证过的示例;从示例创建项目;再把
-构建/烧录/监视/调试交给 Zephyr 工具链。浏览直接读取仓库元数据,因此无需安装
-Zephyr 工具链也能离线浏览;创建和执行操作会调用 `seeed-zephyr` CLI。Grove
-模块会展开显示仓库中记录的示例和板级矩阵。
+创建和打开 XIAO Zephyr 项目,管理插件环境,浏览 XIAO 板子、Grove 模块和扩展板,
+再把构建/烧录/监视操作交给 Zephyr 工具链。浏览直接读取仓库元数据,因此无需安装
+Zephyr 工具链也能离线浏览;创建和执行操作会调用 `seeed-zephyr` CLI。Grove 模块
+会展开显示仓库中记录的示例和板级矩阵。
 
 ## Install
 
@@ -24,23 +24,20 @@ Build, flash, and monitor actions call the `seeed-zephyr` CLI. Install it with
 `pip install seeed-zephyr`, and for the full Zephyr toolchain (SDK + `west`
 workspace) use the one-line installer in the
 [project README](https://github.com/limengdu/Seeed-Zephyr-Project#quick-start).
-The first-run Catalog view provides setup actions for existing CLI detection,
-extension-managed CLI installation, CLI version selection, manual CLI path
-selection, and repository folder selection.
-Use **Update Repository** in the Catalog title bar to refresh repository
-examples and metadata from the editor.
-After setup, the same environment actions stay available from the Catalog
-title bar **More Actions** menu.
+The sidebar is organized into **Projects**, **Extension Setup**, and **Catalog**.
+Use **Projects** to create a generated project, open a generated project or
+Zephyr app in a new window, or add it to the current workspace. Use **Extension Setup** for existing CLI
+detection, extension-managed CLI installation, CLI version selection, manual CLI
+path selection, repository folder selection, and repository updates.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
 **Seeed XIAO Zephyr** 安装,或从
 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 构建/烧录/监视会调用 `seeed-zephyr` CLI,用 `pip install seeed-zephyr` 安装即可。
-首次打开 Catalog 时，可通过插件入口检测已有 CLI、安装插件托管 CLI、选择 CLI
-版本、手动选择 CLI 路径和选择仓库目录。
-在 Catalog 标题栏点击 **Update Repository**，即可从编辑器刷新仓库示例和 metadata。
-完成配置后，仍可从 Catalog 标题栏的 **More Actions** 菜单重新选择 CLI、CLI
-版本或仓库目录。
+左侧栏分为 **Projects**、**Extension Setup** 和 **Catalog**。在 **Projects** 里创建
+生成项目、打开生成项目或 Zephyr app，或把项目加入当前工作区。在 **Extension Setup** 里
+检测已有 CLI、安装插件托管 CLI、选择 CLI 版本、手动选择 CLI 路径、选择仓库目录和
+更新仓库内容。
 
 ## Develop
 

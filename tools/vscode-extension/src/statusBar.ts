@@ -58,7 +58,7 @@ export class ProjectStatusBar {
 
 // Detects a Zephyr project in any workspace folder: a snapshot.json or a Zephyr app.
 // 在任一工作区文件夹中检测 Zephyr 工程:snapshot.json 或一个 Zephyr 应用。
-function detectProject(): ProjectInfo | undefined {
+export function detectProject(): ProjectInfo | undefined {
   const folders = vscode.workspace.workspaceFolders ?? [];
   for (const folder of folders) {
     const dir = folder.uri.fsPath;

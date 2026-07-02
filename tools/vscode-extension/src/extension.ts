@@ -58,7 +58,10 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.projectBuild", projectAction("build")),
     vscode.commands.registerCommand("seeedZephyr.projectFlash", projectAction("flash")),
     vscode.commands.registerCommand("seeedZephyr.projectMonitor", projectAction("monitor")),
-    vscode.workspace.onDidChangeWorkspaceFolders(() => statusBar.refresh()),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      statusBar.refresh();
+      catalog.refresh();
+    }),
   );
 }
 

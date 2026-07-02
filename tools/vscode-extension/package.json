@@ -101,14 +101,15 @@
       },
       {
         "command": "seeedZephyr.createProject",
-        "title": "Create Project from Example",
+        "title": "Create Project",
         "category": "Seeed XIAO",
         "icon": "$(new-folder)"
       },
       {
         "command": "seeedZephyr.openGenerated",
-        "title": "Open Generated Project",
-        "category": "Seeed XIAO"
+        "title": "Open Project",
+        "category": "Seeed XIAO",
+        "icon": "$(folder-opened)"
       },
       {
         "command": "seeedZephyr.build",
@@ -157,6 +158,8 @@
         { "command": "seeedZephyr.flash", "when": "false" },
         { "command": "seeedZephyr.monitor", "when": "false" },
         { "command": "seeedZephyr.debug", "when": "false" },
+        { "command": "seeedZephyr.createProject" },
+        { "command": "seeedZephyr.openGenerated" },
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },
         { "command": "seeedZephyr.installManagedCli" },
@@ -168,12 +171,22 @@
         {
           "command": "seeedZephyr.updateRepository",
           "when": "view == seeedZephyrCatalog",
-          "group": "navigation"
+          "group": "navigation@3"
         },
         {
           "command": "seeedZephyr.refreshCatalog",
           "when": "view == seeedZephyrCatalog",
-          "group": "navigation"
+          "group": "navigation@4"
+        },
+        {
+          "command": "seeedZephyr.createProject",
+          "when": "view == seeedZephyrCatalog",
+          "group": "navigation@1"
+        },
+        {
+          "command": "seeedZephyr.openGenerated",
+          "when": "view == seeedZephyrCatalog",
+          "group": "navigation@2"
         },
         {
           "command": "seeedZephyr.setupEnvironment",
