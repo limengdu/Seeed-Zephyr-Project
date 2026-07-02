@@ -159,6 +159,9 @@ def build_parser() -> argparse.ArgumentParser:
     list_expansion = list_subparsers.add_parser("expansion", help="List expansion boards.")
     add_json_flag(list_expansion)
     list_expansion.set_defaults(func=cmd_list_expansion)
+    list_ports = list_subparsers.add_parser("ports", help="List USB serial ports.")
+    add_json_flag(list_ports)
+    list_ports.set_defaults(func=cmd_list_ports)
 
     show_parser = subparsers.add_parser(
         "show", help="Show details for a board or example."
@@ -1956,6 +1959,22 @@ def list_serial_ports_detailed() -> list[tuple[str, str]]:
         description = parts[1] if len(parts) > 1 else device
         ports.append((device, description))
     return ports
+
+
+def cmd_list_ports(args: argparse.Namespace) -> None:
+    ports = [
+        {"device": device, "description": description}
+        for device, description in list_serial_ports_detailed()
+    ]
+    if getattr(args, "as_json", False):
+        print(json.dumps(ports, indent=2))
+        return
+
+    if not ports:
+        print("No USB serial ports found.")
+        return
+    for port in ports:
+        print(f"{port['device']}\t{port['description']}")
 
 
 COMMON_BAUD_RATES = [9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]

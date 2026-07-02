@@ -141,6 +141,18 @@
         "category": "Seeed XIAO"
       },
       {
+        "command": "seeedZephyr.selectProjectBoard",
+        "title": "Select Project Board",
+        "category": "Seeed XIAO",
+        "icon": "$(circuit-board)"
+      },
+      {
+        "command": "seeedZephyr.selectProjectPort",
+        "title": "Select Project Port",
+        "category": "Seeed XIAO",
+        "icon": "$(plug)"
+      },
+      {
         "command": "seeedZephyr.projectFlash",
         "title": "Upload Project",
         "category": "Seeed XIAO"
@@ -160,6 +172,8 @@
         { "command": "seeedZephyr.debug", "when": "false" },
         { "command": "seeedZephyr.createProject" },
         { "command": "seeedZephyr.openGenerated" },
+        { "command": "seeedZephyr.selectProjectBoard" },
+        { "command": "seeedZephyr.selectProjectPort" },
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },
         { "command": "seeedZephyr.installManagedCli" },

@@ -26,18 +26,22 @@ workspace) use the one-line installer in the
 [project README](https://github.com/limengdu/Seeed-Zephyr-Project#quick-start).
 The sidebar is organized into **Projects**, **Extension Setup**, and **Catalog**.
 Use **Projects** to create a generated project, open a generated project or
-Zephyr app in a new window, or add it to the current workspace. Use **Extension Setup** for existing CLI
-detection, extension-managed CLI installation, CLI version selection, manual CLI
-path selection, repository folder selection, and repository updates.
+Zephyr app, select the project board and serial port, and run project actions.
+Use **Extension Setup** for existing CLI detection, extension-managed CLI
+installation, CLI version selection, manual CLI path selection, repository
+folder selection, and repository updates. Serial port detection is provided by
+the selected CLI. When testing from a source checkout, select the checkout's
+`scripts/seeed-zephyr` command.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
 **Seeed XIAO Zephyr** 安装,或从
 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 构建/烧录/监视会调用 `seeed-zephyr` CLI,用 `pip install seeed-zephyr` 安装即可。
 左侧栏分为 **Projects**、**Extension Setup** 和 **Catalog**。在 **Projects** 里创建
-生成项目、打开生成项目或 Zephyr app，或把项目加入当前工作区。在 **Extension Setup** 里
-检测已有 CLI、安装插件托管 CLI、选择 CLI 版本、手动选择 CLI 路径、选择仓库目录和
-更新仓库内容。
+生成项目、打开生成项目或 Zephyr app、选择项目开发板和串口，并运行项目操作。在
+**Extension Setup** 里检测已有 CLI、安装插件托管 CLI、选择 CLI 版本、手动选择 CLI
+路径、选择仓库目录和更新仓库内容。串口检测由当前选择的 CLI 提供；从源码测试时，
+选择当前仓库里的 `scripts/seeed-zephyr`。
 
 ## Develop
 

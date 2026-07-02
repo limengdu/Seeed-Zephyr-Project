@@ -1029,6 +1029,21 @@ class JsonOutputTests(unittest.TestCase):
         self.assertGreaterEqual(len(data), 3)
         self.assertTrue(all("id" in board for board in data))
 
+    def test_list_ports_json(self) -> None:
+        with mock.patch.object(
+            seeed_zephyr,
+            "list_serial_ports_detailed",
+            return_value=[("/dev/cu.usb1", "Board A"), ("/dev/cu.usb2", "Board B")],
+        ):
+            data = self._run_json(seeed_zephyr.cmd_list_ports)
+        self.assertEqual(
+            data,
+            [
+                {"device": "/dev/cu.usb1", "description": "Board A"},
+                {"device": "/dev/cu.usb2", "description": "Board B"},
+            ],
+        )
+
     def test_select_example_unknown_name_raises(self) -> None:
         ex1 = {"demo": "blinky", "validation_status": "hardware-tested", "path": "a"}
         with mock.patch.object(seeed_zephyr, "require_board"):

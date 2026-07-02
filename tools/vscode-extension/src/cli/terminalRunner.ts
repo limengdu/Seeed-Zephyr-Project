@@ -34,13 +34,17 @@ export function runProjectAction(
   action: Action,
   board: string,
   appDir: string,
+  options: { port?: string } = {},
 ): void {
   const cli = locateCli(repoRoot);
   const parts = [cli.command, ...cli.baseArgs, action, board];
-  // monitor opens the board serial port; build/flash/debug take the app dir.
-  // monitor 打开板子串口;build/flash/debug 需要应用目录。
+  // monitor uses the selected serial port; build/flash/debug take the app dir.
+  // monitor 使用已选择的串口;build/flash/debug 需要应用目录。
   if (action !== "monitor") {
     parts.push("--app", appDir);
+  }
+  if ((action === "flash" || action === "monitor") && options.port) {
+    parts.push("--port", options.port);
   }
   const commandLine = parts.map(quoteArg).join(" ");
 

@@ -11,8 +11,15 @@ import {
   setupEnvironment,
   useExistingCli,
 } from "./commands/environmentCommands";
+import {
+  getEffectiveBoard,
+  resolveProjectPort,
+  selectProjectBoard,
+  selectProjectPort,
+} from "./commands/projectSettings";
 import { Action, runAction, runProjectAction } from "./cli/terminalRunner";
 import { ProjectStatusBar } from "./statusBar";
+import type { ProjectInfo } from "./statusBar";
 
 export function activate(context: vscode.ExtensionContext): void {
   const catalog = new CatalogTreeProvider(context);
@@ -55,6 +62,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.flash", action("flash")),
     vscode.commands.registerCommand("seeedZephyr.monitor", action("monitor")),
     vscode.commands.registerCommand("seeedZephyr.debug", action("debug")),
+    vscode.commands.registerCommand("seeedZephyr.selectProjectBoard", () =>
+      selectProjectBoardCmd(catalog, statusBar, context),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.selectProjectPort", () =>
+      selectProjectPortCmd(catalog, statusBar, context),
+    ),
     vscode.commands.registerCommand("seeedZephyr.projectBuild", projectAction("build")),
     vscode.commands.registerCommand("seeedZephyr.projectFlash", projectAction("flash")),
     vscode.commands.registerCommand("seeedZephyr.projectMonitor", projectAction("monitor")),
@@ -78,34 +91,68 @@ async function runProjectActionCmd(
     void vscode.window.showErrorMessage("No Zephyr project detected in this workspace.");
     return;
   }
-  const board = await resolveProjectBoard(project.board, context);
+  const board = await resolveProjectBoard(project, catalog, context);
   if (!board) {
     return;
   }
-  runProjectAction(projectRepoRoot(catalog), name, board, project.appDir);
+  const needsPort = name === "flash" || name === "monitor";
+  const port = needsPort
+    ? await resolveProjectPort(context, project, projectRepoRoot(catalog))
+    : undefined;
+  if (needsPort && !port) {
+    return;
+  }
+  runProjectAction(projectRepoRoot(catalog), name, board, project.appDir, { port });
 }
 
-// Resolves the project board: from snapshot, remembered choice, or a one-time prompt.
-// 解析工程板子:来自 snapshot、记住的选择,或一次性提示输入。
+// Resolves the project board from snapshot or saved selection, then prompts from catalog.
+// 从 snapshot 或已保存选择解析板子,必要时从 catalog 弹窗选择。
 async function resolveProjectBoard(
-  known: string | undefined,
+  project: ProjectInfo,
+  catalog: CatalogTreeProvider,
   context: vscode.ExtensionContext,
 ): Promise<string | undefined> {
+  const known = getEffectiveBoard(context, project);
   if (known) {
     return known;
   }
-  const remembered = context.workspaceState.get<string>("seeedZephyr.board");
-  if (remembered) {
-    return remembered;
+  return selectProjectBoard(context, project, catalog.getCatalog());
+}
+
+async function selectProjectBoardCmd(
+  catalog: CatalogTreeProvider,
+  statusBar: ProjectStatusBar,
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  const project = requireCurrentProject(statusBar);
+  if (!project) {
+    return;
   }
-  const input = await vscode.window.showInputBox({
-    prompt: "Board id for this project",
-    placeHolder: "xiao_esp32c6",
-  });
-  if (input) {
-    await context.workspaceState.update("seeedZephyr.board", input);
+  await selectProjectBoard(context, project, catalog.getCatalog());
+  statusBar.refresh();
+  catalog.refresh();
+}
+
+async function selectProjectPortCmd(
+  catalog: CatalogTreeProvider,
+  statusBar: ProjectStatusBar,
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  const project = requireCurrentProject(statusBar);
+  if (!project) {
+    return;
   }
-  return input || undefined;
+  await selectProjectPort(context, project, projectRepoRoot(catalog));
+  statusBar.refresh();
+  catalog.refresh();
+}
+
+function requireCurrentProject(statusBar: ProjectStatusBar) {
+  const project = statusBar.getProject();
+  if (!project) {
+    void vscode.window.showErrorMessage("No Zephyr project detected in this workspace.");
+  }
+  return project;
 }
 
 function projectRepoRoot(catalog: CatalogTreeProvider): string | undefined {

@@ -6,6 +6,7 @@ import { locateRepoRoot } from "../repo/repoLocator";
 import { Catalog } from "../model/types";
 import { detectProject } from "../statusBar";
 import type { ProjectInfo } from "../statusBar";
+import { displayBoard, displayPort } from "../commands/projectSettings";
 import {
   ActionNode,
   BoardNode,
@@ -109,10 +110,14 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
       return node.module.examples.map((example) => new GroveExampleNode(example, node.module));
     }
     if (node instanceof ProjectNode) {
+      const board = displayBoard(this.context, node.project);
+      const port = displayPort(this.context, node.project);
       return [
+        new ActionNode("Select Board", "seeedZephyr.selectProjectBoard", "circuit-board", board),
         new ActionNode("Build Project", "seeedZephyr.projectBuild", "check"),
         new ActionNode("Upload Project", "seeedZephyr.projectFlash", "arrow-up"),
-        new ActionNode("Monitor Project", "seeedZephyr.projectMonitor", "plug"),
+        new ActionNode("Select Port", "seeedZephyr.selectProjectPort", "plug", port),
+        new ActionNode("Monitor Project", "seeedZephyr.projectMonitor", "terminal"),
       ];
     }
     return [];
@@ -124,7 +129,14 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
       new ActionNode("Open Project", "seeedZephyr.openGenerated", "folder-opened"),
     ];
     if (this.project) {
-      nodes.push(new ProjectNode(path.basename(this.project.appDir), this.project));
+      nodes.push(
+        new ProjectNode(
+          path.basename(this.project.appDir),
+          this.project,
+          displayBoard(this.context, this.project),
+          displayPort(this.context, this.project),
+        ),
+      );
     } else {
       nodes.push(new MessageNode("No project in the current workspace."));
     }

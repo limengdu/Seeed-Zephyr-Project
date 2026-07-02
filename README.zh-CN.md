@@ -208,6 +208,7 @@ seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 ```sh
 seeed-zephyr list boards
 seeed-zephyr list examples
+seeed-zephyr list ports --json
 ```
 
 ### 更新
@@ -266,7 +267,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 
 ### 左侧栏布局
 
-- **Projects** —— 创建项目、打开生成项目或 Zephyr app，并对当前工作区项目执行 Build / Upload / Monitor。
+- **Projects** —— 创建项目、打开生成项目或 Zephyr app，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Monitor。
 - **Extension Setup** —— 查看仓库和 CLI 状态，安装或选择 CLI，选择仓库目录，更新仓库内容，并刷新环境状态。
 - **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。
 - **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
@@ -281,7 +282,8 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 - **Select CLI Path**：手动指定某个命令或脚本路径。
 - **Select Repository Folder**：选择提供示例和 metadata 的仓库目录。
 
-插件创建项目和运行操作时会调用 CLI；真正的固件构建、烧录、监视和调试仍由 Zephyr 工具链完成。
+插件创建项目、检测串口和运行操作时会调用所选 CLI；从源码测试插件时，建议在 **Select CLI Path** 里选择同一仓库下的 `scripts/seeed-zephyr`，让编辑器使用当前 checkout 里的 CLI。
+真正的固件构建、烧录、监视和调试仍由 Zephyr 工具链完成。
 
 ### 常见编辑器流程
 
@@ -291,7 +293,8 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 4. 在 **Catalog** 里浏览板级示例或 Grove 示例。
 5. Grove 示例会先让你选择目标开发板。
 6. 使用 **Open Project** 打开生成项目或 Zephyr app 示例，可选择新窗口打开或加入当前工作区。
-7. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project** 和 **Monitor Project** 操作。
+7. 在 **Projects** 或状态栏里选择项目开发板和串口。
+8. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project** 和 **Monitor Project** 操作。
 
 生成项目会把来源仓库路径写进 `.vscode/settings.json`，后续重新打开项目时，状态栏也能找到同一套 CLI 和 metadata 上下文。
 

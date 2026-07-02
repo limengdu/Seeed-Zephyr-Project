@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { displayBoard, displayPort } from "./commands/projectSettings";
 
 export interface ProjectInfo {
   appDir: string;
@@ -32,9 +33,19 @@ export class ProjectStatusBar {
       return;
     }
     const buttons: Array<[string, string, string]> = [
+      [
+        `$(circuit-board) ${displayBoard(this.context, this.project)}`,
+        "seeedZephyr.selectProjectBoard",
+        "Select board",
+      ],
       ["$(check) Build", "seeedZephyr.projectBuild", "Build this project"],
       ["$(arrow-up) Upload", "seeedZephyr.projectFlash", "Build and flash this project"],
-      ["$(plug) Monitor", "seeedZephyr.projectMonitor", "Open the serial monitor"],
+      [
+        `$(plug) ${displayPort(this.context, this.project)}`,
+        "seeedZephyr.selectProjectPort",
+        "Select serial port",
+      ],
+      ["$(terminal) Monitor", "seeedZephyr.projectMonitor", "Open the serial monitor"],
     ];
     buttons.forEach(([text, command, tooltip], index) => {
       const item = vscode.window.createStatusBarItem(

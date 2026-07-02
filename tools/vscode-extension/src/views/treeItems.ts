@@ -62,9 +62,11 @@ export class ProjectNode extends vscode.TreeItem {
   constructor(
     label: string,
     public readonly project: ProjectInfo,
+    boardLabel: string,
+    portLabel: string,
   ) {
     super(label, vscode.TreeItemCollapsibleState.Expanded);
-    this.description = project.board ?? "board not selected";
+    this.description = `${boardLabel} - ${portLabel}`;
     this.iconPath = new vscode.ThemeIcon("folder-active");
     this.tooltip = project.appDir;
     this.contextValue = "project";

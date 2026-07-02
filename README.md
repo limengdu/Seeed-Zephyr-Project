@@ -210,6 +210,7 @@ seeed-zephyr flash xiao_esp32c6 --app ~/my-zephyr-app --monitor
 ```sh
 seeed-zephyr list boards
 seeed-zephyr list examples
+seeed-zephyr list ports --json
 ```
 
 ### Update
@@ -268,7 +269,7 @@ The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front e
 
 ### Sidebar Layout
 
-- **Projects** — create a project, open a generated project or Zephyr app, and run Build / Upload / Monitor for the current workspace project.
+- **Projects** — create a project, open a generated project or Zephyr app, select the target board and serial port, and run Build / Upload / Monitor for the current workspace project.
 - **Extension Setup** — check the repository and CLI state, install or select a CLI, select the repository folder, update repository content, and refresh the environment.
 - **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices.
 - **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
@@ -283,7 +284,8 @@ The extension can run with the CLI path that fits your setup:
 - **Select CLI Path** points the extension at a specific command or script.
 - **Select Repository Folder** chooses the checkout that supplies examples and metadata.
 
-The extension calls the CLI for project creation and run actions. Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
+The extension calls the selected CLI for project creation, serial port detection, and run actions. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
+Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
 
 ### Common editor workflow
 
@@ -293,7 +295,8 @@ The extension calls the CLI for project creation and run actions. Zephyr still p
 4. Browse a board example or Grove example under **Catalog**.
 5. Grove examples ask for a target board before generation.
 6. Use **Open Project** to open a generated project or Zephyr app example, either in a new window or in the current workspace.
-7. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, and **Monitor Project**.
+7. Select the project board and serial port from **Projects** or the status bar.
+8. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, and **Monitor Project**.
 
 Generated projects record the source repository path in `.vscode/settings.json`, so the status bar can find the same CLI and metadata context when the project is opened later.
 
