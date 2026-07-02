@@ -270,19 +270,18 @@ The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front e
 ### Sidebar Layout
 
 - **Projects** — create a project, open a generated project or Zephyr app, select the target board and serial port, and run Build / Upload / Monitor for the current workspace project.
-- **Extension Setup** — check the repository and CLI state, install or select a CLI, select the repository folder, update repository content, and refresh the environment.
+- **Extension Setup** — review environment status, use the recommended CLI, manage the repository checkout, and manage the CLI tool version from separate groups.
 - **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices.
 - **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
 
 ### CLI selection inside the extension
 
-The extension can run with the CLI path that fits your setup:
+The **Extension Setup** section is grouped by task:
 
-- **Use Existing CLI** detects a `seeed-zephyr` command already installed on the machine.
-- **Install Managed CLI** installs a CLI copy owned by the extension.
-- **Select CLI Version** chooses the managed CLI version.
-- **Select CLI Path** points the extension at a specific command or script.
-- **Select Repository Folder** chooses the checkout that supplies examples and metadata.
+- **Status** shows the active repository folder, CLI command, CLI source, and CLI version when available.
+- **Recommended** provides **Use Recommended CLI** for the current workspace and **Run Full Setup** for a complete toolchain setup.
+- **Repository** contains repository actions: **Select Repository Folder**, **Update Repository**, and **Refresh Environment Status**. These actions affect examples, metadata, and catalog data.
+- **CLI** contains CLI actions: **Install or Update Managed CLI** for the latest extension-managed CLI, **Select Managed CLI Version** for a specific published version, **Use System CLI**, and **Select CLI Path**. These actions affect the `seeed-zephyr` command used by the extension.
 
 The extension calls the selected CLI for project creation, serial port detection, and run actions. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
 Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
@@ -290,7 +289,7 @@ Zephyr still performs the firmware build, flash, monitor, and debug operations u
 ### Common editor workflow
 
 1. Open the Seeed XIAO Zephyr sidebar from the activity bar.
-2. Use **Extension Setup** to select or install a CLI and choose the repository folder if it is not auto-detected.
+2. Use **Extension Setup** to confirm **Status**, then run **Use Recommended CLI** or choose a repository/CLI action from its matching group.
 3. Use **Projects** to run **Create Project** or **Open Project**.
 4. Browse a board example or Grove example under **Catalog**.
 5. Grove examples ask for a target board before generation.

@@ -268,19 +268,18 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 ### 左侧栏布局
 
 - **Projects** —— 创建项目、打开生成项目或 Zephyr app，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Monitor。
-- **Extension Setup** —— 查看仓库和 CLI 状态，安装或选择 CLI，选择仓库目录，更新仓库内容，并刷新环境状态。
+- **Extension Setup** —— 按状态、推荐设置、仓库、CLI 四组管理环境。
 - **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。
 - **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
 
 ### 插件里的 CLI 选择
 
-插件可以按你的环境选择 CLI：
+**Extension Setup** 按任务分组：
 
-- **Use Existing CLI**：检测电脑上已经安装好的 `seeed-zephyr` 命令。
-- **Install Managed CLI**：安装一份由插件管理的 CLI。
-- **Select CLI Version**：选择插件托管 CLI 的版本。
-- **Select CLI Path**：手动指定某个命令或脚本路径。
-- **Select Repository Folder**：选择提供示例和 metadata 的仓库目录。
+- **Status**：显示当前仓库目录、CLI 命令、CLI 来源，以及可读取到的 CLI 版本。
+- **Recommended**：提供 **Use Recommended CLI** 和 **Run Full Setup**，作为优先入口。
+- **Repository**：包含 **Select Repository Folder**、**Update Repository**、**Refresh Environment Status**，用于管理示例、metadata 和 catalog 数据。
+- **CLI**：包含 **Install or Update Managed CLI**（安装或更新到最新版插件托管 CLI）、**Select Managed CLI Version**（选择指定发布版本）、**Use System CLI**、**Select CLI Path**，用于管理插件实际调用的 `seeed-zephyr` 命令。
 
 插件创建项目、检测串口和运行操作时会调用所选 CLI；从源码测试插件时，建议在 **Select CLI Path** 里选择同一仓库下的 `scripts/seeed-zephyr`，让编辑器使用当前 checkout 里的 CLI。
 真正的固件构建、烧录、监视和调试仍由 Zephyr 工具链完成。
@@ -288,7 +287,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 ### 常见编辑器流程
 
 1. 从活动栏打开 Seeed XIAO Zephyr 左侧栏。
-2. 在 **Extension Setup** 里选择或安装 CLI；如果没有自动识别仓库，就选择仓库目录。
+2. 在 **Extension Setup** 里先确认 **Status**，再使用 **Use Recommended CLI**，或按 Repository / CLI 分组选择对应操作。
 3. 在 **Projects** 里执行 **Create Project** 或 **Open Project**。
 4. 在 **Catalog** 里浏览板级示例或 Grove 示例。
 5. Grove 示例会先让你选择目标开发板。

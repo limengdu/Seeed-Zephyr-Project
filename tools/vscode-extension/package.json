@@ -55,25 +55,31 @@
       },
       {
         "command": "seeedZephyr.setupEnvironment",
-        "title": "Set Up Environment",
+        "title": "Run Full Setup",
         "category": "Seeed XIAO",
         "icon": "$(rocket)"
       },
       {
+        "command": "seeedZephyr.useRecommendedCli",
+        "title": "Use Recommended CLI",
+        "category": "Seeed XIAO",
+        "icon": "$(check)"
+      },
+      {
         "command": "seeedZephyr.useExistingCli",
-        "title": "Use Existing CLI",
+        "title": "Use System CLI",
         "category": "Seeed XIAO",
         "icon": "$(terminal)"
       },
       {
         "command": "seeedZephyr.installManagedCli",
-        "title": "Install Managed CLI",
+        "title": "Install or Update Managed CLI",
         "category": "Seeed XIAO",
         "icon": "$(cloud-download)"
       },
       {
         "command": "seeedZephyr.selectCliVersion",
-        "title": "Select CLI Version",
+        "title": "Select Managed CLI Version",
         "category": "Seeed XIAO",
         "icon": "$(versions)"
       },
@@ -85,14 +91,15 @@
       },
       {
         "command": "seeedZephyr.recheckEnvironment",
-        "title": "Recheck Environment",
+        "title": "Refresh Environment Status",
         "category": "Seeed XIAO",
         "icon": "$(refresh)"
       },
       {
         "command": "seeedZephyr.setRepoRoot",
-        "title": "Set Repository Folder",
-        "category": "Seeed XIAO"
+        "title": "Select Repository Folder",
+        "category": "Seeed XIAO",
+        "icon": "$(repo)"
       },
       {
         "command": "seeedZephyr.showDetail",
@@ -174,6 +181,7 @@
         { "command": "seeedZephyr.openGenerated" },
         { "command": "seeedZephyr.selectProjectBoard" },
         { "command": "seeedZephyr.selectProjectPort" },
+        { "command": "seeedZephyr.useRecommendedCli" },
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },
         { "command": "seeedZephyr.installManagedCli" },
@@ -201,41 +209,6 @@
           "command": "seeedZephyr.openGenerated",
           "when": "view == seeedZephyrCatalog",
           "group": "navigation@2"
-        },
-        {
-          "command": "seeedZephyr.setupEnvironment",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@1"
-        },
-        {
-          "command": "seeedZephyr.useExistingCli",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@2"
-        },
-        {
-          "command": "seeedZephyr.installManagedCli",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@3"
-        },
-        {
-          "command": "seeedZephyr.selectCliVersion",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@4"
-        },
-        {
-          "command": "seeedZephyr.selectCliPath",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@5"
-        },
-        {
-          "command": "seeedZephyr.setRepoRoot",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@6"
-        },
-        {
-          "command": "seeedZephyr.recheckEnvironment",
-          "when": "view == seeedZephyrCatalog",
-          "group": "2_environment@7"
         }
       ],
       "view/item/context": [

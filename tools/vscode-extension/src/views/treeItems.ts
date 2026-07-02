@@ -14,6 +14,10 @@ import type { ProjectInfo } from "../statusBar";
 export type GroupKind =
   | "projects"
   | "setup"
+  | "setupStatus"
+  | "setupRecommended"
+  | "setupRepository"
+  | "setupCli"
   | "catalog"
   | "boards"
   | "modules"
@@ -147,17 +151,26 @@ export class ExpansionNode extends vscode.TreeItem {
 }
 
 export class MessageNode extends vscode.TreeItem {
-  constructor(message: string) {
+  constructor(message: string, description?: string, icon?: string) {
     super(message, vscode.TreeItemCollapsibleState.None);
+    this.description = description;
+    this.iconPath = icon ? new vscode.ThemeIcon(icon) : undefined;
     this.contextValue = "message";
   }
 }
 
 export class ActionNode extends vscode.TreeItem {
-  constructor(label: string, command: string, icon: string, description?: string) {
+  constructor(
+    label: string,
+    command: string,
+    icon: string,
+    description?: string,
+    tooltip?: string,
+  ) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.contextValue = "welcomeAction";
     this.description = description;
+    this.tooltip = tooltip ?? description;
     this.iconPath = new vscode.ThemeIcon(icon);
     this.command = { command, title: label };
   }

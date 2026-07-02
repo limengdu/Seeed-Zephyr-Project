@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as fs from "fs";
 import * as path from "path";
 import { detectEnvironment, EnvironmentState } from "../env/environment";
 import { readCatalog } from "../repo/dataReader";
@@ -89,6 +90,18 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
       if (node.group === "setup") {
         return this.setupNodes();
       }
+      if (node.group === "setupStatus") {
+        return this.setupStatusNodes();
+      }
+      if (node.group === "setupRecommended") {
+        return this.setupRecommendedNodes();
+      }
+      if (node.group === "setupRepository") {
+        return this.setupRepositoryNodes();
+      }
+      if (node.group === "setupCli") {
+        return this.setupCliNodes();
+      }
       if (node.group === "catalog") {
         return this.catalogNodes();
       }
@@ -144,26 +157,141 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
   }
 
   private setupNodes(): CatalogNode[] {
-    const nodes: CatalogNode[] = [
-      new MessageNode(this.environment?.ready ? "Environment ready." : "Set up the extension environment."),
+    return [
+      new GroupNode("Status", "setupStatus", this.environment?.ready ? "ready" : "setup needed"),
+      new GroupNode("Recommended", "setupRecommended", "start here"),
+      new GroupNode("Repository", "setupRepository", "examples and catalog"),
+      new GroupNode("CLI", "setupCli", "tool version"),
     ];
-    if (this.environment) {
-      nodes.push(
-        new MessageNode(`Repository: ${this.environment.repoRoot ?? "not selected"}`),
-        new MessageNode(`CLI: ${this.environment.cli.display}`),
-      );
+  }
+
+  private setupStatusNodes(): CatalogNode[] {
+    if (!this.environment) {
+      return [new MessageNode("Environment", "not checked", "warning")];
     }
+
+    const nodes: CatalogNode[] = [
+      new MessageNode(
+        this.environment.ready ? "Environment Ready" : "Setup Needed",
+        this.environment.ready ? "ready to build" : "complete repository and CLI setup",
+      ),
+    ];
+
+    for (const issue of this.environment.issues) {
+      nodes.push(new MessageNode(issue, "action needed"));
+    }
+
     nodes.push(
-      new ActionNode("Update Repository", "seeedZephyr.updateRepository", "sync"),
-      new ActionNode("Set Up Environment", "seeedZephyr.setupEnvironment", "rocket"),
-      new ActionNode("Use Existing CLI", "seeedZephyr.useExistingCli", "terminal"),
-      new ActionNode("Install Managed CLI", "seeedZephyr.installManagedCli", "cloud-download"),
-      new ActionNode("Select CLI Version", "seeedZephyr.selectCliVersion", "versions"),
-      new ActionNode("Select CLI Path", "seeedZephyr.selectCliPath", "folder-opened"),
-      new ActionNode("Select Repository Folder", "seeedZephyr.setRepoRoot", "repo"),
-      new ActionNode("Recheck Environment", "seeedZephyr.recheckEnvironment", "refresh"),
+      new MessageNode(
+        "Repository Folder",
+        this.environment.repoRoot ?? "not selected",
+      ),
+      new MessageNode(
+        "CLI Command",
+        this.environment.cli.display,
+      ),
+      new MessageNode("CLI Source", cliSourceLabel(this.environment.cli.source)),
     );
+
+    const version = this.cliVersionLabel();
+    if (version) {
+      nodes.push(new MessageNode("CLI Version", version));
+    }
+
     return nodes;
+  }
+
+  private setupRecommendedNodes(): CatalogNode[] {
+    const description = this.repoRoot ? "use repository CLI" : "install managed CLI";
+    return [
+      new ActionNode(
+        "Use Recommended CLI",
+        "seeedZephyr.useRecommendedCli",
+        "check",
+        description,
+        "Select the CLI that best matches this workspace.",
+      ),
+      new ActionNode(
+        "Run Full Setup",
+        "seeedZephyr.setupEnvironment",
+        "rocket",
+        "install Zephyr tools",
+        "Run the installer for the repository, Zephyr SDK, west workspace, and CLI.",
+      ),
+    ];
+  }
+
+  private setupRepositoryNodes(): CatalogNode[] {
+    return [
+      new ActionNode(
+        "Select Repository Folder",
+        "seeedZephyr.setRepoRoot",
+        "repo",
+        "examples and catalog",
+        "Choose the repository checkout that provides examples and metadata.",
+      ),
+      new ActionNode(
+        "Update Repository",
+        "seeedZephyr.updateRepository",
+        "sync",
+        "pull latest content",
+        "Pull the latest examples, metadata, and catalog files.",
+      ),
+      new ActionNode(
+        "Refresh Environment Status",
+        "seeedZephyr.recheckEnvironment",
+        "refresh",
+        "reload local state",
+        "Reload the extension state after files or settings changed.",
+      ),
+    ];
+  }
+
+  private setupCliNodes(): CatalogNode[] {
+    return [
+      new ActionNode(
+        "Install or Update Managed CLI",
+        "seeedZephyr.installManagedCli",
+        "cloud-download",
+        "extension managed",
+        "Install a CLI copy owned by the extension.",
+      ),
+      new ActionNode(
+        "Select Managed CLI Version",
+        "seeedZephyr.selectCliVersion",
+        "versions",
+        "choose published version",
+        "Install a selected published CLI version into extension storage.",
+      ),
+      new ActionNode(
+        "Use System CLI",
+        "seeedZephyr.useExistingCli",
+        "terminal",
+        "PATH command",
+        "Use the seeed-zephyr command already available on this computer.",
+      ),
+      new ActionNode(
+        "Select CLI Path",
+        "seeedZephyr.selectCliPath",
+        "folder-opened",
+        "advanced",
+        "Choose a specific seeed-zephyr command or script.",
+      ),
+    ];
+  }
+
+  private cliVersionLabel(): string | undefined {
+    if (!this.environment) {
+      return undefined;
+    }
+    const config = vscode.workspace.getConfiguration("seeedZephyr");
+    if (this.environment.cli.source === "managed") {
+      return config.get<string>("managedCliVersion") || "managed";
+    }
+    if (this.repoRoot && usesRepoCli(this.environment.cli.command, this.repoRoot)) {
+      return readRepoCliVersion(this.repoRoot) ?? "repository";
+    }
+    return undefined;
   }
 
   private catalogNodes(): CatalogNode[] {
@@ -179,5 +307,46 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
       new GroupNode("Grove Modules", "modules", this.catalog.modules.length),
       new GroupNode("Expansion Boards", "expansions", this.catalog.expansions.length),
     ];
+  }
+}
+
+function cliSourceLabel(source: EnvironmentState["cli"]["source"]): string {
+  switch (source) {
+    case "configured":
+      return "selected path";
+    case "managed":
+      return "extension managed";
+    case "repo":
+      return "repository checkout";
+    case "path":
+      return "system PATH";
+    case "missing":
+      return "not configured";
+  }
+}
+
+function usesRepoCli(command: string, repoRoot: string): boolean {
+  const wrapper = path.join(repoRoot, "scripts", "seeed-zephyr");
+  try {
+    return path.resolve(command) === wrapper || path.resolve(repoRoot, command) === wrapper;
+  } catch {
+    return command === wrapper || command === "scripts/seeed-zephyr";
+  }
+}
+
+function readRepoCliVersion(repoRoot: string): string | undefined {
+  const versionFile = path.join(
+    repoRoot,
+    "packages",
+    "seeed-zephyr",
+    "src",
+    "seeed_zephyr",
+    "__init__.py",
+  );
+  try {
+    const content = fs.readFileSync(versionFile, "utf-8");
+    return content.match(/__version__\s*=\s*"([^"]+)"/)?.[1];
+  } catch {
+    return undefined;
   }
 }

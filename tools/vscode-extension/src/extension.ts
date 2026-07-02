@@ -7,9 +7,11 @@ import { openGenerated } from "./commands/openGenerated";
 import { updateRepository } from "./commands/updateRepository";
 import {
   installManagedCli,
+  selectManagedCliVersion,
   selectCliPath,
   setupEnvironment,
   useExistingCli,
+  useRecommendedCli,
 } from "./commands/environmentCommands";
 import {
   getEffectiveBoard,
@@ -37,6 +39,9 @@ export function activate(context: vscode.ExtensionContext): void {
       updateRepository(catalog.getRepoRoot(), () => catalog.refresh()),
     ),
     vscode.commands.registerCommand("seeedZephyr.setupEnvironment", () => setupEnvironment()),
+    vscode.commands.registerCommand("seeedZephyr.useRecommendedCli", () =>
+      useRecommendedCli(catalog.getRepoRoot(), context, () => catalog.refresh()),
+    ),
     vscode.commands.registerCommand("seeedZephyr.useExistingCli", () =>
       useExistingCli(() => catalog.refresh()),
     ),
@@ -44,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): void {
       installManagedCli(context, () => catalog.refresh()),
     ),
     vscode.commands.registerCommand("seeedZephyr.selectCliVersion", () =>
-      installManagedCli(context, () => catalog.refresh()),
+      selectManagedCliVersion(context, () => catalog.refresh()),
     ),
     vscode.commands.registerCommand("seeedZephyr.selectCliPath", () =>
       selectCliPath(() => catalog.refresh()),

@@ -213,7 +213,7 @@ async function showOutdatedCliMessage(
   const repoCli = repositoryCliPath(repoRoot);
   const actions = [
     ...(repoCli ? ["Use Repository CLI"] : []),
-    "Install Managed CLI",
+    "Install or Update Managed CLI",
     "Select CLI Path",
   ];
   const picked = await vscode.window.showErrorMessage(
@@ -228,7 +228,7 @@ async function showOutdatedCliMessage(
     void vscode.window.showInformationMessage(`CLI selected: ${repoCli}`);
     return;
   }
-  if (picked === "Install Managed CLI") {
+  if (picked === "Install or Update Managed CLI") {
     await vscode.commands.executeCommand("seeedZephyr.installManagedCli");
     return;
   }

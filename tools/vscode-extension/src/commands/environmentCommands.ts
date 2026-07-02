@@ -1,8 +1,10 @@
 import { spawn } from "child_process";
 import * as fs from "fs";
 import * as https from "https";
+import * as path from "path";
 import * as vscode from "vscode";
 import {
+  commandAvailable,
   managedCliPath,
   managedCliPythonPath,
   managedCliVenvPath,
@@ -24,6 +26,31 @@ export function setupEnvironment(): void {
   const terminal = vscode.window.createTerminal({ name: "Seeed XIAO Zephyr Setup" });
   terminal.show();
   terminal.sendText(INSTALL_COMMAND);
+}
+
+// Selects the best CLI for the current workspace.
+// 为当前工作区选择最合适的 CLI。
+export async function useRecommendedCli(
+  repoRoot: string | undefined,
+  context: vscode.ExtensionContext,
+  onUpdated: () => void,
+): Promise<void> {
+  const repoCli = repositoryCliPath(repoRoot);
+  if (repoCli) {
+    const result = await runProcess(repoCli, ["info", "--json"]);
+    if (!result.ok) {
+      void vscode.window.showErrorMessage(`Repository CLI is not ready: ${result.message}`);
+      return;
+    }
+    await vscode.workspace
+      .getConfiguration("seeedZephyr")
+      .update("cliPath", repoCli, vscode.ConfigurationTarget.Global);
+    onUpdated();
+    void vscode.window.showInformationMessage(cliConfiguredMessage(repoCli, result.stdout));
+    return;
+  }
+
+  await installManagedCli(context, onUpdated);
 }
 
 // Configures the extension to use a seeed-zephyr command already available on PATH.
@@ -61,9 +88,22 @@ export async function selectCliPath(onUpdated: () => void): Promise<void> {
   void vscode.window.showInformationMessage(`CLI selected: ${cliPath}`);
 }
 
-// Installs a user-selected seeed-zephyr package version into extension storage.
-// 将用户选择的 seeed-zephyr 包版本安装到插件存储目录。
+// Installs the latest published seeed-zephyr package into extension storage.
+// 将最新发布的 seeed-zephyr 包安装到插件存储目录。
 export async function installManagedCli(
+  context: vscode.ExtensionContext,
+  onUpdated: () => void,
+): Promise<void> {
+  const version = await latestCliVersion();
+  if (!version) {
+    return;
+  }
+  await installManagedCliVersion(context, onUpdated, version);
+}
+
+// Lets the user choose a published seeed-zephyr package version.
+// 让用户选择一个已发布的 seeed-zephyr 包版本。
+export async function selectManagedCliVersion(
   context: vscode.ExtensionContext,
   onUpdated: () => void,
 ): Promise<void> {
@@ -71,7 +111,14 @@ export async function installManagedCli(
   if (!version) {
     return;
   }
+  await installManagedCliVersion(context, onUpdated, version);
+}
 
+async function installManagedCliVersion(
+  context: vscode.ExtensionContext,
+  onUpdated: () => void,
+  version: string,
+): Promise<void> {
   const storagePath = context.globalStorageUri.fsPath;
   const venvDir = managedCliVenvPath(storagePath);
   const python = vscode.workspace.getConfiguration("seeedZephyr").get<string>("pythonPath") || "python3";
@@ -108,6 +155,15 @@ export async function installManagedCli(
   await config.update("managedCliVersion", version, vscode.ConfigurationTarget.Global);
   onUpdated();
   void vscode.window.showInformationMessage(`Managed CLI selected: seeed-zephyr ${version}`);
+}
+
+async function latestCliVersion(): Promise<string | undefined> {
+  try {
+    return (await fetchPublishedVersions())[0];
+  } catch (error) {
+    void vscode.window.showErrorMessage(`Could not read published CLI versions: ${String(error)}`);
+    return undefined;
+  }
 }
 
 async function chooseCliVersion(): Promise<string | undefined> {
@@ -182,6 +238,14 @@ function cliConfiguredMessage(command: string, stdout: string): string {
   } catch {
     return `CLI selected: ${command}`;
   }
+}
+
+function repositoryCliPath(repoRoot: string | undefined): string | undefined {
+  if (!repoRoot) {
+    return undefined;
+  }
+  const cliPath = path.join(repoRoot, "scripts", "seeed-zephyr");
+  return commandAvailable(cliPath) ? cliPath : undefined;
 }
 
 function runProcess(command: string, args: string[]): Promise<ProcessResult> {
