@@ -1,0 +1,15 @@
+id: grove_ultrasonic_basic_read
+kind: grove
+module_id: grove_ultrasonic_distance_sensor
+demo: basic_read
+interface: gpio
+connector: xiao
+pin_policy: selectable
+# xiao_esp32c5 has no upstream Zephyr board target in the v4.4.0 baseline.
+excluded_boards:
+  - xiao_esp32c5
+pins:
+  - role: signal
+    default: D2
+    allowed: [D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10]
+expected_behavior: Prints distance in centimeters once per second from the Grove Ultrasonic Ranger SIG pin.

@@ -1,0 +1,13 @@
+/*
+ * Board-agnostic Grove Ultrasonic devicetree overlay.
+ * The default signal pin is D2. The CLI can override it with --pin.
+ *
+ * 板级无关的 Grove Ultrasonic devicetree overlay。
+ * 默认信号引脚为 D2，CLI 可通过 --pin 覆盖。
+ */
+
+/ {
+	zephyr,user {
+		ultrasonic-gpios = <&xiao_d 2 GPIO_ACTIVE_HIGH>;
+	};
+};

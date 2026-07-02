@@ -43,6 +43,7 @@ expected_behavior: Prints CO2, temperature, and humidity every five seconds.
 
 For `pin_policy: selectable` modules (GPIO/analog), add a `pins:` list of roles with
 `default` and `allowed` pin sets. Fixed-bus modules (I2C/SPI/UART) need no pin selection.
+Use an inline list for `allowed`, for example `allowed: [D0, D1, D2]`.
 
 ### Building
 
@@ -102,6 +103,7 @@ expected_behavior: Prints CO2, temperature, and humidity every five seconds.
 
 `pin_policy: selectable` 的模块（GPIO/模拟）需额外声明 `pins:` 角色列表，含 `default` 与
 `allowed` 引脚集合；fixed-bus 模块（I2C/SPI/UART）无需选引脚。
+`allowed` 使用行内列表，例如 `allowed: [D0, D1, D2]`。
 
 ### 构建
 

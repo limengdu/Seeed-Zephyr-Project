@@ -1,0 +1,13 @@
+/*
+ * CLI-rendered pin overlay for Grove Ultrasonic.
+ * The CLI replaces the numeric XIAO Dn index below.
+ *
+ * CLI 渲染的 Grove Ultrasonic 引脚 overlay。
+ * CLI 会替换下面的 XIAO Dn 数字索引。
+ */
+
+/ {
+	zephyr,user {
+		ultrasonic-gpios = <&xiao_d @PIN_SIGNAL@ GPIO_ACTIVE_HIGH>;
+	};
+};
