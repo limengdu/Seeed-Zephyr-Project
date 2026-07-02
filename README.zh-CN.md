@@ -119,9 +119,9 @@ Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里
 
 ### 2. 安装编辑器插件
 
-**Seeed XIAO Zephyr Assistant** 插件可浏览带验证徽章的开发板与示例,并在编辑器内直接构建 / 烧录 / 监视。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
+**Seeed XIAO Zephyr Assistant** 插件把目录浏览、项目生成和运行按钮放进编辑器。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 
-首次使用时，插件会显示环境入口，可选择 setup、检测已有 CLI、安装插件托管 CLI、选择 CLI 版本、选择 CLI 路径和选择仓库目录。
+首次使用时，Catalog 视图会提供 CLI 检测、插件托管 CLI 安装、CLI 版本选择、手动 CLI 路径选择和仓库目录选择。完成配置后，这些入口仍会保留在 Catalog 标题栏。
 
 在 Catalog 标题栏点击 **Update Repository**，即可刷新插件读取的示例和 metadata。
 
@@ -182,7 +182,7 @@ seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sens
 seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read   # 同一份源码，换块板
 ```
 
-查看引脚图（编辑器插件交互式引脚图的数据源）：
+查看供编辑器工具使用的每脚状态：
 
 ```sh
 seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read --json
@@ -252,13 +252,51 @@ seeed-zephyr verify-hardware xiao_esp32c6  # 记录一次硬件观测结果
 
 能力目录同样收录了与 XIAO 搭配的 Grove 模块和扩展板，包含它们的接口、默认地址、供电轨，以及所需的 Zephyr 驱动和 Kconfig 选项。
 
-Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过上游 `seeed_xiao_connector` 抽象在所有 XIAO 板上构建。SCD41 `basic_read` 示例已用同一份源码在 ESP32-C6、nRF52840、RP2040 上验证通过，其余板子的矩阵状态记录在 [`metadata/status/`](metadata/status/)。运行 `seeed-zephyr show pins <板子> grove/<模块>/<demo> --json` 可获得每脚状态（selectable / reserved / bus / power），驱动编辑器插件的交互式引脚图。
+Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过上游 `seeed_xiao_connector` 抽象在所有 XIAO 板上构建。SCD41 `basic_read` 示例已用同一份源码在 ESP32-C6、nRF52840、RP2040 上验证通过，其余板子的矩阵状态记录在 [`metadata/status/`](metadata/status/)。运行 `seeed-zephyr show pins <板子> grove/<模块>/<demo> --json` 可获得每脚状态（selectable / reserved / bus / power）。编辑器插件读取同一套 Grove 示例和状态矩阵，因此 Grove 模块会在 Catalog 里展开显示可用示例。
 
 **Grove 模块：** Grove - Ultrasonic Distance Sensor · Grove - Soil Moisture Sensor · Grove - Temperature & Humidity Sensor V2.0 (DHT20) · Grove - CO2 & Temperature & Humidity Sensor (SCD41) · 1.47inch LCD Display Module
 
 **扩展板：** Grove Shield for XIAO · XIAO 扩展板 · XIAO 圆形显示屏
 
 完整的机器可读目录见 [`metadata/`](metadata/)。
+
+## 编辑器插件
+
+[Seeed XIAO Zephyr Assistant](tools/vscode-extension/) 是这个仓库的编辑器入口。它读取和 CLI 相同的 metadata 与示例，所以点击 **Update Repository** 之后，Catalog 视图会跟随仓库内容更新。
+
+### Catalog 里能看到什么
+
+- **开发板** —— XIAO 开发板、验证徽章、Zephyr target、烧录方式说明和板级示例。
+- **Grove 模块** —— 当前选定的 Grove 模块、驱动/配置 metadata、可用 Grove 示例，以及来自 `metadata/status/` 的“示例 x 板子”状态矩阵。
+- **扩展板** —— XIAO 兼容扩展板、Grove 端口、板载外设和 shield metadata。
+- **详情页** —— 点击开发板、示例、模块、Grove 示例或扩展板，会在侧边面板显示对应命令和 metadata。
+
+### 插件里的 CLI 选择
+
+插件可以按你的环境选择 CLI：
+
+- **Use Existing CLI**：检测电脑上已经安装好的 `seeed-zephyr` 命令。
+- **Install Managed CLI**：安装一份由插件管理的 CLI。
+- **Select CLI Version**：选择插件托管 CLI 的版本。
+- **Select CLI Path**：手动指定某个命令或脚本路径。
+- **Select Repository Folder**：选择提供示例和 metadata 的仓库目录。
+
+插件创建项目和运行操作时会调用 CLI；真正的固件构建、烧录、监视和调试仍由 Zephyr 工具链完成。
+
+### 常见编辑器流程
+
+1. 从 Seeed XIAO Zephyr 活动栏打开 Catalog。
+2. 通过 setup 入口选择或安装 CLI。
+3. 如果没有自动识别仓库，就选择仓库目录。
+4. 浏览板级示例或 Grove 示例。
+5. 执行 **Create Project from Example**。Grove 示例会先让你选择目标开发板。
+6. 打开生成的项目，用状态栏的 **Build Project**、**Upload Project** 和 **Monitor Project** 操作。
+
+生成项目会把来源仓库路径写进 `.vscode/settings.json`，后续重新打开项目时，状态栏也能找到同一套 CLI 和 metadata 上下文。
+
+### 在编辑器里更新
+
+Catalog 标题栏的 **Update Repository** 会拉取最新示例、metadata、状态矩阵、文档和插件可读取的目录数据。文件已经更新、只想重新加载视图时，使用 **Refresh Catalog**。
 
 ## 从源码构建
 
@@ -307,7 +345,7 @@ Seeed-Zephyr-Project/
 
 1. **示例、元数据与验证基础**（进行中）—— 最小板级示例、可复用的 XIAO + Grove 项目示例、能力目录、构建矩阵、CI 验证，以及选定的硬件在环测试。
 2. **发现与生成命令行** —— 扩展 `seeed-zephyr`，从仓库模板脚手架出新的示例与项目，组合「板子 + Grove + 场景」模板，并生成带 README、overlay 和源码的 west / PlatformIO 项目。
-3. **VS Code 产品体验** —— 可视化选择开发板、Grove 模块与扩展板；浏览示例；查看兼容性与验证状态；渲染接线图；生成项目；再把构建/烧录/监视/调试交给官方 Zephyr VS Code 扩展。
+3. **VS Code 产品体验** —— [Seeed XIAO Zephyr Assistant 插件](tools/vscode-extension/)可浏览开发板、Grove 模块、Grove 示例和扩展板，查看验证徽章、示例详情和状态矩阵，从板级或 Grove 示例生成项目，并提供类似 PlatformIO 的状态栏 Build / Upload / Monitor 操作，把执行交给 Zephyr 工具链。接线图和更深的官方扩展集成继续推进。
 
 指导原则：示例和项目是产品核心；元数据、命令行、生成器与编辑器工具的存在，都是为了让这些示例更易于发现、构建、验证和扩展。
 

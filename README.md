@@ -119,9 +119,9 @@ On Windows without WSL2, follow the PowerShell setup in the [Getting Started gui
 
 ### 2. Install the editor extension
 
-The **Seeed XIAO Zephyr Assistant** browses boards and examples with validation badges and runs Build / Flash / Monitor from the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
+The **Seeed XIAO Zephyr Assistant** adds a catalog, project generator, and run controls to the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
 
-On first use, the extension shows environment actions for setup, existing CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository folder selection.
+On first use, the Catalog view offers setup actions for CLI detection, extension-managed CLI installation, CLI version selection, manual CLI path selection, and repository folder selection. After setup, the same actions stay available from the Catalog title bar.
 
 Use **Update Repository** in the Catalog title bar to refresh the examples and metadata read by the extension.
 
@@ -262,6 +262,44 @@ Grove module examples are **board-agnostic**: one source tree under `examples/gr
 
 See [`metadata/`](metadata/) for the full, machine-readable catalog.
 
+## Editor Extension
+
+The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front end for this repository. It reads the same metadata and examples as the CLI, so the Catalog view stays aligned with the repository content after **Update Repository**.
+
+### What the Catalog shows
+
+- **Boards** — XIAO boards with validation badges, Zephyr targets, flash method notes, and board examples.
+- **Grove Modules** — selected Grove modules, driver/config metadata, available Grove examples, and the example x board status matrix from `metadata/status/`.
+- **Expansion Boards** — XIAO-compatible expansion boards, Grove ports, onboard peripherals, and shield metadata.
+- **Details** — clicking a board, example, module, Grove example, or expansion board opens a side panel with the relevant commands and metadata.
+
+### CLI selection inside the extension
+
+The extension can run with the CLI path that fits your setup:
+
+- **Use Existing CLI** detects a `seeed-zephyr` command already installed on the machine.
+- **Install Managed CLI** installs a CLI copy owned by the extension.
+- **Select CLI Version** chooses the managed CLI version.
+- **Select CLI Path** points the extension at a specific command or script.
+- **Select Repository Folder** chooses the checkout that supplies examples and metadata.
+
+The extension calls the CLI for project creation and run actions. Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
+
+### Common editor workflow
+
+1. Open the Catalog from the Seeed XIAO Zephyr activity bar.
+2. Select or install a CLI from the setup actions.
+3. Choose the repository folder if it is not auto-detected.
+4. Browse a board example or Grove example.
+5. Run **Create Project from Example**. Grove examples ask for a target board before generation.
+6. Open the generated project and use the status bar actions: **Build Project**, **Upload Project**, and **Monitor Project**.
+
+Generated projects record the source repository path in `.vscode/settings.json`, so the status bar can find the same CLI and metadata context when the project is opened later.
+
+### Updating from the editor
+
+Use **Update Repository** in the Catalog title bar to pull the latest examples, metadata, status matrices, docs, and plugin-readable catalog data. Use **Refresh Catalog** when the files on disk already changed and you only need the view to reload.
+
 ## Build From Source
 
 Working on the examples, metadata, or the CLI itself? Clone the repository and run the setup script directly. This also unlocks the maintainer commands (`matrix`, `verify-hardware`) and the in-repo `scripts/seeed-zephyr` launcher.
@@ -309,7 +347,7 @@ The project is being built in three layers, each enabling the next.
 
 1. **Examples, metadata & validation base** *(in progress)* — minimal board examples, reusable XIAO + Grove project examples, the capability catalog, the build matrix, CI verification, and selected hardware-in-the-loop tests.
 2. **Discovery & generation CLI** *(in progress)* — `seeed-zephyr` discovers boards, examples, Grove modules, and expansion boards (with `--json` output), shows asset details, validates metadata, and generates a project from any example with a reproducible `snapshot.json`. Scenario templates and west / PlatformIO output are next.
-3. **VS Code product experience** *(MVP in progress)* — the [Seeed XIAO Zephyr Assistant extension](tools/vscode-extension/) browses boards, modules, and expansion boards with validation badges, previews example details, creates a project from an example, and offers PlatformIO-style status bar Build / Upload / Monitor actions that delegate execution to Zephyr tooling. Wiring diagrams and deeper official-extension integration are next.
+3. **VS Code product experience** *(MVP in progress)* — the [Seeed XIAO Zephyr Assistant extension](tools/vscode-extension/) browses boards, Grove modules, Grove examples, and expansion boards with validation badges, previews example details and status matrices, creates a project from board or Grove examples, and offers PlatformIO-style status bar Build / Upload / Monitor actions that delegate execution to Zephyr tooling. Wiring diagrams and deeper official-extension integration are next.
 
 The guiding principle: examples and projects are the product core; metadata, the CLI, generators, and editor tooling exist to make those examples easy to find, build, validate, and extend.
 
