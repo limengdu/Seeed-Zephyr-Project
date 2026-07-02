@@ -24,27 +24,32 @@ Build, flash, and monitor actions call the `seeed-zephyr` CLI. Install it with
 `pip install seeed-zephyr`, and for the full Zephyr toolchain (SDK + `west`
 workspace) use the one-line installer in the
 [project README](https://github.com/limengdu/Seeed-Zephyr-Project#quick-start).
-The sidebar is organized into **Projects**, **Extension Setup**, and **Catalog**.
-Use **Projects** to create a generated project, open a generated project or
-Zephyr app, select the project board and serial port, and run project actions.
-Use **Extension Setup** to check **Status**, run **Use Recommended CLI**, update
+The sidebar is organized into **Welcome**, **Projects**, **Environment**, and
+**Catalog** views. Use **Welcome** for common setup and project actions. Use
+**Projects** to create or open a project, select the project board and serial
+port, and run project actions. Use **Environment** to check **Status**, update
 repository content from the **Repository** group, and manage the selected
-`seeed-zephyr` command from the **CLI** group. **Install or Update Managed CLI**
-uses the latest release; **Select Managed CLI Version** installs a specific
-published version. Serial port detection is provided by the selected CLI. When
+`seeed-zephyr` command from the **CLI** group. **Install Latest CLI** installs
+the newest published CLI into extension storage and selects it automatically;
+**Choose CLI Version** installs a specific published version. Managed CLI
+installation uses Python 3.12 or newer and searches for a suitable Python before
+creating its venv. Serial port detection is provided by the selected CLI. When
 testing from a source checkout, select the checkout's `scripts/seeed-zephyr`
-command.
+command. **Catalog** is visible by default, with Boards, Grove Modules, and
+Expansion Boards collapsed until opened.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
 **Seeed XIAO Zephyr** 安装,或从
 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 构建/烧录/监视会调用 `seeed-zephyr` CLI,用 `pip install seeed-zephyr` 安装即可。
-左侧栏分为 **Projects**、**Extension Setup** 和 **Catalog**。在 **Projects** 里创建
-生成项目、打开生成项目或 Zephyr app、选择项目开发板和串口，并运行项目操作。在
-**Extension Setup** 里先查看 **Status**，再使用 **Use Recommended CLI**，仓库内容放在
-**Repository** 分组，CLI 工具版本放在 **CLI** 分组。**Install or Update Managed CLI**
-使用最新版，**Select Managed CLI Version** 用于指定发布版本。串口检测由当前选择的
-CLI 提供；从源码测试时，选择当前仓库里的 `scripts/seeed-zephyr`。
+左侧栏分为 **Welcome**、**Projects**、**Environment** 和 **Catalog**。在 **Welcome**
+里放常用入口。在 **Projects** 里创建或打开项目、选择项目开发板和串口，并运行项目操作。
+在 **Environment** 里查看 **Status**，仓库内容放在 **Repository** 分组，CLI 工具版本
+放在 **CLI** 分组。**Install Latest CLI** 会安装最新发布的 CLI，并自动切换插件使用它；
+**Choose CLI Version** 用于指定发布版本。插件托管 CLI 使用 Python 3.12 或更新版本，并会
+先查找可用 Python 再创建 venv。串口检测由当前选择的 CLI 提供；从源码测试时，选择当前
+仓库里的 `scripts/seeed-zephyr`。**Catalog** 默认显示，Boards、Grove Modules、
+Expansion Boards 默认收起。
 
 ## Develop
 
@@ -92,4 +97,4 @@ users automatically.
 | `seeedZephyr.repoRoot` | Repository path (auto-detected from the workspace when empty). |
 | `seeedZephyr.cliPath` | Override the `seeed-zephyr` CLI command. |
 | `seeedZephyr.managedCliVersion` | Version of the extension-managed CLI. |
-| `seeedZephyr.pythonPath` | Python interpreter used to run the CLI from source. |
+| `seeedZephyr.pythonPath` | Python interpreter used for managed CLI installation and CLI helper commands. |

@@ -57,7 +57,7 @@ export function managedCliPythonPath(storagePath: string): string {
 }
 
 export function managedCliVenvPath(storagePath: string): string {
-  return path.join(storagePath, "managed-cli");
+  return path.join(storagePath, "managed-cli-py312");
 }
 
 function detectCli(repoRoot: string | undefined, storagePath: string): CliState {

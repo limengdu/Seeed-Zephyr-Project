@@ -121,7 +121,7 @@ On Windows without WSL2, follow the PowerShell setup in the [Getting Started gui
 
 The **Seeed XIAO Zephyr Assistant** adds a catalog, project generator, and run controls to the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
 
-On first use, the Catalog view offers setup actions for CLI detection, extension-managed CLI installation, CLI version selection, manual CLI path selection, and repository folder selection. After setup, the same actions stay available from the Catalog title bar.
+On first use, the Welcome and Environment views offer setup actions for CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository folder selection.
 
 Use **Update Repository** in the Catalog title bar to refresh the examples and metadata read by the extension.
 
@@ -269,27 +269,27 @@ The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front e
 
 ### Sidebar Layout
 
+- **Welcome** — install the latest CLI, create/open a project, or refresh repository content.
 - **Projects** — create a project, open a generated project or Zephyr app, select the target board and serial port, and run Build / Upload / Monitor for the current workspace project.
-- **Extension Setup** — review environment status, use the recommended CLI, manage the repository checkout, and manage the CLI tool version from separate groups.
-- **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices.
+- **Environment** — review environment status, manage the repository checkout, and manage the CLI tool version from separate groups.
+- **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices. The Catalog view is visible by default, with its categories collapsed until opened.
 - **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
 
 ### CLI selection inside the extension
 
-The **Extension Setup** section is grouped by task:
+The **Environment** view is grouped by task:
 
 - **Status** shows the active repository folder, CLI command, CLI source, and CLI version when available.
-- **Recommended** provides **Use Recommended CLI** for the current workspace and **Run Full Setup** for a complete toolchain setup.
 - **Repository** contains repository actions: **Select Repository Folder**, **Update Repository**, and **Refresh Environment Status**. These actions affect examples, metadata, and catalog data.
-- **CLI** contains CLI actions: **Install or Update Managed CLI** for the latest extension-managed CLI, **Select Managed CLI Version** for a specific published version, **Use System CLI**, and **Select CLI Path**. These actions affect the `seeed-zephyr` command used by the extension.
+- **CLI** contains CLI actions: **Install Latest CLI** installs the newest published `seeed-zephyr` package into extension storage and selects it automatically, **Choose CLI Version** installs a specific published version, **Use System CLI** selects `seeed-zephyr` from `PATH`, and **Select CLI Path** selects a CLI executable manually. These actions affect the `seeed-zephyr` command used by the extension.
 
-The extension calls the selected CLI for project creation, serial port detection, and run actions. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
+The extension calls the selected CLI for project creation, serial port detection, and run actions. Managed CLI installation uses Python 3.12 or newer and the extension searches for a suitable Python before creating its venv. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
 Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
 
 ### Common editor workflow
 
 1. Open the Seeed XIAO Zephyr sidebar from the activity bar.
-2. Use **Extension Setup** to confirm **Status**, then run **Use Recommended CLI** or choose a repository/CLI action from its matching group.
+2. Use **Welcome** to run **Install Latest CLI**, or open **Environment** for repository and CLI settings.
 3. Use **Projects** to run **Create Project** or **Open Project**.
 4. Browse a board example or Grove example under **Catalog**.
 5. Grove examples ask for a target board before generation.
@@ -301,7 +301,7 @@ Generated projects record the source repository path in `.vscode/settings.json`,
 
 ### Updating from the editor
 
-Use **Update Repository** under **Extension Setup** or in the sidebar title bar to pull the latest examples, metadata, status matrices, docs, and plugin-readable catalog data. Use **Refresh Catalog** when the files on disk already changed and you only need the view to reload.
+Use **Update Repository** in **Welcome**, **Environment**, or the Catalog title bar to pull the latest examples, metadata, status matrices, docs, and plugin-readable catalog data. Use **Refresh Catalog** when the files on disk already changed and you only need the view to reload.
 
 ## Build From Source
 

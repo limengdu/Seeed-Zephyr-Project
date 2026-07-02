@@ -121,7 +121,7 @@ Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里
 
 **Seeed XIAO Zephyr Assistant** 插件把目录浏览、项目生成和运行按钮放进编辑器。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 
-首次使用时，Catalog 视图会提供 CLI 检测、插件托管 CLI 安装、CLI 版本选择、手动 CLI 路径选择和仓库目录选择。完成配置后，这些入口仍会保留在 Catalog 标题栏。
+首次使用时，Welcome 和 Environment 视图会提供 CLI 检测、插件托管 CLI 安装、CLI 版本选择、CLI 路径选择和仓库目录选择。
 
 在 Catalog 标题栏点击 **Update Repository**，即可刷新插件读取的示例和 metadata。
 
@@ -267,27 +267,27 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 
 ### 左侧栏布局
 
+- **Welcome** —— 安装最新版 CLI、创建/打开项目、更新仓库内容等常用入口。
 - **Projects** —— 创建项目、打开生成项目或 Zephyr app，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Monitor。
-- **Extension Setup** —— 按状态、推荐设置、仓库、CLI 四组管理环境。
-- **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。
+- **Environment** —— 按状态、仓库、CLI 三组管理环境。
+- **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。Catalog 默认显示，内部分类默认收起，需要时再展开。
 - **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
 
 ### 插件里的 CLI 选择
 
-**Extension Setup** 按任务分组：
+**Environment** 按任务分组：
 
 - **Status**：显示当前仓库目录、CLI 命令、CLI 来源，以及可读取到的 CLI 版本。
-- **Recommended**：提供 **Use Recommended CLI** 和 **Run Full Setup**，作为优先入口。
 - **Repository**：包含 **Select Repository Folder**、**Update Repository**、**Refresh Environment Status**，用于管理示例、metadata 和 catalog 数据。
-- **CLI**：包含 **Install or Update Managed CLI**（安装或更新到最新版插件托管 CLI）、**Select Managed CLI Version**（选择指定发布版本）、**Use System CLI**、**Select CLI Path**，用于管理插件实际调用的 `seeed-zephyr` 命令。
+- **CLI**：包含 **Install Latest CLI**（联网安装最新版 `seeed-zephyr`，并自动切换插件使用它）、**Choose CLI Version**（选择指定发布版本）、**Use System CLI**（使用系统 `PATH` 里的命令）、**Select CLI Path**（手动选择 CLI 文件），用于管理插件实际调用的 `seeed-zephyr` 命令。
 
-插件创建项目、检测串口和运行操作时会调用所选 CLI；从源码测试插件时，建议在 **Select CLI Path** 里选择同一仓库下的 `scripts/seeed-zephyr`，让编辑器使用当前 checkout 里的 CLI。
+插件创建项目、检测串口和运行操作时会调用所选 CLI；插件托管 CLI 会使用 Python 3.12 或更新版本，插件会先查找可用 Python 再创建 venv。从源码测试插件时，建议在 **Select CLI Path** 里选择同一仓库下的 `scripts/seeed-zephyr`，让编辑器使用当前 checkout 里的 CLI。
 真正的固件构建、烧录、监视和调试仍由 Zephyr 工具链完成。
 
 ### 常见编辑器流程
 
 1. 从活动栏打开 Seeed XIAO Zephyr 左侧栏。
-2. 在 **Extension Setup** 里先确认 **Status**，再使用 **Use Recommended CLI**，或按 Repository / CLI 分组选择对应操作。
+2. 在 **Welcome** 里使用 **Install Latest CLI**，或打开 **Environment** 管理仓库和 CLI 设置。
 3. 在 **Projects** 里执行 **Create Project** 或 **Open Project**。
 4. 在 **Catalog** 里浏览板级示例或 Grove 示例。
 5. Grove 示例会先让你选择目标开发板。
@@ -299,7 +299,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 
 ### 在编辑器里更新
 
-**Extension Setup** 或左侧栏标题栏里的 **Update Repository** 会拉取最新示例、metadata、状态矩阵、文档和插件可读取的目录数据。文件已经更新、只想重新加载视图时，使用 **Refresh Catalog**。
+**Welcome**、**Environment** 或 Catalog 标题栏里的 **Update Repository** 会拉取最新示例、metadata、状态矩阵、文档和插件可读取的目录数据。文件已经更新、只想重新加载视图时，使用 **Refresh Catalog**。
 
 ## 从源码构建
 

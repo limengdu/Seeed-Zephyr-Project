@@ -12,13 +12,9 @@ import type { DetailTarget } from "../panels/detailPanel";
 import type { ProjectInfo } from "../statusBar";
 
 export type GroupKind =
-  | "projects"
-  | "setup"
   | "setupStatus"
-  | "setupRecommended"
   | "setupRepository"
   | "setupCli"
-  | "catalog"
   | "boards"
   | "modules"
   | "expansions";
@@ -53,8 +49,9 @@ export class GroupNode extends vscode.TreeItem {
     label: string,
     public readonly group: GroupKind,
     count?: number | string,
+    collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Expanded,
   ) {
-    super(label, vscode.TreeItemCollapsibleState.Expanded);
+    super(label, collapsibleState);
     if (count !== undefined) {
       this.description = `${count}`;
     }

@@ -1,5 +1,8 @@
 import * as vscode from "vscode";
 import { CatalogTreeProvider } from "./views/catalogTreeProvider";
+import { EnvironmentTreeProvider } from "./views/environmentTreeProvider";
+import { ProjectsTreeProvider } from "./views/projectsTreeProvider";
+import { WelcomeTreeProvider } from "./views/welcomeTreeProvider";
 import { DetailPanel, DetailTarget } from "./panels/detailPanel";
 import { BoardNode, ExampleNode, GroveExampleNode } from "./views/treeItems";
 import { createProject, CreatePreset } from "./commands/createProject";
@@ -24,38 +27,51 @@ import { ProjectStatusBar } from "./statusBar";
 import type { ProjectInfo } from "./statusBar";
 
 export function activate(context: vscode.ExtensionContext): void {
-  const catalog = new CatalogTreeProvider(context);
+  const welcome = new WelcomeTreeProvider();
+  const projects = new ProjectsTreeProvider(context);
+  const environment = new EnvironmentTreeProvider(context);
+  const catalog = new CatalogTreeProvider();
   const statusBar = new ProjectStatusBar(context);
   statusBar.refresh();
 
+  const refreshAll = () => {
+    welcome.refresh();
+    projects.refresh();
+    environment.refresh();
+    catalog.refresh();
+    statusBar.refresh();
+  };
   const action = (name: Action) => (node?: unknown) => runActionFromNode(catalog, name, node);
   const projectAction =
-    (name: Action) => () => runProjectActionCmd(catalog, statusBar, context, name);
+    (name: Action) => () => runProjectActionCmd(catalog, projects, statusBar, context, name);
 
   context.subscriptions.push(
+    vscode.window.registerTreeDataProvider("seeedZephyrWelcome", welcome),
+    vscode.window.registerTreeDataProvider("seeedZephyrProjects", projects),
+    vscode.window.registerTreeDataProvider("seeedZephyrEnvironment", environment),
     vscode.window.registerTreeDataProvider("seeedZephyrCatalog", catalog),
     vscode.commands.registerCommand("seeedZephyr.refreshCatalog", () => catalog.refresh()),
     vscode.commands.registerCommand("seeedZephyr.updateRepository", () =>
-      updateRepository(catalog.getRepoRoot(), () => catalog.refresh()),
+      updateRepository(catalog.getRepoRoot(), refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.setupEnvironment", () => setupEnvironment()),
     vscode.commands.registerCommand("seeedZephyr.useRecommendedCli", () =>
-      useRecommendedCli(catalog.getRepoRoot(), context, () => catalog.refresh()),
+      useRecommendedCli(catalog.getRepoRoot(), context, refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.useExistingCli", () =>
-      useExistingCli(() => catalog.refresh()),
+      useExistingCli(refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.installManagedCli", () =>
-      installManagedCli(context, () => catalog.refresh()),
+      installManagedCli(context, refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.selectCliVersion", () =>
-      selectManagedCliVersion(context, () => catalog.refresh()),
+      selectManagedCliVersion(context, refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.selectCliPath", () =>
-      selectCliPath(() => catalog.refresh()),
+      selectCliPath(refreshAll),
     ),
-    vscode.commands.registerCommand("seeedZephyr.recheckEnvironment", () => catalog.refresh()),
-    vscode.commands.registerCommand("seeedZephyr.setRepoRoot", () => setRepoRoot(catalog)),
+    vscode.commands.registerCommand("seeedZephyr.recheckEnvironment", refreshAll),
+    vscode.commands.registerCommand("seeedZephyr.setRepoRoot", () => setRepoRoot(refreshAll)),
     vscode.commands.registerCommand("seeedZephyr.showDetail", (target: DetailTarget) =>
       DetailPanel.show(target),
     ),
@@ -68,17 +84,16 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.monitor", action("monitor")),
     vscode.commands.registerCommand("seeedZephyr.debug", action("debug")),
     vscode.commands.registerCommand("seeedZephyr.selectProjectBoard", () =>
-      selectProjectBoardCmd(catalog, statusBar, context),
+      selectProjectBoardCmd(catalog, projects, statusBar, context),
     ),
     vscode.commands.registerCommand("seeedZephyr.selectProjectPort", () =>
-      selectProjectPortCmd(catalog, statusBar, context),
+      selectProjectPortCmd(catalog, projects, statusBar, context),
     ),
     vscode.commands.registerCommand("seeedZephyr.projectBuild", projectAction("build")),
     vscode.commands.registerCommand("seeedZephyr.projectFlash", projectAction("flash")),
     vscode.commands.registerCommand("seeedZephyr.projectMonitor", projectAction("monitor")),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      statusBar.refresh();
-      catalog.refresh();
+      refreshAll();
     }),
   );
 }
@@ -87,6 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
 // 从状态栏按钮对当前工程运行 build/flash/monitor 操作。
 async function runProjectActionCmd(
   catalog: CatalogTreeProvider,
+  projects: ProjectsTreeProvider,
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
   name: Action,
@@ -107,6 +123,8 @@ async function runProjectActionCmd(
   if (needsPort && !port) {
     return;
   }
+  projects.refresh();
+  statusBar.refresh();
   runProjectAction(projectRepoRoot(catalog), name, board, project.appDir, { port });
 }
 
@@ -126,6 +144,7 @@ async function resolveProjectBoard(
 
 async function selectProjectBoardCmd(
   catalog: CatalogTreeProvider,
+  projects: ProjectsTreeProvider,
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
 ): Promise<void> {
@@ -135,11 +154,12 @@ async function selectProjectBoardCmd(
   }
   await selectProjectBoard(context, project, catalog.getCatalog());
   statusBar.refresh();
-  catalog.refresh();
+  projects.refresh();
 }
 
 async function selectProjectPortCmd(
   catalog: CatalogTreeProvider,
+  projects: ProjectsTreeProvider,
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
 ): Promise<void> {
@@ -149,7 +169,7 @@ async function selectProjectPortCmd(
   }
   await selectProjectPort(context, project, projectRepoRoot(catalog));
   statusBar.refresh();
-  catalog.refresh();
+  projects.refresh();
 }
 
 function requireCurrentProject(statusBar: ProjectStatusBar) {
@@ -213,7 +233,7 @@ export function deactivate(): void {
 
 // Prompts for a repository folder and stores it in configuration.
 // 提示选择仓库目录并存入配置。
-async function setRepoRoot(catalog: CatalogTreeProvider): Promise<void> {
+async function setRepoRoot(onUpdated: () => void): Promise<void> {
   const picked = await vscode.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
@@ -226,5 +246,5 @@ async function setRepoRoot(catalog: CatalogTreeProvider): Promise<void> {
   await vscode.workspace
     .getConfiguration("seeedZephyr")
     .update("repoRoot", picked[0].fsPath, vscode.ConfigurationTarget.Global);
-  catalog.refresh();
+  onUpdated();
 }

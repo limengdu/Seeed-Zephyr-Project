@@ -35,8 +35,24 @@
     "views": {
       "seeedZephyr": [
         {
+          "id": "seeedZephyrWelcome",
+          "name": "Welcome",
+          "visibility": "visible"
+        },
+        {
+          "id": "seeedZephyrProjects",
+          "name": "Projects",
+          "visibility": "visible"
+        },
+        {
+          "id": "seeedZephyrEnvironment",
+          "name": "Environment",
+          "visibility": "collapsed"
+        },
+        {
           "id": "seeedZephyrCatalog",
-          "name": "Catalog"
+          "name": "Catalog",
+          "visibility": "visible"
         }
       ]
     },
@@ -60,12 +76,6 @@
         "icon": "$(rocket)"
       },
       {
-        "command": "seeedZephyr.useRecommendedCli",
-        "title": "Use Recommended CLI",
-        "category": "Seeed XIAO",
-        "icon": "$(check)"
-      },
-      {
         "command": "seeedZephyr.useExistingCli",
         "title": "Use System CLI",
         "category": "Seeed XIAO",
@@ -73,13 +83,13 @@
       },
       {
         "command": "seeedZephyr.installManagedCli",
-        "title": "Install or Update Managed CLI",
+        "title": "Install Latest CLI",
         "category": "Seeed XIAO",
         "icon": "$(cloud-download)"
       },
       {
         "command": "seeedZephyr.selectCliVersion",
-        "title": "Select Managed CLI Version",
+        "title": "Choose CLI Version",
         "category": "Seeed XIAO",
         "icon": "$(versions)"
       },
@@ -181,7 +191,6 @@
         { "command": "seeedZephyr.openGenerated" },
         { "command": "seeedZephyr.selectProjectBoard" },
         { "command": "seeedZephyr.selectProjectPort" },
-        { "command": "seeedZephyr.useRecommendedCli" },
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },
         { "command": "seeedZephyr.installManagedCli" },
@@ -202,13 +211,18 @@
         },
         {
           "command": "seeedZephyr.createProject",
-          "when": "view == seeedZephyrCatalog",
+          "when": "view == seeedZephyrProjects",
           "group": "navigation@1"
         },
         {
           "command": "seeedZephyr.openGenerated",
-          "when": "view == seeedZephyrCatalog",
+          "when": "view == seeedZephyrProjects",
           "group": "navigation@2"
+        },
+        {
+          "command": "seeedZephyr.recheckEnvironment",
+          "when": "view == seeedZephyrEnvironment",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
@@ -295,7 +309,7 @@
         "seeedZephyr.pythonPath": {
           "type": "string",
           "default": "python3",
-          "description": "Python interpreter used to run the CLI from source."
+          "description": "Python interpreter used for managed CLI installation and CLI helper commands."
         }
       }
     }

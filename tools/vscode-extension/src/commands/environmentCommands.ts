@@ -17,8 +17,15 @@ interface ProcessResult {
   message: string;
 }
 
+interface PythonInvocation {
+  command: string;
+  baseArgs: string[];
+  display: string;
+}
+
 const INSTALL_COMMAND =
   "curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash";
+const DEFAULT_MANAGED_CLI_VERSION = "0.3.1";
 
 // Starts the repository setup command in a visible terminal.
 // 在可见终端中启动仓库 setup 命令。
@@ -94,11 +101,7 @@ export async function installManagedCli(
   context: vscode.ExtensionContext,
   onUpdated: () => void,
 ): Promise<void> {
-  const version = await latestCliVersion();
-  if (!version) {
-    return;
-  }
-  await installManagedCliVersion(context, onUpdated, version);
+  await installManagedCliVersion(context, onUpdated);
 }
 
 // Lets the user choose a published seeed-zephyr package version.
@@ -117,53 +120,159 @@ export async function selectManagedCliVersion(
 async function installManagedCliVersion(
   context: vscode.ExtensionContext,
   onUpdated: () => void,
-  version: string,
+  version?: string,
 ): Promise<void> {
   const storagePath = context.globalStorageUri.fsPath;
   const venvDir = managedCliVenvPath(storagePath);
-  const python = vscode.workspace.getConfiguration("seeedZephyr").get<string>("pythonPath") || "python3";
+  const python = await resolveManagedCliPython();
+  if (!python) {
+    return;
+  }
 
   const result = await vscode.window.withProgress<ProcessResult>(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `Installing seeed-zephyr ${version}`,
+      title: version ? `Installing seeed-zephyr ${version}` : "Installing latest seeed-zephyr",
       cancellable: false,
     },
     async () => {
       fs.mkdirSync(storagePath, { recursive: true });
-      let step = await runProcess(python, ["-m", "venv", venvDir]);
+      let step = await runProcess(python.command, [...python.baseArgs, "-m", "venv", venvDir]);
       if (!step.ok) {
         return step;
       }
       const venvPython = managedCliPythonPath(storagePath);
+      const venvVersion = await pythonExecutableVersion(venvPython);
+      if (!venvVersion || !versionAtLeast(venvVersion, [3, 12, 0])) {
+        return {
+          ok: false,
+          stdout: "",
+          stderr: "",
+          message: "Managed CLI venv must use Python 3.12 or newer.",
+        };
+      }
       step = await runProcess(venvPython, ["-m", "pip", "install", "--upgrade", "pip"]);
       if (!step.ok) {
         return step;
       }
-      return runProcess(venvPython, ["-m", "pip", "install", `seeed-zephyr==${version}`]);
+      const packageSpec = version ? `seeed-zephyr==${version}` : "seeed-zephyr";
+      const installArgs = version
+        ? ["-m", "pip", "install", packageSpec]
+        : ["-m", "pip", "install", "--upgrade", packageSpec];
+      return runProcess(venvPython, installArgs);
     },
   );
 
   if (!result.ok) {
-    void vscode.window.showErrorMessage(`Managed CLI install failed: ${result.message}`);
+    void vscode.window.showErrorMessage(`CLI install failed: ${result.message}`);
     return;
   }
 
   const cliPath = managedCliPath(storagePath);
   const config = vscode.workspace.getConfiguration("seeedZephyr");
+  const installedVersion = await readCliVersion(cliPath);
+  const storedVersion = installedVersion ?? version;
   await config.update("cliPath", cliPath, vscode.ConfigurationTarget.Global);
-  await config.update("managedCliVersion", version, vscode.ConfigurationTarget.Global);
+  await config.update("managedCliVersion", storedVersion, vscode.ConfigurationTarget.Global);
   onUpdated();
-  void vscode.window.showInformationMessage(`Managed CLI selected: seeed-zephyr ${version}`);
+  void vscode.window.showInformationMessage(
+    `CLI selected: seeed-zephyr ${storedVersion ?? "latest"}`,
+  );
 }
 
-async function latestCliVersion(): Promise<string | undefined> {
-  try {
-    return (await fetchPublishedVersions())[0];
-  } catch (error) {
-    void vscode.window.showErrorMessage(`Could not read published CLI versions: ${String(error)}`);
+async function resolveManagedCliPython(): Promise<PythonInvocation | undefined> {
+  for (const candidate of pythonCandidates()) {
+    const version = await pythonVersion(candidate);
+    if (version && versionAtLeast(version, [3, 12, 0])) {
+      return candidate;
+    }
+  }
+
+  void vscode.window.showErrorMessage(
+    "Managed CLI requires Python 3.12 or newer. Install Python 3.12+ or set seeedZephyr.pythonPath.",
+  );
+  return undefined;
+}
+
+function pythonCandidates(): PythonInvocation[] {
+  const configPython = vscode.workspace.getConfiguration("seeedZephyr").get<string>("pythonPath")?.trim();
+  const candidates: PythonInvocation[] = [];
+  if (configPython) {
+    candidates.push({ command: configPython, baseArgs: [], display: configPython });
+  }
+  candidates.push(
+    { command: "python3.13", baseArgs: [], display: "python3.13" },
+    { command: "python3.12", baseArgs: [], display: "python3.12" },
+    { command: "python3", baseArgs: [], display: "python3" },
+  );
+  if (process.platform === "darwin") {
+    candidates.push(
+      {
+        command: "/opt/homebrew/bin/python3.13",
+        baseArgs: [],
+        display: "/opt/homebrew/bin/python3.13",
+      },
+      {
+        command: "/opt/homebrew/bin/python3.12",
+        baseArgs: [],
+        display: "/opt/homebrew/bin/python3.12",
+      },
+    );
+  }
+  if (process.platform === "win32") {
+    candidates.push(
+      { command: "py", baseArgs: ["-3.13"], display: "py -3.13" },
+      { command: "py", baseArgs: ["-3.12"], display: "py -3.12" },
+    );
+  }
+  return uniquePythonCandidates(candidates);
+}
+
+async function pythonVersion(candidate: PythonInvocation): Promise<number[] | undefined> {
+  const result = await runProcess(candidate.command, [
+    ...candidate.baseArgs,
+    "-c",
+    "import sys; print('.'.join(map(str, sys.version_info[:3])))",
+  ]);
+  return versionFromProcessResult(result);
+}
+
+async function pythonExecutableVersion(command: string): Promise<number[] | undefined> {
+  const result = await runProcess(command, [
+    "-c",
+    "import sys; print('.'.join(map(str, sys.version_info[:3])))",
+  ]);
+  return versionFromProcessResult(result);
+}
+
+function versionFromProcessResult(result: ProcessResult): number[] | undefined {
+  if (!result.ok) {
     return undefined;
   }
+  const version = firstUsefulLine(result.stdout).split(".").map((part) => Number.parseInt(part, 10));
+  return version.every((part) => Number.isFinite(part)) ? version : undefined;
+}
+
+function versionAtLeast(actual: number[], minimum: number[]): boolean {
+  for (let index = 0; index < minimum.length; index += 1) {
+    const diff = (actual[index] ?? 0) - minimum[index];
+    if (diff !== 0) {
+      return diff > 0;
+    }
+  }
+  return true;
+}
+
+function uniquePythonCandidates(candidates: PythonInvocation[]): PythonInvocation[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = `${candidate.command}\0${candidate.baseArgs.join("\0")}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 async function chooseCliVersion(): Promise<string | undefined> {
@@ -180,8 +289,22 @@ async function chooseCliVersion(): Promise<string | undefined> {
   } catch {
     return vscode.window.showInputBox({
       prompt: "seeed-zephyr CLI version",
-      placeHolder: "0.3.0",
+      placeHolder: DEFAULT_MANAGED_CLI_VERSION,
+      value: DEFAULT_MANAGED_CLI_VERSION,
     });
+  }
+}
+
+async function readCliVersion(command: string): Promise<string | undefined> {
+  const result = await runProcess(command, ["info", "--json"]);
+  if (!result.ok) {
+    return undefined;
+  }
+  try {
+    const info = JSON.parse(result.stdout) as { cli_version?: string };
+    return info.cli_version;
+  } catch {
+    return undefined;
   }
 }
 
