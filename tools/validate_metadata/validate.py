@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import os
 import re
 import sys
@@ -107,6 +108,23 @@ FORM_FACTOR_PIN_KEYS = {"id", "type"}
 FORM_FACTOR_PIN_OPTIONAL_KEYS = {"bus", "bus_role", "rail"}
 VALID_PIN_TYPES = {"gpio", "power"}
 
+STATUS_REQUIRED_KEYS = {
+    "example_id",
+    "example_ref",
+    "zephyr_version",
+    "generated_on",
+    "boards",
+}
+STATUS_BOARD_REQUIRED_KEYS = {"board_id", "status"}
+STATUS_BOARD_OPTIONAL_KEYS = {"target", "reason", "evidence"}
+VALID_MATRIX_STATUSES = {
+    "build-verified",
+    "build-failed",
+    "hardware-tested",
+    "pending",
+    "excluded",
+}
+
 DERIVED_KEYS = {
     "status",
     "validation",
@@ -181,6 +199,7 @@ def collect_results(repo_root: Path) -> list[ValidationResult]:
         (repo_root / "metadata" / "expansion_boards").glob("*.yaml")
     )
     form_factor_paths = sorted((repo_root / "metadata" / "form_factors").glob("*.yaml"))
+    status_paths = sorted((repo_root / "metadata" / "status").glob("*.yaml"))
     example_paths = sorted((repo_root / "examples").glob("**/example.yaml"))
 
     results: list[ValidationResult] = []
@@ -195,6 +214,11 @@ def collect_results(repo_root: Path) -> list[ValidationResult]:
         results.append(result)
     for path in form_factor_paths:
         result = validate_file(path, validate_form_factor_metadata)
+        results.append(result)
+    for path in status_paths:
+        result = validate_file(
+            path, validate_status_metadata, id_matches_filename=False
+        )
         results.append(result)
     for path in example_paths:
         result = validate_file(path, validate_example_metadata, id_matches_filename=False)
@@ -553,6 +577,111 @@ def validate_grove_pins(result: ValidationResult, document: dict[str, Any]) -> N
             if pin["role"] in roles:
                 result.fail(f"pins[{index}] duplicate role '{pin['role']}'")
             roles.add(pin["role"])
+
+
+def validate_status_metadata(result: ValidationResult, document: dict[str, Any]) -> None:
+    validate_exact_keys(result, document, STATUS_REQUIRED_KEYS)
+
+    for key in ("example_id", "example_ref", "zephyr_version"):
+        validate_non_empty_string(result, document, key)
+
+    example_id = document.get("example_id")
+    if isinstance(example_id, str) and example_id != result.path.stem:
+        result.fail(f"example_id must match filename stem '{result.path.stem}'")
+
+    generated_on = document.get("generated_on")
+    if isinstance(generated_on, dt.date):
+        pass
+    elif isinstance(generated_on, str) and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", generated_on):
+        result.fail("generated_on must use YYYY-MM-DD")
+    else:
+        result.fail("generated_on must use YYYY-MM-DD")
+
+    excluded_boards = validate_status_example_ref(result, document)
+    validate_status_board_rows(result, document, excluded_boards)
+
+
+def validate_status_example_ref(
+    result: ValidationResult, document: dict[str, Any]
+) -> set[str]:
+    example_ref = document.get("example_ref")
+    example_id = document.get("example_id")
+    if not isinstance(example_ref, str):
+        return set()
+
+    parts = [part for part in example_ref.strip("/").split("/") if part]
+    if len(parts) != 3 or parts[0] != "grove":
+        result.fail("example_ref must look like grove/<module>/<demo>")
+        return set()
+
+    repo_root = result.path.parent.parent.parent
+    example_file = repo_root / "examples" / "grove" / parts[1] / parts[2] / "example.yaml"
+    if not example_file.is_file():
+        result.fail(f"example_ref target does not exist: {example_ref}")
+        return set()
+
+    try:
+        example_doc = yaml.safe_load(example_file.read_text(encoding="utf-8"))
+    except (yaml.YAMLError, OSError) as error:
+        result.fail(f"example_ref target cannot be read: {error}")
+        return set()
+
+    if not isinstance(example_doc, dict):
+        result.fail("example_ref target must be a YAML mapping")
+        return set()
+
+    if isinstance(example_id, str) and example_doc.get("id") != example_id:
+        result.fail("example_id must match the referenced Grove example id")
+
+    excluded = example_doc.get("excluded_boards")
+    if not isinstance(excluded, list):
+        return set()
+    return {str(board) for board in excluded if isinstance(board, str)}
+
+
+def validate_status_board_rows(
+    result: ValidationResult, document: dict[str, Any], excluded_boards: set[str]
+) -> None:
+    boards = document.get("boards")
+    if not isinstance(boards, list) or not boards:
+        result.fail("boards must be a non-empty list")
+        return
+
+    repo_root = result.path.parent.parent.parent
+    seen: set[str] = set()
+    for index, row in enumerate(boards):
+        if not isinstance(row, dict):
+            result.fail(f"boards[{index}] must be a mapping")
+            continue
+        validate_allowed_keys(
+            result, row, STATUS_BOARD_REQUIRED_KEYS, STATUS_BOARD_OPTIONAL_KEYS
+        )
+        validate_non_empty_string(result, row, "board_id")
+        validate_allowed_value(result, row, "status", VALID_MATRIX_STATUSES)
+        for key in ("target", "reason", "evidence"):
+            if key in row:
+                validate_non_empty_string(result, row, key)
+
+        board_id = row.get("board_id")
+        status = row.get("status")
+        if not isinstance(board_id, str):
+            continue
+        if board_id in seen:
+            result.fail(f"boards[{index}] duplicate board_id '{board_id}'")
+        seen.add(board_id)
+
+        board_file = repo_root / "metadata" / "boards" / f"{board_id}.yaml"
+        if not board_file.is_file():
+            result.fail(f"boards[{index}].board_id '{board_id}' has no board metadata")
+
+        if status == "excluded" and board_id not in excluded_boards:
+            result.fail(f"boards[{index}] is excluded but the Grove example does not exclude {board_id}")
+        if board_id in excluded_boards and status != "excluded":
+            result.fail(f"boards[{index}] must be excluded because the Grove example excludes {board_id}")
+        if status in {"build-verified", "build-failed", "hardware-tested"}:
+            validate_non_empty_string(result, row, "evidence")
+        if status == "excluded":
+            validate_non_empty_string(result, row, "reason")
 
 
 def validate_example_path_consistency(

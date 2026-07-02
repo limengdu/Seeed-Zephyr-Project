@@ -7,7 +7,11 @@ import {
   Example,
   ExpansionBoard,
   ExpansionPort,
+  GroveBoardStatus,
+  GroveExample,
+  GroveMatrixStatus,
   GroveModule,
+  GrovePinRole,
   ValidationStatus,
 } from "../model/types";
 
@@ -35,6 +39,14 @@ function asString(value: unknown, fallback = ""): string {
 
 function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item)) : [];
+}
+
+function asRecordList(value: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(value)
+    ? value.filter((item): item is Record<string, unknown> => {
+        return item !== null && typeof item === "object" && !Array.isArray(item);
+      })
+    : [];
 }
 
 // Reads the full offline catalog from a repository checkout.
@@ -117,8 +129,9 @@ function readGroveModules(repoRoot: string): GroveModule[] {
   const modules: GroveModule[] = [];
   for (const file of listYamlFiles(dir)) {
     const raw = readYaml(file);
+    const id = asString(raw.id, path.basename(file, ".yaml"));
     modules.push({
-      id: asString(raw.id, path.basename(file, ".yaml")),
+      id,
       sku: asString(raw.sku),
       displayName: asString(raw.display_name),
       category: asString(raw.category),
@@ -131,9 +144,67 @@ function readGroveModules(repoRoot: string): GroveModule[] {
       zephyrDriver: raw.zephyr_driver ? asString(raw.zephyr_driver) : null,
       requiredConfigs: asStringList(raw.required_configs),
       supportedTemplates: asStringList(raw.supported_templates),
+      examples: readGroveExamples(repoRoot, id),
     });
   }
   return modules;
+}
+
+function readGroveExamples(repoRoot: string, moduleId: string): GroveExample[] {
+  const dir = path.join(repoRoot, "examples", "grove", moduleId);
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+  const examples: GroveExample[] = [];
+  for (const entry of fs.readdirSync(dir).sort()) {
+    const exampleDir = path.join(dir, entry);
+    const exampleFile = path.join(exampleDir, "example.yaml");
+    if (!fs.existsSync(exampleFile)) {
+      continue;
+    }
+    const raw = readYaml(exampleFile);
+    const id = asString(raw.id, `${moduleId}_${entry}`);
+    examples.push({
+      id,
+      moduleId: asString(raw.module_id, moduleId),
+      demo: asString(raw.demo, entry),
+      interface: asString(raw.interface),
+      connector: asString(raw.connector),
+      pinPolicy: asString(raw.pin_policy),
+      excludedBoards: asStringList(raw.excluded_boards),
+      expectedBehavior: asString(raw.expected_behavior),
+      dirPath: exampleDir,
+      files: fs
+        .readdirSync(exampleDir)
+        .filter((name) => fs.statSync(path.join(exampleDir, name)).isFile()),
+      pins: readGrovePinRoles(raw.pins),
+      boardStatus: readGroveStatus(repoRoot, id),
+    });
+  }
+  return examples;
+}
+
+function readGrovePinRoles(value: unknown): GrovePinRole[] {
+  return asRecordList(value).map((pin) => ({
+    role: asString(pin.role),
+    default: asString(pin.default),
+    allowed: asStringList(pin.allowed),
+  }));
+}
+
+function readGroveStatus(repoRoot: string, exampleId: string): GroveBoardStatus[] {
+  const file = path.join(repoRoot, "metadata", "status", `${exampleId}.yaml`);
+  if (!fs.existsSync(file)) {
+    return [];
+  }
+  const raw = readYaml(file);
+  return asRecordList(raw.boards).map((row) => ({
+    boardId: asString(row.board_id),
+    status: asString(row.status, "unknown") as GroveMatrixStatus,
+    target: row.target ? asString(row.target) : undefined,
+    reason: row.reason ? asString(row.reason) : undefined,
+    evidence: row.evidence ? asString(row.evidence) : undefined,
+  }));
 }
 
 function readExpansionBoards(repoRoot: string): ExpansionBoard[] {
@@ -141,13 +212,11 @@ function readExpansionBoards(repoRoot: string): ExpansionBoard[] {
   const expansions: ExpansionBoard[] = [];
   for (const file of listYamlFiles(dir)) {
     const raw = readYaml(file);
-    const ports: ExpansionPort[] = Array.isArray(raw.ports)
-      ? (raw.ports as Array<Record<string, unknown>>).map((port) => ({
-          id: asString(port.id),
-          type: asString(port.type),
-          label: asString(port.label),
-        }))
-      : [];
+    const ports: ExpansionPort[] = asRecordList(raw.ports).map((port) => ({
+      id: asString(port.id),
+      type: asString(port.type),
+      label: asString(port.label),
+    }));
     expansions.push({
       id: asString(raw.id, path.basename(file, ".yaml")),
       sku: asString(raw.sku),

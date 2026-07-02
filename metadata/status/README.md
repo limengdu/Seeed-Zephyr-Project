@@ -4,8 +4,9 @@ This directory records the build and hardware verification status for examples t
 span multiple boards, expressed as an **example x board** matrix.
 
 The Grove framework writes one file per Grove example here
-(`tools/build_matrix/run_grove.py` is the generator). Board-bound examples keep
-their single `validation_status` field in `examples/boards/<board>/<demo>/example.yaml`.
+(`tools/build_matrix/run_grove.py` is the generator). Partial runs keep existing
+status rows for boards that are not built in the current run. Board-bound examples
+keep their single `validation_status` field in `examples/boards/<board>/<demo>/example.yaml`.
 
 ## File schema
 
@@ -43,12 +44,12 @@ boards:
 # Build every Grove example on every supported board (full CI pass):
 python3 tools/build_matrix/run_grove.py
 
-# Build one example on a few boards (others stay pending):
+# Build one example on a few boards (existing rows are kept for the rest):
 python3 tools/build_matrix/run_grove.py \
   --example grove/grove_scd41_co2_temperature_humidity_sensor/basic_read \
   --board xiao_esp32c6 --board xiao_nrf52840
 
-# Emit the skeleton from metadata without building:
+# Emit or refresh the skeleton from metadata without building:
 python3 tools/build_matrix/run_grove.py --no-build
 ```
 

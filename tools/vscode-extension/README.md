@@ -6,11 +6,13 @@ to Zephyr tooling.
 
 The extension reads repository metadata directly, so browsing works offline
 without a Zephyr toolchain installed. Create and execute actions call the
-`seeed-zephyr` CLI.
+`seeed-zephyr` CLI. Grove modules expand to the examples and board matrix
+recorded in the repository.
 
 浏览 XIAO 板子、Grove 模块和扩展板;预览验证过的示例;从示例创建项目;再把
 构建/烧录/监视/调试交给 Zephyr 工具链。浏览直接读取仓库元数据,因此无需安装
-Zephyr 工具链也能离线浏览;创建和执行操作会调用 `seeed-zephyr` CLI。
+Zephyr 工具链也能离线浏览;创建和执行操作会调用 `seeed-zephyr` CLI。Grove
+模块会展开显示仓库中记录的示例和板级矩阵。
 
 ## Install
 

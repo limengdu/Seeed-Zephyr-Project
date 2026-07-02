@@ -183,7 +183,7 @@ seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sens
 seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read   # same source, another board
 ```
 
-Inspect the pin diagram (the data source for the editor extension's interactive pinout):
+Inspect the per-pin state exported for editor tooling:
 
 ```sh
 seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read --json
@@ -254,7 +254,7 @@ For the complete walk-through, see the [Getting Started guide](docs/en/getting-s
 
 The capability catalog also tracks the Grove modules and expansion boards that pair with XIAO, including their interface, default address, power rail, and the Zephyr driver and Kconfig options they need.
 
-Grove module examples are **board-agnostic**: one source tree under `examples/grove/` builds for every XIAO board through the upstream `seeed_xiao_connector` abstraction. The SCD41 `basic_read` example is verified on ESP32-C6, nRF52840, and RP2040 from a single source; the rest of the board matrix is recorded in [`metadata/status/`](metadata/status/). Use `seeed-zephyr show pins <board> grove/<module>/<demo> --json` to get the per-pin state (selectable / reserved / bus / power) that drives the editor extension's interactive pinout.
+Grove module examples are **board-agnostic**: one source tree under `examples/grove/` builds for every XIAO board through the upstream `seeed_xiao_connector` abstraction. The SCD41 `basic_read` example is verified on ESP32-C6, nRF52840, and RP2040 from a single source; the rest of the board matrix is recorded in [`metadata/status/`](metadata/status/). Use `seeed-zephyr show pins <board> grove/<module>/<demo> --json` to get the per-pin state (selectable / reserved / bus / power). The editor extension reads the same Grove examples and status matrix, so Grove modules expand to their available examples in the catalog.
 
 **Grove modules:** Grove - Ultrasonic Distance Sensor · Grove - Soil Moisture Sensor · Grove - Temperature & Humidity Sensor V2.0 (DHT20) · Grove - CO2 & Temperature & Humidity Sensor (SCD41) · 1.47inch LCD Display Module
 

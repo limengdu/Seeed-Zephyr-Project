@@ -3,6 +3,8 @@ import {
   Board,
   Example,
   ExpansionBoard,
+  GroveExample,
+  GroveMatrixStatus,
   GroveModule,
   ValidationStatus,
 } from "../model/types";
@@ -15,13 +17,17 @@ export type GroupKind = "boards" | "modules" | "expansions";
 const STATUS_ICON: Record<string, string> = {
   "hardware-tested": "verified",
   "build-only": "check",
+  "build-verified": "check",
+  "build-failed": "error",
   experimental: "beaker",
   blocked: "error",
+  pending: "clock",
   unsupported: "circle-slash",
+  excluded: "circle-slash",
   unknown: "question",
 };
 
-function statusIcon(status: ValidationStatus): vscode.ThemeIcon {
+function statusIcon(status: ValidationStatus | GroveMatrixStatus): vscode.ThemeIcon {
   return new vscode.ThemeIcon(STATUS_ICON[status] ?? "question");
 }
 
@@ -75,12 +81,33 @@ export class ExampleNode extends vscode.TreeItem {
 
 export class ModuleNode extends vscode.TreeItem {
   constructor(public readonly module: GroveModule) {
-    super(module.displayName, vscode.TreeItemCollapsibleState.None);
-    this.description = module.interface;
+    super(
+      module.displayName,
+      module.examples.length > 0
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None,
+    );
+    this.description =
+      module.examples.length > 0 ? `${module.interface} - ${module.examples.length}` : module.interface;
     this.iconPath = new vscode.ThemeIcon("circuit-board");
     this.tooltip = `${module.id}\n${module.zephyrSupport}`;
     this.contextValue = "module";
     this.command = detailCommand({ kind: "module", module });
+  }
+}
+
+export class GroveExampleNode extends vscode.TreeItem {
+  constructor(
+    public readonly example: GroveExample,
+    public readonly module: GroveModule,
+  ) {
+    super(example.demo, vscode.TreeItemCollapsibleState.None);
+    const status = primaryGroveStatus(example);
+    this.description = summarizeGroveStatus(example);
+    this.iconPath = statusIcon(status);
+    this.tooltip = example.expectedBehavior;
+    this.contextValue = "groveExample";
+    this.command = detailCommand({ kind: "groveExample", example, module });
   }
 }
 
@@ -118,5 +145,30 @@ export type CatalogNode =
   | BoardNode
   | ExampleNode
   | ModuleNode
+  | GroveExampleNode
   | ExpansionNode
   | MessageNode;
+
+function primaryGroveStatus(example: GroveExample): GroveMatrixStatus {
+  if (example.boardStatus.some((row) => row.status === "hardware-tested")) {
+    return "hardware-tested";
+  }
+  if (example.boardStatus.some((row) => row.status === "build-verified")) {
+    return "build-verified";
+  }
+  if (example.boardStatus.some((row) => row.status === "build-failed")) {
+    return "build-failed";
+  }
+  return example.boardStatus.length > 0 ? "pending" : "unknown";
+}
+
+function summarizeGroveStatus(example: GroveExample): string {
+  const verified = example.boardStatus.filter((row) =>
+    row.status === "build-verified" || row.status === "hardware-tested"
+  ).length;
+  const failed = example.boardStatus.filter((row) => row.status === "build-failed").length;
+  if (failed > 0) {
+    return `${verified} verified - ${failed} failed`;
+  }
+  return `${verified} verified`;
+}

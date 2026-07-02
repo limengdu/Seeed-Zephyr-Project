@@ -13,6 +13,7 @@ demo listed in `metadata/boards/`.
 `tools/build_matrix/run_grove.py` extends the matrix to the Grove framework: it
 builds each Grove example on every supported XIAO board and writes the
 example x board status matrix into `metadata/status/<example_id>.yaml`.
+Partial runs keep the recorded rows for boards outside the current build.
 
 ## 中文
 
@@ -24,3 +25,4 @@ example x board status matrix into `metadata/status/<example_id>.yaml`.
 
 `tools/build_matrix/run_grove.py` 将矩阵扩展到 Grove 框架:对每个 Grove 示例在所有支持的 XIAO 板上构建,
 并将"示例 x 板子"状态矩阵写入 `metadata/status/<example_id>.yaml`。
+局部运行会保留本次未构建板子的既有记录。

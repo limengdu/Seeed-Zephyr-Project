@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { Board, Example, ExpansionBoard, GroveModule } from "../model/types";
+import { Board, Example, ExpansionBoard, GroveExample, GroveModule } from "../model/types";
 import { escapeHtml, renderHtml } from "./webviewHtml";
 
 // A detail view target chosen from the catalog tree.
@@ -10,6 +10,7 @@ export type DetailTarget =
   | { kind: "example"; example: Example; board: Board }
   | { kind: "board"; board: Board }
   | { kind: "module"; module: GroveModule }
+  | { kind: "groveExample"; example: GroveExample; module: GroveModule }
   | { kind: "expansion"; expansion: ExpansionBoard };
 
 // A single reusable webview panel that shows details for the selected item.
@@ -56,6 +57,8 @@ function renderTarget(target: DetailTarget): { title: string; body: string } {
       return renderBoard(target.board);
     case "module":
       return renderModule(target.module);
+    case "groveExample":
+      return renderGroveExample(target.example, target.module);
     case "expansion":
       return renderExpansion(target.expansion);
   }
@@ -174,17 +177,63 @@ function renderModule(module: GroveModule): { title: string; body: string } {
     row("Zephyr compatible", module.zephyrCompatible ? `<code>${escapeHtml(module.zephyrCompatible)}</code>` : '<span class="muted">n/a</span>'),
     row("Zephyr driver", module.zephyrDriver ? `<code>${escapeHtml(module.zephyrDriver)}</code>` : '<span class="muted">n/a</span>'),
   ];
+  const examples = module.examples
+    .map((example) => `<li>${escapeHtml(example.demo)} ${badge(primaryGroveStatus(example))}</li>`)
+    .join("");
   const body = `
 <h1>${escapeHtml(module.displayName)}</h1>
 <p class="subtitle">${escapeHtml(module.interface)} module</p>
 <h2>Module</h2>
 <table>${fields.join("")}</table>
+<h2>Examples</h2>
+${examples ? `<ul>${examples}</ul>` : '<span class="muted">none</span>'}
 <h2>Required config</h2>
 ${listHtml(module.requiredConfigs)}
 <h2>Supported templates</h2>
 ${listHtml(module.supportedTemplates)}
 `;
   return { title: module.displayName, body };
+}
+
+function renderGroveExample(
+  example: GroveExample,
+  module: GroveModule,
+): { title: string; body: string } {
+  const ref = `grove/${example.moduleId}/${example.demo}`;
+  const title = `${module.displayName} / ${example.demo}`;
+  const fields = [
+    row("Example reference", `<code>${escapeHtml(ref)}</code>`),
+    row("Interface", escapeHtml(example.interface)),
+    row("Connector", escapeHtml(example.connector)),
+    row("Pin policy", escapeHtml(example.pinPolicy)),
+    row("Build command", `<code>seeed-zephyr build &lt;board_id&gt; ${escapeHtml(ref)}</code>`),
+    row("Pin query", `<code>seeed-zephyr show pins &lt;board_id&gt; ${escapeHtml(ref)} --json</code>`),
+    row("Expected behavior", escapeHtml(example.expectedBehavior)),
+  ];
+  const boardRows = example.boardStatus
+    .map((status) => {
+      const note = status.evidence ?? status.reason ?? "";
+      return `<tr><td><code>${escapeHtml(status.boardId)}</code></td><td>${badge(status.status)}</td><td>${escapeHtml(note)}</td></tr>`;
+    })
+    .join("");
+  const pins = example.pins.map((pin) => {
+    return `${pin.role}: default ${pin.default}, allowed ${pin.allowed.join(", ")}`;
+  });
+  const body = `
+<h1>${escapeHtml(title)} ${badge(primaryGroveStatus(example))}</h1>
+<p class="subtitle">${escapeHtml(example.id)}</p>
+<h2>Overview</h2>
+<table>${fields.join("")}</table>
+<h2>Board matrix</h2>
+${boardRows ? `<table><tr><td class="key">Board</td><td class="key">Status</td><td class="key">Evidence</td></tr>${boardRows}</table>` : '<span class="muted">none</span>'}
+<h2>Pin roles</h2>
+${pins.length ? listHtml(pins) : '<span class="muted">fixed bus</span>'}
+<h2>Files</h2>
+${listHtml(example.files)}
+<h2>README</h2>
+${readmeHtml(example.dirPath)}
+`;
+  return { title, body };
 }
 
 function renderExpansion(expansion: ExpansionBoard): { title: string; body: string } {
@@ -207,6 +256,19 @@ ${ports ? `<ul>${ports}</ul>` : '<span class="muted">none</span>'}
 ${listHtml(expansion.onboard)}
 `;
   return { title: expansion.displayName, body };
+}
+
+function primaryGroveStatus(example: GroveExample): string {
+  if (example.boardStatus.some((row) => row.status === "hardware-tested")) {
+    return "hardware-tested";
+  }
+  if (example.boardStatus.some((row) => row.status === "build-verified")) {
+    return "build-verified";
+  }
+  if (example.boardStatus.some((row) => row.status === "build-failed")) {
+    return "build-failed";
+  }
+  return example.boardStatus.length > 0 ? "pending" : "unknown";
 }
 
 // Reads an example README and renders it as preformatted text.

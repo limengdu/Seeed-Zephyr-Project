@@ -8,9 +8,10 @@
 #   python3 tools/build_matrix/run_grove.py [--example grove/<module>/<demo>] [--board <id> ...]
 #                                          [--zephyr-workspace ~/zephyrproject] [--no-build]
 #
-# --no-build emits the matrix skeleton from metadata only (statuses: pending / excluded),
-# useful for seeding a new example before a full CI run. Without --no-build, selected
-# boards are built for real and recorded as build-verified / build-failed.
+# --no-build refreshes the matrix from metadata without running west builds. Existing
+# board rows are preserved when a board is not built in the current run. Without
+# --no-build, selected boards are built for real and recorded as build-verified /
+# build-failed.
 #
 # Env:
 #   ZEPHYR_WORKSPACE defaults to ~/zephyrproject (forwarded to the CLI for west builds).
@@ -36,6 +37,56 @@ STATUS_BUILD_FAILED = "build-failed"
 STATUS_HARDWARE_TESTED = "hardware-tested"
 STATUS_PENDING = "pending"
 STATUS_EXCLUDED = "excluded"
+
+
+def _parse_yaml_scalar(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == '"' and value[-1] == '"':
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value[1:-1]
+    return value
+
+
+def read_existing_status_rows(path: Path) -> dict[str, dict[str, str]]:
+    # Reads rows produced by emit_yaml() so partial matrix runs keep prior evidence.
+    # 读取 emit_yaml() 生成的行,让局部矩阵运行保留已有验证证据。
+    if not path.is_file():
+        return {}
+    rows: dict[str, dict[str, str]] = {}
+    current: dict[str, str] | None = None
+    in_boards = False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line == "boards:":
+            in_boards = True
+            continue
+        if not in_boards:
+            continue
+        if line.startswith("  - "):
+            if current and current.get("board_id"):
+                rows[current["board_id"]] = current
+            current = {}
+            item = line[4:]
+            if ":" in item:
+                key, value = item.split(":", 1)
+                current[key.strip()] = _parse_yaml_scalar(value)
+            continue
+        if current is not None and line.startswith("    ") and ":" in line:
+            key, value = line.strip().split(":", 1)
+            current[key.strip()] = _parse_yaml_scalar(value)
+    if current and current.get("board_id"):
+        rows[current["board_id"]] = current
+    return rows
+
+
+def preserved_or_pending(
+    board_id: str, existing_rows: dict[str, dict[str, str]]
+) -> dict[str, str]:
+    existing = existing_rows.get(board_id)
+    if existing and existing.get("status") != STATUS_EXCLUDED:
+        return dict(existing)
+    return {"board_id": board_id, "status": STATUS_PENDING}
 
 
 def run_cli(args: list[str], workspace: Path) -> tuple[int, str]:
@@ -80,6 +131,9 @@ def _yaml_scalar(value: str) -> str:
     # Double-quoted YAML scalar: safely encodes newlines, quotes, and colons that
     # would otherwise corrupt the flat "key: value" emitter below.
     # 双引号 YAML 标量：安全编码换行、引号与冒号，避免破坏下面的扁平 "key: value" 输出。
+    special_chars = '\n\r:#{}[]&*?|<>=!%@`\\\'"'
+    if value and value == value.strip() and not any(ch in value for ch in special_chars):
+        return value
     escaped = value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
     return f'"{escaped}"'
 
@@ -110,6 +164,7 @@ def build_example_matrix(
     workspace: Path,
     no_build: bool,
     zephyr_version: str,
+    existing_rows: dict[str, dict[str, str]],
 ) -> dict[str, object]:
     module_id = str(example["module_id"])
     demo = str(example["demo"])
@@ -124,12 +179,10 @@ def build_example_matrix(
                 {"board_id": board_id, "status": STATUS_EXCLUDED, "reason": "listed in excluded_boards"}
             )
             continue
-        # Boards outside the --board filter (and the --no-build case) stay pending so the
-        # full matrix is always written; only filtered boards are built for real.
-        # --board 过滤之外的板子(以及 --no-build 情形)保持 pending,使完整矩阵始终写入;
-        # 仅过滤内的板子真正构建。
+        # Boards outside the current build keep prior evidence; new rows start pending.
+        # 当前未构建的板子保留已有证据;新行从 pending 开始。
         if no_build or (board_filter and board_id not in board_filter):
-            board_rows.append({"board_id": board_id, "status": STATUS_PENDING})
+            board_rows.append(preserved_or_pending(board_id, existing_rows))
             continue
         print(f"Building {example_ref} on {board_id}...", flush=True)
         code, out = run_cli(["build", board_id, example_ref], workspace)
@@ -165,7 +218,7 @@ def main() -> int:
     parser.add_argument("--board", action="append", help="Limit builds to these board ids (repeatable).")
     parser.add_argument("--zephyr-workspace", default=os.path.expanduser("~/zephyrproject"))
     parser.add_argument("--zephyr-version", default="v4.4.0")
-    parser.add_argument("--no-build", action="store_true", help="Emit the skeleton without building.")
+    parser.add_argument("--no-build", action="store_true", help="Refresh the matrix without building.")
     args = parser.parse_args()
 
     workspace = Path(args.zephyr_workspace)
@@ -185,12 +238,20 @@ def main() -> int:
         detail = show_example(str(example["module_id"]), str(example["demo"]))
         if not detail:
             continue
+        example_id = str(detail.get("id", ""))
+        out_path = STATUS_DIR / f"{example_id}.yaml"
+        existing_rows = read_existing_status_rows(out_path)
         matrix = build_example_matrix(
-            example, detail, args.board, workspace, args.no_build, args.zephyr_version
+            example,
+            detail,
+            args.board,
+            workspace,
+            args.no_build,
+            args.zephyr_version,
+            existing_rows,
         )
         if not matrix["boards"]:
             continue
-        out_path = STATUS_DIR / f"{matrix['example_id']}.yaml"
         out_path.write_text(emit_yaml(matrix), encoding="utf-8")
         verified = sum(1 for b in matrix["boards"] if b["status"] == STATUS_BUILD_VERIFIED)
         failed = sum(1 for b in matrix["boards"] if b["status"] == STATUS_BUILD_FAILED)

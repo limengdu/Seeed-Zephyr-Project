@@ -9,6 +9,7 @@ import {
   CatalogNode,
   ExampleNode,
   ExpansionNode,
+  GroveExampleNode,
   GroupNode,
   MessageNode,
   ModuleNode,
@@ -95,6 +96,9 @@ export class CatalogTreeProvider implements vscode.TreeDataProvider<CatalogNode>
     }
     if (node instanceof BoardNode) {
       return node.board.examples.map((example) => new ExampleNode(example, node.board));
+    }
+    if (node instanceof ModuleNode) {
+      return node.module.examples.map((example) => new GroveExampleNode(example, node.module));
     }
     return [];
   }

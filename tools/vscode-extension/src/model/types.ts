@@ -48,6 +48,44 @@ export interface GroveModule {
   zephyrDriver: string | null;
   requiredConfigs: string[];
   supportedTemplates: string[];
+  examples: GroveExample[];
+}
+
+export type GroveMatrixStatus =
+  | "build-verified"
+  | "build-failed"
+  | "hardware-tested"
+  | "pending"
+  | "excluded"
+  | "unknown";
+
+export interface GroveBoardStatus {
+  boardId: string;
+  status: GroveMatrixStatus;
+  target?: string;
+  reason?: string;
+  evidence?: string;
+}
+
+export interface GrovePinRole {
+  role: string;
+  default: string;
+  allowed: string[];
+}
+
+export interface GroveExample {
+  id: string;
+  moduleId: string;
+  demo: string;
+  interface: string;
+  connector: string;
+  pinPolicy: string;
+  excludedBoards: string[];
+  expectedBehavior: string;
+  dirPath: string;
+  files: string[];
+  pins: GrovePinRole[];
+  boardStatus: GroveBoardStatus[];
 }
 
 export interface ExpansionPort {

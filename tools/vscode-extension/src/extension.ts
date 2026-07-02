@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { CatalogTreeProvider } from "./views/catalogTreeProvider";
 import { DetailPanel, DetailTarget } from "./panels/detailPanel";
-import { BoardNode, ExampleNode } from "./views/treeItems";
-import { createProject } from "./commands/createProject";
+import { BoardNode, ExampleNode, GroveExampleNode } from "./views/treeItems";
+import { createProject, CreatePreset } from "./commands/createProject";
 import { openGenerated } from "./commands/openGenerated";
 import { updateRepository } from "./commands/updateRepository";
 import {
@@ -138,9 +138,12 @@ function actionTarget(node: unknown): { board: string; demo?: string } | undefin
 // 从被点击的树节点推导创建项目的预设(若有)。
 function presetFromNode(
   node: unknown,
-): { board: BoardNode["board"]; example?: ExampleNode["example"] } | undefined {
+): CreatePreset | undefined {
   if (node instanceof ExampleNode) {
     return { board: node.board, example: node.example };
+  }
+  if (node instanceof GroveExampleNode) {
+    return { groveExample: node.example };
   }
   if (node instanceof BoardNode) {
     return { board: node.board };

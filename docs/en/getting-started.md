@@ -183,8 +183,8 @@ seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sens
 seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
 ```
 
-The same source builds on both boards unchanged. Inspect the per-pin state that drives
-the editor extension's interactive pinout with:
+The same source builds on both boards unchanged. Inspect the per-pin state exported for
+editor tooling with:
 
 ```sh
 seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read

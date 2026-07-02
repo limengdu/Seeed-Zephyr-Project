@@ -1,33 +1,57 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { Board, Catalog, Example } from "../model/types";
+import { Board, Catalog, Example, GroveExample } from "../model/types";
 import { locateCli } from "../cli/cliLocator";
 import { runCapture } from "../cli/cliBridge";
+
+export type CreatePreset =
+  | { board: Board; example?: Example }
+  | { groveExample: GroveExample };
 
 // Runs the create-project wizard, then calls the CLI to generate the project.
 // 运行创建项目向导,然后调用 CLI 生成项目。
 export async function createProject(
   repoRoot: string | undefined,
   catalog: Catalog | undefined,
-  preset?: { board: Board; example?: Example },
+  preset?: CreatePreset,
 ): Promise<void> {
   if (!repoRoot || !catalog) {
     void vscode.window.showErrorMessage("No seeed-zephyr repository found.");
     return;
   }
 
-  const board = preset?.board ?? (await pickBoard(catalog));
+  const groveExample = preset && "groveExample" in preset ? preset.groveExample : undefined;
+  const board = groveExample
+    ? await pickBoardForGroveExample(catalog, groveExample)
+    : (preset && "board" in preset ? preset.board : undefined) ?? (await pickBoard(catalog));
   if (!board) {
     return;
   }
-  if (board.examples.length === 0) {
+  if (!groveExample && board.examples.length === 0) {
     void vscode.window.showErrorMessage(`${board.id} has no examples to create from.`);
     return;
   }
-  const example = preset?.example ?? (await pickExample(board));
-  if (!example) {
+  const boardExample = groveExample
+    ? undefined
+    : preset && "board" in preset && preset.example
+      ? preset.example
+      : await pickExample(board);
+  if (!groveExample && !boardExample) {
     return;
+  }
+  let source: string;
+  let defaultName: string;
+  if (groveExample) {
+    source = `grove/${groveExample.moduleId}/${groveExample.demo}`;
+    defaultName = `${board.id}_${groveExample.moduleId}_${groveExample.demo}`;
+  } else {
+    const example = boardExample;
+    if (!example) {
+      return;
+    }
+    source = `${board.id}/${example.demo}`;
+    defaultName = `${board.id}_${example.demo}`;
   }
 
   const parent = await vscode.window.showOpenDialog({
@@ -42,7 +66,7 @@ export async function createProject(
 
   const name = await vscode.window.showInputBox({
     prompt: "Project folder name",
-    value: `${board.id}_${example.demo}`,
+    value: defaultName,
   });
   if (!name) {
     return;
@@ -56,7 +80,7 @@ export async function createProject(
       runCapture(cli, [
         "create",
         "--from",
-        `${board.id}/${example.demo}`,
+        source,
         "--board",
         board.id,
         "--output",
@@ -109,6 +133,31 @@ async function pickBoard(catalog: Catalog): Promise<Board | undefined> {
       .map((board) => ({ label: board.displayName, description: board.id, board })),
     { placeHolder: "Select a board" },
   );
+  return pick?.board;
+}
+
+async function pickBoardForGroveExample(
+  catalog: Catalog,
+  example: GroveExample,
+): Promise<Board | undefined> {
+  const choices = catalog.boards
+    .map((board) => {
+      const row = example.boardStatus.find((status) => status.boardId === board.id);
+      return { board, status: row?.status ?? "pending" };
+    })
+    .filter((choice) => choice.status !== "excluded")
+    .map((choice) => ({
+      label: choice.board.displayName,
+      description: `${choice.board.id} - ${choice.status}`,
+      board: choice.board,
+    }));
+  if (choices.length === 0) {
+    void vscode.window.showErrorMessage(`${example.id} has no supported boards.`);
+    return undefined;
+  }
+  const pick = await vscode.window.showQuickPick(choices, {
+    placeHolder: `Select a board for ${example.demo}`,
+  });
   return pick?.board;
 }
 

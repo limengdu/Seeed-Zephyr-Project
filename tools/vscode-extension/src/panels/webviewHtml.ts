@@ -56,10 +56,14 @@ ul { margin: 4px 0; padding-left: 20px; }
 .badge { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 0.8em;
   vertical-align: middle; }
 .badge-hardware-tested { background: var(--vscode-testing-iconPassed, #2ea043); color: #fff; }
+.badge-build-verified { background: var(--vscode-testing-iconPassed, #2ea043); color: #fff; }
+.badge-build-failed { background: var(--vscode-errorForeground, #f14c4c); color: #fff; }
 .badge-build-only { background: var(--vscode-charts-blue, #3794ff); color: #fff; }
 .badge-experimental { background: var(--vscode-charts-yellow, #d7a000); color: #000; }
 .badge-blocked { background: var(--vscode-errorForeground, #f14c4c); color: #fff; }
 .badge-unsupported { background: var(--vscode-errorForeground, #f14c4c); color: #fff; }
+.badge-pending { background: var(--vscode-descriptionForeground, #888); color: #fff; }
+.badge-excluded { background: var(--vscode-descriptionForeground, #888); color: #fff; }
 .badge-unknown { background: var(--vscode-descriptionForeground, #888); color: #fff; }
 .muted { color: var(--vscode-descriptionForeground); }
 `;

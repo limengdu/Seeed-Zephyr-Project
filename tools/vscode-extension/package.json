@@ -219,7 +219,17 @@
         },
         {
           "command": "seeedZephyr.createProject",
+          "when": "view == seeedZephyrCatalog && viewItem == groveExample",
+          "group": "inline"
+        },
+        {
+          "command": "seeedZephyr.createProject",
           "when": "view == seeedZephyrCatalog && viewItem == example",
+          "group": "1_actions"
+        },
+        {
+          "command": "seeedZephyr.createProject",
+          "when": "view == seeedZephyrCatalog && viewItem == groveExample",
           "group": "1_actions"
         },
         {

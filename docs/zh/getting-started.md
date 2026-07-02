@@ -180,7 +180,7 @@ seeed-zephyr build xiao_esp32c6  grove/grove_scd41_co2_temperature_humidity_sens
 seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
 ```
 
-同一份源码在两块板上都能构建，无需修改。查看驱动编辑器插件交互式引脚图的每脚状态：
+同一份源码在两块板上都能构建，无需修改。查看供编辑器工具使用的每脚状态：
 
 ```sh
 seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
