@@ -23,9 +23,24 @@ interface PythonInvocation {
   display: string;
 }
 
+interface CliInvocation {
+  command: string;
+  display: string;
+  source: "configured" | "managed" | "repo" | "path";
+}
+
+interface ManagedCliInstallOptions {
+  version?: string;
+  forceReinstall?: boolean;
+}
+
 const INSTALL_COMMAND =
   "curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash";
 const DEFAULT_MANAGED_CLI_VERSION = "0.3.1";
+const PYPI_VERSION_RETRIES = 3;
+const PYPI_VERSION_TIMEOUT_MS = 15000;
+const PIP_RETRIES = "5";
+const PIP_TIMEOUT_SECONDS = "30";
 
 // Starts the repository setup command in a visible terminal.
 // 在可见终端中启动仓库 setup 命令。
@@ -101,7 +116,16 @@ export async function installManagedCli(
   context: vscode.ExtensionContext,
   onUpdated: () => void,
 ): Promise<void> {
-  await installManagedCliVersion(context, onUpdated);
+  await installManagedCliVersion(context, onUpdated, {});
+}
+
+// Reinstalls the latest published seeed-zephyr package into extension storage.
+// 重新安装最新发布的 seeed-zephyr 包到插件存储目录。
+export async function reinstallManagedCli(
+  context: vscode.ExtensionContext,
+  onUpdated: () => void,
+): Promise<void> {
+  await installManagedCliVersion(context, onUpdated, { forceReinstall: true });
 }
 
 // Lets the user choose a published seeed-zephyr package version.
@@ -114,14 +138,58 @@ export async function selectManagedCliVersion(
   if (!version) {
     return;
   }
-  await installManagedCliVersion(context, onUpdated, version);
+  await installManagedCliVersion(context, onUpdated, { version });
+}
+
+// Verifies the CLI command currently selected by the extension.
+// 验证插件当前选择的 CLI 命令。
+export async function verifyCli(
+  repoRoot: string | undefined,
+  context: vscode.ExtensionContext,
+  onUpdated: () => void,
+): Promise<void> {
+  const cli = resolveActiveCli(repoRoot, context.globalStorageUri.fsPath);
+  if (!cli) {
+    void vscode.window.showErrorMessage("No seeed-zephyr CLI is configured.");
+    return;
+  }
+
+  const result = await vscode.window.withProgress<ProcessResult>(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Verifying seeed-zephyr CLI",
+      cancellable: false,
+    },
+    () => runProcess(cli.command, ["info", "--json"]),
+  );
+  if (!result.ok) {
+    void vscode.window.showErrorMessage(`CLI verification failed: ${result.message}`);
+    return;
+  }
+
+  const version = parseCliVersion(result.stdout);
+  const compatibility = await verifyCliCompatibility(cli.command);
+  if (!compatibility.ok) {
+    void vscode.window.showErrorMessage(`CLI compatibility check failed: ${compatibility.message}`);
+    return;
+  }
+  if (cli.source === "managed" && version) {
+    await vscode.workspace
+      .getConfiguration("seeedZephyr")
+      .update("managedCliVersion", version, vscode.ConfigurationTarget.Global);
+  }
+  onUpdated();
+  void vscode.window.showInformationMessage(
+    `CLI verified: ${cli.display} (${version ?? "unknown"})`,
+  );
 }
 
 async function installManagedCliVersion(
   context: vscode.ExtensionContext,
   onUpdated: () => void,
-  version?: string,
+  options: ManagedCliInstallOptions,
 ): Promise<void> {
+  const { version, forceReinstall = false } = options;
   const storagePath = context.globalStorageUri.fsPath;
   const venvDir = managedCliVenvPath(storagePath);
   const python = await resolveManagedCliPython();
@@ -132,7 +200,7 @@ async function installManagedCliVersion(
   const result = await vscode.window.withProgress<ProcessResult>(
     {
       location: vscode.ProgressLocation.Notification,
-      title: version ? `Installing seeed-zephyr ${version}` : "Installing latest seeed-zephyr",
+      title: installProgressTitle(version, forceReinstall),
       cancellable: false,
     },
     async () => {
@@ -151,14 +219,22 @@ async function installManagedCliVersion(
           message: "Managed CLI venv must use Python 3.12 or newer.",
         };
       }
-      step = await runProcess(venvPython, ["-m", "pip", "install", "--upgrade", "pip"]);
+      step = await runProcess(venvPython, [
+        "-m",
+        "pip",
+        "install",
+        "--retries",
+        PIP_RETRIES,
+        "--timeout",
+        PIP_TIMEOUT_SECONDS,
+        "--upgrade",
+        "pip",
+      ]);
       if (!step.ok) {
         return step;
       }
       const packageSpec = version ? `seeed-zephyr==${version}` : "seeed-zephyr";
-      const installArgs = version
-        ? ["-m", "pip", "install", packageSpec]
-        : ["-m", "pip", "install", "--upgrade", packageSpec];
+      const installArgs = pipInstallArgs(packageSpec, !version, forceReinstall);
       return runProcess(venvPython, installArgs);
     },
   );
@@ -169,15 +245,54 @@ async function installManagedCliVersion(
   }
 
   const cliPath = managedCliPath(storagePath);
+  const verification = await runProcess(cliPath, ["info", "--json"]);
+  if (!verification.ok) {
+    void vscode.window.showErrorMessage(`CLI installed but verification failed: ${verification.message}`);
+    return;
+  }
+  const installedVersion = parseCliVersion(verification.stdout);
+  if (!installedVersion) {
+    void vscode.window.showErrorMessage("CLI installed but version could not be read.");
+    return;
+  }
+  const compatibility = await verifyCliCompatibility(cliPath);
+  if (!compatibility.ok) {
+    void vscode.window.showErrorMessage(`CLI installed but compatibility check failed: ${compatibility.message}`);
+    return;
+  }
+
   const config = vscode.workspace.getConfiguration("seeedZephyr");
-  const installedVersion = await readCliVersion(cliPath);
-  const storedVersion = installedVersion ?? version;
   await config.update("cliPath", cliPath, vscode.ConfigurationTarget.Global);
-  await config.update("managedCliVersion", storedVersion, vscode.ConfigurationTarget.Global);
+  await config.update("managedCliVersion", installedVersion, vscode.ConfigurationTarget.Global);
   onUpdated();
-  void vscode.window.showInformationMessage(
-    `CLI selected: seeed-zephyr ${storedVersion ?? "latest"}`,
-  );
+  void vscode.window.showInformationMessage(`CLI selected: seeed-zephyr ${installedVersion}`);
+}
+
+function installProgressTitle(version: string | undefined, forceReinstall: boolean): string {
+  if (forceReinstall) {
+    return version ? `Reinstalling seeed-zephyr ${version}` : "Reinstalling latest seeed-zephyr";
+  }
+  return version ? `Installing seeed-zephyr ${version}` : "Installing latest seeed-zephyr";
+}
+
+function pipInstallArgs(packageSpec: string, upgrade: boolean, forceReinstall: boolean): string[] {
+  const args = [
+    "-m",
+    "pip",
+    "install",
+    "--retries",
+    PIP_RETRIES,
+    "--timeout",
+    PIP_TIMEOUT_SECONDS,
+  ];
+  if (upgrade) {
+    args.push("--upgrade");
+  }
+  if (forceReinstall) {
+    args.push("--force-reinstall");
+  }
+  args.push(packageSpec);
+  return args;
 }
 
 async function resolveManagedCliPython(): Promise<PythonInvocation | undefined> {
@@ -277,7 +392,7 @@ function uniquePythonCandidates(candidates: PythonInvocation[]): PythonInvocatio
 
 async function chooseCliVersion(): Promise<string | undefined> {
   try {
-    const versions = await fetchPublishedVersions();
+    const versions = await retryAsync(() => fetchPublishedVersions(), PYPI_VERSION_RETRIES);
     const picked = await vscode.window.showQuickPick(
       versions.map((version, index) => ({
         label: version,
@@ -287,6 +402,9 @@ async function chooseCliVersion(): Promise<string | undefined> {
     );
     return picked?.label;
   } catch {
+    void vscode.window.showWarningMessage(
+      "Could not read published CLI versions after retries. Enter a version manually.",
+    );
     return vscode.window.showInputBox({
       prompt: "seeed-zephyr CLI version",
       placeHolder: DEFAULT_MANAGED_CLI_VERSION,
@@ -295,22 +413,37 @@ async function chooseCliVersion(): Promise<string | undefined> {
   }
 }
 
-async function readCliVersion(command: string): Promise<string | undefined> {
-  const result = await runProcess(command, ["info", "--json"]);
-  if (!result.ok) {
-    return undefined;
-  }
+function parseCliVersion(stdout: string): string | undefined {
   try {
-    const info = JSON.parse(result.stdout) as { cli_version?: string };
+    const info = JSON.parse(stdout) as { cli_version?: string };
     return info.cli_version;
   } catch {
     return undefined;
   }
 }
 
+async function verifyCliCompatibility(command: string): Promise<ProcessResult> {
+  const ports = await runProcess(command, ["list", "ports", "--json"]);
+  if (!ports.ok) {
+    return ports;
+  }
+  try {
+    JSON.parse(ports.stdout);
+  } catch {
+    return {
+      ok: false,
+      stdout: ports.stdout,
+      stderr: ports.stderr,
+      message: "Serial port detection returned invalid JSON.",
+    };
+  }
+
+  return runProcess(command, ["create", "--help"]);
+}
+
 function fetchPublishedVersions(): Promise<string[]> {
   return new Promise((resolve, reject) => {
-    https
+    const request = https
       .get("https://pypi.org/pypi/seeed-zephyr/json", (response) => {
         if (response.statusCode !== 200) {
           reject(new Error(`PyPI returned ${response.statusCode ?? "unknown"}`));
@@ -335,6 +468,30 @@ function fetchPublishedVersions(): Promise<string[]> {
         });
       })
       .on("error", reject);
+    request.setTimeout(PYPI_VERSION_TIMEOUT_MS, () => {
+      request.destroy(new Error("PyPI request timed out"));
+    });
+  });
+}
+
+async function retryAsync<T>(operation: () => Promise<T>, attempts: number): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts) {
+        await delay(attempt * 500);
+      }
+    }
+  }
+  throw lastError;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
   });
 }
 
@@ -369,6 +526,38 @@ function repositoryCliPath(repoRoot: string | undefined): string | undefined {
   }
   const cliPath = path.join(repoRoot, "scripts", "seeed-zephyr");
   return commandAvailable(cliPath) ? cliPath : undefined;
+}
+
+function resolveActiveCli(repoRoot: string | undefined, storagePath: string): CliInvocation | undefined {
+  const configured = vscode.workspace.getConfiguration("seeedZephyr").get<string>("cliPath")?.trim();
+  const managed = managedCliPath(storagePath);
+  if (configured && commandAvailable(configured)) {
+    const source = samePath(configured, managed) ? "managed" : "configured";
+    return { command: configured, display: configured, source };
+  }
+
+  if (commandAvailable(managed)) {
+    return { command: managed, display: managed, source: "managed" };
+  }
+
+  const repoCli = repositoryCliPath(repoRoot);
+  if (repoCli) {
+    return { command: repoCli, display: "scripts/seeed-zephyr", source: "repo" };
+  }
+
+  if (commandAvailable("seeed-zephyr")) {
+    return { command: "seeed-zephyr", display: "seeed-zephyr", source: "path" };
+  }
+
+  return undefined;
+}
+
+function samePath(left: string, right: string): boolean {
+  try {
+    return path.resolve(left) === path.resolve(right);
+  } catch {
+    return left === right;
+  }
 }
 
 function runProcess(command: string, args: string[]): Promise<ProcessResult> {

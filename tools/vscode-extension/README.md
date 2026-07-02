@@ -31,12 +31,15 @@ port, and run project actions. Use **Environment** to check **Status**, update
 repository content from the **Repository** group, and manage the selected
 `seeed-zephyr` command from the **CLI** group. **Install Latest CLI** installs
 the newest published CLI into extension storage and selects it automatically;
-**Choose CLI Version** installs a specific published version. Managed CLI
-installation uses Python 3.12 or newer and searches for a suitable Python before
-creating its venv. Serial port detection is provided by the selected CLI. When
-testing from a source checkout, select the checkout's `scripts/seeed-zephyr`
-command. **Catalog** is visible by default, with Boards, Grove Modules, and
-Expansion Boards collapsed until opened.
+**Reinstall CLI** force-installs the newest package again; **Verify CLI** checks
+the selected CLI version and required plugin commands; **Choose CLI Version**
+installs a specific published version. Managed CLI installation uses Python 3.12
+or newer and searches for a suitable Python before creating its venv. Install
+and reinstall actions verify `info --json`, `list ports --json`, and
+`create --help` before saving the managed CLI version. Serial port detection is
+provided by the selected CLI. When testing from a source checkout, select the
+checkout's `scripts/seeed-zephyr` command. **Catalog** is visible by default,
+with Boards, Grove Modules, and Expansion Boards collapsed until opened.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
 **Seeed XIAO Zephyr** 安装,或从
@@ -46,10 +49,12 @@ Expansion Boards collapsed until opened.
 里放常用入口。在 **Projects** 里创建或打开项目、选择项目开发板和串口，并运行项目操作。
 在 **Environment** 里查看 **Status**，仓库内容放在 **Repository** 分组，CLI 工具版本
 放在 **CLI** 分组。**Install Latest CLI** 会安装最新发布的 CLI，并自动切换插件使用它；
-**Choose CLI Version** 用于指定发布版本。插件托管 CLI 使用 Python 3.12 或更新版本，并会
-先查找可用 Python 再创建 venv。串口检测由当前选择的 CLI 提供；从源码测试时，选择当前
-仓库里的 `scripts/seeed-zephyr`。**Catalog** 默认显示，Boards、Grove Modules、
-Expansion Boards 默认收起。
+**Reinstall CLI** 会强制重新安装最新版；**Verify CLI** 会检查当前 CLI 版本和插件依赖的
+基础命令；**Choose CLI Version** 用于指定发布版本。插件托管 CLI 使用 Python 3.12 或更新
+版本，并会先查找可用 Python 再创建 venv。安装和重新安装会先验证 `info --json`、
+`list ports --json` 和 `create --help`，通过后才保存托管 CLI 版本。串口检测由当前选择的
+CLI 提供；从源码测试时，选择当前仓库里的 `scripts/seeed-zephyr`。**Catalog** 默认显示，
+Boards、Grove Modules、Expansion Boards 默认收起。
 
 ## Develop
 

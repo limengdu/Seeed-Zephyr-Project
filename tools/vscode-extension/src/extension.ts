@@ -10,11 +10,13 @@ import { openGenerated } from "./commands/openGenerated";
 import { updateRepository } from "./commands/updateRepository";
 import {
   installManagedCli,
+  reinstallManagedCli,
   selectManagedCliVersion,
   selectCliPath,
   setupEnvironment,
   useExistingCli,
   useRecommendedCli,
+  verifyCli,
 } from "./commands/environmentCommands";
 import {
   getEffectiveBoard,
@@ -64,8 +66,14 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.installManagedCli", () =>
       installManagedCli(context, refreshAll),
     ),
+    vscode.commands.registerCommand("seeedZephyr.reinstallManagedCli", () =>
+      reinstallManagedCli(context, refreshAll),
+    ),
     vscode.commands.registerCommand("seeedZephyr.selectCliVersion", () =>
       selectManagedCliVersion(context, refreshAll),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.verifyCli", () =>
+      verifyCli(catalog.getRepoRoot(), context, refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.selectCliPath", () =>
       selectCliPath(refreshAll),

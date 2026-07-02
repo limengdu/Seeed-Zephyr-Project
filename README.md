@@ -281,9 +281,9 @@ The **Environment** view is grouped by task:
 
 - **Status** shows the active repository folder, CLI command, CLI source, and CLI version when available.
 - **Repository** contains repository actions: **Select Repository Folder**, **Update Repository**, and **Refresh Environment Status**. These actions affect examples, metadata, and catalog data.
-- **CLI** contains CLI actions: **Install Latest CLI** installs the newest published `seeed-zephyr` package into extension storage and selects it automatically, **Choose CLI Version** installs a specific published version, **Use System CLI** selects `seeed-zephyr` from `PATH`, and **Select CLI Path** selects a CLI executable manually. These actions affect the `seeed-zephyr` command used by the extension.
+- **CLI** contains CLI actions: **Install Latest CLI** installs the newest published `seeed-zephyr` package into extension storage and selects it automatically, **Reinstall CLI** force-installs the newest package again, **Verify CLI** checks the selected CLI version and required plugin commands, **Choose CLI Version** installs a specific published version, **Use System CLI** selects `seeed-zephyr` from `PATH`, and **Select CLI Path** selects a CLI executable manually. These actions affect the `seeed-zephyr` command used by the extension.
 
-The extension calls the selected CLI for project creation, serial port detection, and run actions. Managed CLI installation uses Python 3.12 or newer and the extension searches for a suitable Python before creating its venv. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
+The extension calls the selected CLI for project creation, serial port detection, and run actions. Managed CLI installation uses Python 3.12 or newer and the extension searches for a suitable Python before creating its venv. Install and reinstall actions verify `info --json`, `list ports --json`, and `create --help` before saving the managed CLI version. When testing the extension from a source checkout, point **Select CLI Path** at `scripts/seeed-zephyr` in the same repository so the editor uses the checkout's current CLI.
 Zephyr still performs the firmware build, flash, monitor, and debug operations underneath.
 
 ### Common editor workflow

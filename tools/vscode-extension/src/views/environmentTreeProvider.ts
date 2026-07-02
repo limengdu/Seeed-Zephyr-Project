@@ -127,6 +127,18 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
         "online latest",
       ),
       new ActionNode(
+        "Reinstall CLI",
+        "seeedZephyr.reinstallManagedCli",
+        "debug-restart",
+        "force latest",
+      ),
+      new ActionNode(
+        "Verify CLI",
+        "seeedZephyr.verifyCli",
+        "verified",
+        "check selected",
+      ),
+      new ActionNode(
         "Choose CLI Version",
         "seeedZephyr.selectCliVersion",
         "versions",

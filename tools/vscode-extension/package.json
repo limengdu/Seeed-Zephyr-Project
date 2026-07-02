@@ -88,10 +88,22 @@
         "icon": "$(cloud-download)"
       },
       {
+        "command": "seeedZephyr.reinstallManagedCli",
+        "title": "Reinstall CLI",
+        "category": "Seeed XIAO",
+        "icon": "$(debug-restart)"
+      },
+      {
         "command": "seeedZephyr.selectCliVersion",
         "title": "Choose CLI Version",
         "category": "Seeed XIAO",
         "icon": "$(versions)"
+      },
+      {
+        "command": "seeedZephyr.verifyCli",
+        "title": "Verify CLI",
+        "category": "Seeed XIAO",
+        "icon": "$(verified)"
       },
       {
         "command": "seeedZephyr.selectCliPath",
@@ -194,7 +206,9 @@
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },
         { "command": "seeedZephyr.installManagedCli" },
+        { "command": "seeedZephyr.reinstallManagedCli" },
         { "command": "seeedZephyr.selectCliVersion" },
+        { "command": "seeedZephyr.verifyCli" },
         { "command": "seeedZephyr.selectCliPath" },
         { "command": "seeedZephyr.recheckEnvironment" }
       ],
@@ -223,6 +237,16 @@
           "command": "seeedZephyr.recheckEnvironment",
           "when": "view == seeedZephyrEnvironment",
           "group": "navigation@1"
+        },
+        {
+          "command": "seeedZephyr.verifyCli",
+          "when": "view == seeedZephyrEnvironment",
+          "group": "navigation@2"
+        },
+        {
+          "command": "seeedZephyr.reinstallManagedCli",
+          "when": "view == seeedZephyrEnvironment",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
