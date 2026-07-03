@@ -63,11 +63,12 @@ export function managedCliVenvPath(storagePath: string): string {
 function detectCli(repoRoot: string | undefined, storagePath: string): CliState {
   const config = vscode.workspace.getConfiguration("seeedZephyr");
   const configured = config.get<string>("cliPath")?.trim();
+  const managed = managedCliPath(storagePath);
   if (configured && commandAvailable(configured)) {
-    return { found: true, source: "configured", command: configured, display: configured };
+    const source: CliSource = samePath(configured, managed) ? "managed" : "configured";
+    return { found: true, source, command: configured, display: configured };
   }
 
-  const managed = managedCliPath(storagePath);
   if (commandAvailable(managed)) {
     return { found: true, source: "managed", command: managed, display: managed };
   }
@@ -120,5 +121,13 @@ function isExecutable(file: string): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+function samePath(left: string, right: string): boolean {
+  try {
+    return path.resolve(left) === path.resolve(right);
+  } catch {
+    return left === right;
   }
 }

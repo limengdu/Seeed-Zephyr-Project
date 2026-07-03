@@ -279,7 +279,7 @@ The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front e
 - **Projects** — create a project, open a generated project or Zephyr app, configure Grove GPIO pins, select the target board and serial port, and run Build / Upload / Upload & Monitor / Monitor for the current workspace project.
 - **Environment** — review environment status, manage the repository checkout, and manage the CLI tool version from separate groups.
 - **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices. The Catalog view is visible by default, with its categories collapsed until opened.
-- **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
+- **Details** — clicking a catalog item opens an editor tab with the relevant commands and metadata.
 
 ### CLI selection inside the extension
 

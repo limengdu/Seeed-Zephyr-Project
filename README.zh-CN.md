@@ -277,7 +277,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 - **Projects** —— 创建项目、打开生成项目或 Zephyr app，配置 Grove GPIO 引脚，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Upload & Monitor / Monitor。
 - **Environment** —— 按状态、仓库、CLI 三组管理环境。
 - **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。Catalog 默认显示，内部分类默认收起，需要时再展开。
-- **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
+- **详情页** —— 点击目录项，会在编辑器标签页显示对应命令和 metadata。
 
 ### 插件里的 CLI 选择
 

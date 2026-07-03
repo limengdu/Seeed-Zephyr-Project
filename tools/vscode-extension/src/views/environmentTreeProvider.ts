@@ -36,6 +36,7 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
 
   getChildren(node?: CatalogNode): CatalogNode[] {
     if (!node) {
+      const cliVersion = this.cliVersionLabel();
       return [
         new GroupNode("Status", "setupStatus", this.environment?.ready ? "ready" : "setup needed"),
         new GroupNode(
@@ -47,7 +48,7 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
         new GroupNode(
           "CLI",
           "setupCli",
-          "tool version",
+          cliVersion ? `version ${cliVersion}` : "tool version",
           vscode.TreeItemCollapsibleState.Collapsed,
         ),
       ];
