@@ -63,6 +63,10 @@ export class PinConfiguratorPanel {
   }
 
   private update(options: PinConfiguratorOptions): Promise<PinAssignments | undefined> {
+    // Resolve any prior flow before binding the panel to a new request.
+    // 绑定新请求前先结束上一个等待中的流程。
+    this.resolver?.(undefined);
+    this.resolver = undefined;
     this.options = options;
     this.panel.title = options.title;
     this.panel.webview.html = renderPinConfiguratorHtml(this.panel.webview, {

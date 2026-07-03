@@ -221,7 +221,7 @@ seeed-zephyr list ports --json
 
 ```sh
 seeed-zephyr update
-seeed-zephyr update --version 0.3.2
+seeed-zephyr update --version 0.4.0
 seeed-zephyr info
 ```
 
@@ -297,7 +297,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 3. 在 **Projects** 里执行 **Create Project** 或 **Open Project**。**Create Project** 会先问从什么创建:Grove 模块示例、板级示例,或空白项目。
 4. 也可以在 **Catalog** 里浏览板级示例或 Grove 示例,用其行内的 **Create Project** 按钮。Grove 模块可以展开显示它的示例,和板子展开示例一样。
 5. Grove 示例会先让你选择目标开发板；可选引脚的 Grove 示例会在创建前打开引脚配置器。空白项目只需选一块板子,然后生成一个最小 Zephyr 应用。
-6. 使用 **Open Project** 打开生成项目或 Zephyr app 示例，可选择新窗口打开或加入当前工作区。
+6. 使用 **Open Project** 把生成项目或 Zephyr app 示例加入当前工作区。
 7. 对生成后的 Grove GPIO 项目，在 **Projects** 里使用 **Configure Pins** 更新 `boards/<target>.overlay`，无需手动改 overlay。
 8. 在 **Projects** 或状态栏里选择项目开发板和串口。
 9. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project**、**Upload & Monitor** 和 **Monitor Project** 操作。

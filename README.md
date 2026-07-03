@@ -223,7 +223,7 @@ seeed-zephyr list ports --json
 
 ```sh
 seeed-zephyr update
-seeed-zephyr update --version 0.3.2
+seeed-zephyr update --version 0.4.0
 seeed-zephyr info
 ```
 
@@ -299,7 +299,7 @@ Zephyr still performs the firmware build, flash, monitor, and debug operations u
 3. Use **Projects** to run **Create Project** or **Open Project**. **Create Project** first asks what to create from: a Grove module example, a board example, or a blank project.
 4. Alternatively, browse a board example or Grove example under **Catalog** and use its inline **Create Project** button. Grove modules expand to their examples, just like boards expand to theirs.
 5. Grove examples ask for a target board before generation. Selectable-pin Grove examples open the pin configurator before the project is created. A blank project asks only for a board and scaffolds a minimal Zephyr app.
-6. Use **Open Project** to open a generated project or Zephyr app example, either in a new window or in the current workspace.
+6. Use **Open Project** to add a generated project or Zephyr app example to the current workspace.
 7. For generated Grove GPIO projects, use **Configure Pins** in **Projects** to update `boards/<target>.overlay` without editing the overlay by hand.
 8. Select the project board and serial port from **Projects** or the status bar.
 9. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, **Upload & Monitor**, and **Monitor Project**.

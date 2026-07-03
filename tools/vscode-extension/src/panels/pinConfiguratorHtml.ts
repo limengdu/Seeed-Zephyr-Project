@@ -141,7 +141,13 @@ function makePin(pin, side) {
     .filter(Boolean)
     .join(" · ");
   const meta = assignedRole ?? pin.reason ?? pin.chip_pin ?? pin.rail ?? pin.status;
-  button.innerHTML = '<span class="pin-id">' + pin.id + '</span><span class="pin-meta">' + meta + '</span>';
+  const pinId = document.createElement("span");
+  pinId.className = "pin-id";
+  pinId.textContent = pin.id;
+  const pinMeta = document.createElement("span");
+  pinMeta.className = "pin-meta";
+  pinMeta.textContent = meta;
+  button.append(pinId, pinMeta);
   button.addEventListener("click", () => {
     if (canAssign(pin)) {
       assignments[selectedRole] = pin.id;
@@ -227,7 +233,13 @@ function renderPinout() {
   root.appendChild(col(left, "left"));
   const body = document.createElement("div");
   body.className = "board-body";
-  body.innerHTML = '<div class="board-title">XIAO</div><div class="board-subtitle">' + caption + '</div>';
+  const boardTitle = document.createElement("div");
+  boardTitle.className = "board-title";
+  boardTitle.textContent = "XIAO";
+  const boardSubtitle = document.createElement("div");
+  boardSubtitle.className = "board-subtitle";
+  boardSubtitle.textContent = caption;
+  body.append(boardTitle, boardSubtitle);
   root.appendChild(body);
   root.appendChild(col(right, "right"));
 }
@@ -249,7 +261,11 @@ function renderRoles() {
   for (const role of state.data.roles) {
     const row = document.createElement("button");
     row.className = "role" + (role.role === selectedRole ? " active" : "");
-    row.innerHTML = '<span>' + role.role + '</span><strong>' + (assignments[role.role] ?? role.default) + '</strong>';
+    const roleName = document.createElement("span");
+    roleName.textContent = role.role;
+    const roleValue = document.createElement("strong");
+    roleValue.textContent = assignments[role.role] ?? role.default;
+    row.append(roleName, roleValue);
     row.addEventListener("click", () => {
       selectedRole = role.role;
       render();
