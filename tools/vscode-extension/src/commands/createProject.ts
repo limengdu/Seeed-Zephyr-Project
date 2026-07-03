@@ -21,6 +21,12 @@ interface CreateSpec {
   fromAsset?: string;
   blank?: boolean;
   pinAssignments?: PinAssignments;
+  pinConfig?: PinConfigRequest;
+}
+
+interface PinConfigRequest {
+  boardId: string;
+  source: string;
 }
 
 // Runs the create-project wizard, then calls the CLI to generate the project.
@@ -37,9 +43,13 @@ export async function createProject(
   }
   const cli = locateCli(repoRoot);
   const spec = preset
-    ? await specFromPreset(catalog, cli, extensionUri, preset)
-    : await specFromWizard(catalog, cli, extensionUri);
+    ? await specFromPreset(catalog, preset)
+    : await specFromWizard(catalog);
   if (!spec) {
+    return;
+  }
+  if (spec.pinConfig) {
+    await runCreateWithPinConfigurator(repoRoot, cli, extensionUri, spec);
     return;
   }
   await runCreate(repoRoot, cli, spec);
@@ -49,12 +59,10 @@ export async function createProject(
 // 从 Catalog 节点点击(板级示例或 Grove 示例)解析来源。
 async function specFromPreset(
   catalog: Catalog,
-  cli: Cli,
-  extensionUri: vscode.Uri,
   preset: CreatePreset,
 ): Promise<CreateSpec | undefined> {
   if ("groveExample" in preset) {
-    return specFromGroveExample(catalog, cli, extensionUri, preset.groveExample);
+    return specFromGroveExample(catalog, preset.groveExample);
   }
   const board = preset.board;
   if (board.examples.length === 0) {
@@ -74,11 +82,7 @@ async function specFromPreset(
 
 // Asks for the source kind first, then routes to Grove / board / blank flows.
 // 先询问来源类型,再分别走 Grove / 板级 / 空白 流程。
-async function specFromWizard(
-  catalog: Catalog,
-  cli: Cli,
-  extensionUri: vscode.Uri,
-): Promise<CreateSpec | undefined> {
+async function specFromWizard(catalog: Catalog): Promise<CreateSpec | undefined> {
   const kind = await pickSourceKind();
   if (!kind) {
     return undefined;
@@ -92,7 +96,7 @@ async function specFromWizard(
     if (!example) {
       return undefined;
     }
-    return specFromGroveExample(catalog, cli, extensionUri, example);
+    return specFromGroveExample(catalog, example);
   }
   if (kind === "board") {
     const board = await pickBoard(catalog);
@@ -120,8 +124,6 @@ async function specFromWizard(
 // 把一个 Grove 示例解析成来源:选板子,并做可选的引脚配置。
 async function specFromGroveExample(
   catalog: Catalog,
-  cli: Cli,
-  extensionUri: vscode.Uri,
   example: GroveExample,
 ): Promise<CreateSpec | undefined> {
   const board = await pickBoardForGroveExample(catalog, example);
@@ -129,24 +131,17 @@ async function specFromGroveExample(
     return undefined;
   }
   const source = `grove/${example.moduleId}/${example.demo}`;
-  let pinAssignments: PinAssignments | undefined;
-  if (example.pinPolicy === "selectable") {
-    pinAssignments = await pickPinsForCreate(cli, extensionUri, board.id, source);
-    if (pinAssignments === undefined) {
-      return undefined;
-    }
-  }
   return {
     board,
     fromAsset: source,
     defaultName: `${board.id}_${example.moduleId}_${example.demo}`,
-    pinAssignments,
+    pinConfig: example.pinPolicy === "selectable" ? { boardId: board.id, source } : undefined,
   };
 }
 
-// Shared tail: pick a parent folder and name, call the CLI, then offer to open the project.
-// 公共收尾:选择父目录与名称,调用 CLI,然后询问是否打开项目。
-async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<void> {
+// Shared tail: pick a parent folder and name, call the CLI, then add the project to the workspace.
+// 公共收尾:选择父目录与名称,调用 CLI,然后把项目加入工作区。
+async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<boolean> {
   const parent = await vscode.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
@@ -154,7 +149,7 @@ async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<
     openLabel: "Select parent folder",
   });
   if (!parent || parent.length === 0) {
-    return;
+    return false;
   }
 
   const name = await vscode.window.showInputBox({
@@ -162,7 +157,7 @@ async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<
     value: spec.defaultName,
   });
   if (!name) {
-    return;
+    return false;
   }
 
   const output = path.join(parent[0].fsPath, name);
@@ -182,7 +177,7 @@ async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<
 
   if (!result.ok) {
     void vscode.window.showErrorMessage(`Create failed: ${result.message}`);
-    return;
+    return false;
   }
 
   writeProjectSettings(output, repoRoot);
@@ -196,6 +191,7 @@ async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<
     { uri: vscode.Uri.file(output) },
   );
   void vscode.window.showInformationMessage(`Added ${name} to this window.`);
+  return true;
 }
 
 type SourceKind = "grove" | "board" | "blank";
@@ -224,12 +220,39 @@ async function pickSourceKind(): Promise<SourceKind | undefined> {
   return pick?.sourceKind;
 }
 
-async function pickPinsForCreate(
+async function runCreateWithPinConfigurator(
+  repoRoot: string,
   cli: Cli,
   extensionUri: vscode.Uri,
+  spec: CreateSpec,
+): Promise<void> {
+  if (!spec.pinConfig) {
+    await runCreate(repoRoot, cli, spec);
+    return;
+  }
+  const data = await loadPinDiagram(cli, spec.pinConfig.boardId, spec.pinConfig.source);
+  if (!data) {
+    return;
+  }
+  await PinConfiguratorPanel.show({
+    title: "Configure Grove Pins",
+    mode: "create",
+    data,
+    extensionUri,
+    onSave: (assignments) =>
+      runCreate(repoRoot, cli, {
+        ...spec,
+        pinAssignments: assignments,
+        pinConfig: undefined,
+      }),
+  });
+}
+
+async function loadPinDiagram(
+  cli: Cli,
   boardId: string,
   source: string,
-): Promise<PinAssignments | undefined> {
+): Promise<PinDiagramData | undefined> {
   const pinsResult = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: "Loading pinout..." },
     () => runCapture(cli, ["show", "pins", boardId, source, "--json"]),
@@ -238,20 +261,13 @@ async function pickPinsForCreate(
     void vscode.window.showErrorMessage(`Pinout load failed: ${pinsResult.message}`);
     return undefined;
   }
-  let data: PinDiagramData;
   try {
-    data = JSON.parse(pinsResult.stdout) as PinDiagramData;
+    return JSON.parse(pinsResult.stdout) as PinDiagramData;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     void vscode.window.showErrorMessage(`Pinout output is not valid JSON: ${detail}`);
     return undefined;
   }
-  return PinConfiguratorPanel.show({
-    title: "Configure Grove Pins",
-    mode: "create",
-    data,
-    extensionUri,
-  });
 }
 
 function pinArgs(assignments: PinAssignments | undefined): string[] {

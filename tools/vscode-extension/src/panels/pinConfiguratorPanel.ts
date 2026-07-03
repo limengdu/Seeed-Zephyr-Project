@@ -14,7 +14,7 @@ export interface PinConfiguratorOptions {
   data: PinDiagramData;
   extensionUri: vscode.Uri;
   initialAssignments?: PinAssignments;
-  onSave?: (assignments: PinAssignments) => Promise<void>;
+  onSave?: (assignments: PinAssignments) => Promise<boolean | void>;
 }
 
 type PinConfiguratorMessage =
@@ -25,6 +25,7 @@ export class PinConfiguratorPanel {
   private static current: PinConfiguratorPanel | undefined;
   private readonly disposables: vscode.Disposable[] = [];
   private resolver: ((value: PinAssignments | undefined) => void) | undefined;
+  private saving = false;
 
   private constructor(
     private readonly panel: vscode.WebviewPanel,
@@ -99,25 +100,30 @@ export class PinConfiguratorPanel {
   }
 
   private async handleMessage(message: PinConfiguratorMessage): Promise<void> {
-    // Handles webview save messages; edit mode may persist through the supplied callback.
-    // 处理 webview 保存消息；edit 模式可通过传入回调持久化。
-    if (message.type !== "save") {
+    // Handles webview save messages; callers can keep the panel open by returning false.
+    // 处理 webview 保存消息；调用方返回 false 时保持面板打开。
+    if (message.type !== "save" || this.saving) {
       return;
     }
     const assignments = message.assignments ?? {};
-    if (this.options.onSave) {
-      try {
-        await this.options.onSave(assignments);
-      } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
-        void vscode.window.showErrorMessage(`Pin configuration failed: ${detail}`);
-        return;
+    this.saving = true;
+    try {
+      if (this.options.onSave) {
+        const completed = await this.options.onSave(assignments);
+        if (completed === false) {
+          return;
+        }
       }
-    }
-    this.resolver?.(assignments);
-    this.resolver = undefined;
-    if (this.options.mode === "edit") {
-      void vscode.window.showInformationMessage("Pin configuration saved.");
+      this.resolver?.(assignments);
+      this.resolver = undefined;
+      if (this.options.mode === "edit") {
+        void vscode.window.showInformationMessage("Pin configuration saved.");
+      }
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      void vscode.window.showErrorMessage(`Pin configuration failed: ${detail}`);
+    } finally {
+      this.saving = false;
     }
   }
 
