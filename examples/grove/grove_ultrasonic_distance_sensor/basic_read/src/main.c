@@ -18,6 +18,10 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/time_units.h>
 
+#if defined(CONFIG_USB_DEVICE_STACK)
+#include <zephyr/usb/usb_device.h>
+#endif
+
 #define TRIGGER_SETTLE_US 2
 #define TRIGGER_PULSE_US 12
 #define ECHO_START_TIMEOUT_US 5000
@@ -26,6 +30,20 @@
 
 static const struct gpio_dt_spec signal =
 	GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), ultrasonic_gpios);
+
+static int init_console_transport(void)
+{
+#if defined(CONFIG_USB_DEVICE_STACK)
+	int ret = usb_enable(NULL);
+
+	if (ret != 0) {
+		printk("USB device initialization failed: %d\n", ret);
+		return ret;
+	}
+#endif
+
+	return 0;
+}
 
 static int wait_for_level(int expected_level, uint32_t timeout_us, uint64_t *cycle_out)
 {
@@ -73,7 +91,16 @@ static int read_distance(uint32_t *distance_mm, uint32_t *echo_us)
 		return ret;
 	}
 
-	ret = gpio_pin_configure_dt(&signal, GPIO_INPUT);
+	/* Read the echo on the same pin. A pull-down keeps the line defined LOW while the
+	 * module takes control, so the release transient is not mistaken for an echo. */
+	ret = gpio_pin_configure_dt(&signal, GPIO_INPUT | GPIO_PULL_DOWN);
+	if (ret < 0) {
+		return ret;
+	}
+
+	/* Skip the release transient: settle to LOW first, then time the echo from its
+	 * true rising edge to its falling edge (mirrors Arduino pulseIn semantics). */
+	ret = wait_for_level(0, ECHO_START_TIMEOUT_US, NULL);
 	if (ret < 0) {
 		return ret;
 	}
@@ -89,13 +116,18 @@ static int read_distance(uint32_t *distance_mm, uint32_t *echo_us)
 	}
 
 	*echo_us = (uint32_t)k_cyc_to_us_floor64(fall_cycle - rise_cycle);
-	*distance_mm = ((*echo_us * 17U) + 50U) / 100U;
+	/* Distance in mm: echo microseconds / 58 us-per-cm, scaled to mm (Seeed ranger). */
+	*distance_mm = (*echo_us * 10U) / 58U;
 
 	return 0;
 }
 
 int main(void)
 {
+	if (init_console_transport() != 0) {
+		return 0;
+	}
+
 	printk("*** Seeed XIAO Zephyr Base | grove: Ultrasonic basic_read | board: %s ***\n",
 	       CONFIG_BOARD);
 	printk("Signal pin comes from /zephyr,user ultrasonic-gpios\n");

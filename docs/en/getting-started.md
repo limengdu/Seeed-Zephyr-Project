@@ -190,6 +190,29 @@ editor tooling with:
 seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
 ```
 
+### Create a project in the editor
+
+In the Seeed XIAO Zephyr Assistant, **Create Project** first asks what to create from:
+
+- **Grove module example** — pick a module (such as Grove Ultrasonic), a demo, and a board.
+- **Board example** — pick a board and one of its demos.
+- **Blank project** — pick a board and scaffold a minimal Zephyr app.
+
+You can also start from the **Catalog**: expand a Grove module to its examples and use the
+inline **Create Project** button, the same way boards expand to their examples. On the CLI,
+`seeed-zephyr create --blank --board <board> --output <dir>` scaffolds the same blank project.
+
+### Configure Grove GPIO pins in the editor
+
+Selectable-pin Grove examples, such as Grove Ultrasonic, can be configured visually in
+the Seeed XIAO Zephyr Assistant. When creating the project from the editor, the pin
+configurator opens before the project is written. For an existing generated Grove
+project, open the project workspace and choose **Configure Pins** under **Projects**.
+
+Saving writes the selected role-to-pin mapping into `boards/<target>.overlay` and
+updates `snapshot.json`. Fixed-bus modules, such as I2C sensors, use the highlighted
+bus pins as read-only wiring guidance.
+
 ## 4. Useful CLI Commands
 
 List boards and examples:
@@ -295,11 +318,15 @@ be monitored with:
 seeed-zephyr monitor xiao_esp32c6
 ```
 
-For non-Espressif boards, the CLI opens pyserial miniterm from the Zephyr venv:
+For non-Espressif boards, the CLI opens a reconnecting serial monitor from the Zephyr
+venv:
 
 ```sh
 seeed-zephyr monitor xiao_samd21
 ```
+
+The monitor keeps running when the device drops off the USB bus (for example a reset or
+replug); it waits and reconnects automatically. Press `Ctrl+]` to exit.
 
 If `--port` is omitted, the CLI tries to auto-detect one USB serial device.
 

@@ -119,7 +119,7 @@ On Windows without WSL2, follow the PowerShell setup in the [Getting Started gui
 
 ### 2. Install the editor extension
 
-The **Seeed XIAO Zephyr Assistant** adds a catalog, project generator, and run controls to the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
+The **Seeed XIAO Zephyr Assistant** adds a catalog, project generator, visual Grove pin configurator, and run controls to the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
 
 On first use, the Welcome and Environment views offer setup actions for CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository folder selection.
 
@@ -197,6 +197,12 @@ seeed-zephyr create --from grove/grove_scd41_co2_temperature_humidity_sensor/bas
                     --board xiao_nrf52840 --output ./my-scd41
 ```
 
+Or scaffold a minimal blank Zephyr project for a board, without copying an example:
+
+```sh
+seeed-zephyr create --blank --board xiao_esp32c6 --output ./my-app
+```
+
 ### Build an external application
 
 Point the CLI at any Zephyr app folder (one with `CMakeLists.txt` and `prj.conf`):
@@ -217,7 +223,7 @@ seeed-zephyr list ports --json
 
 ```sh
 seeed-zephyr update
-seeed-zephyr update --version 0.3.1
+seeed-zephyr update --version 0.3.2
 seeed-zephyr info
 ```
 
@@ -270,7 +276,7 @@ The [Seeed XIAO Zephyr Assistant](tools/vscode-extension/) is the editor front e
 ### Sidebar Layout
 
 - **Welcome** — install the latest CLI, create/open a project, or refresh repository content.
-- **Projects** — create a project, open a generated project or Zephyr app, select the target board and serial port, and run Build / Upload / Upload & Monitor / Monitor for the current workspace project.
+- **Projects** — create a project, open a generated project or Zephyr app, configure Grove GPIO pins, select the target board and serial port, and run Build / Upload / Upload & Monitor / Monitor for the current workspace project.
 - **Environment** — review environment status, manage the repository checkout, and manage the CLI tool version from separate groups.
 - **Catalog** — browse XIAO boards, Grove modules, expansion boards, validation badges, Zephyr targets, example metadata, and Grove example status matrices. The Catalog view is visible by default, with its categories collapsed until opened.
 - **Details** — clicking a catalog item opens a side panel with the relevant commands and metadata.
@@ -290,14 +296,19 @@ Zephyr still performs the firmware build, flash, monitor, and debug operations u
 
 1. Open the Seeed XIAO Zephyr sidebar from the activity bar.
 2. Use **Welcome** to run **Install Latest CLI**, or open **Environment** for repository and CLI settings.
-3. Use **Projects** to run **Create Project** or **Open Project**.
-4. Browse a board example or Grove example under **Catalog**.
-5. Grove examples ask for a target board before generation.
+3. Use **Projects** to run **Create Project** or **Open Project**. **Create Project** first asks what to create from: a Grove module example, a board example, or a blank project.
+4. Alternatively, browse a board example or Grove example under **Catalog** and use its inline **Create Project** button. Grove modules expand to their examples, just like boards expand to theirs.
+5. Grove examples ask for a target board before generation. Selectable-pin Grove examples open the pin configurator before the project is created. A blank project asks only for a board and scaffolds a minimal Zephyr app.
 6. Use **Open Project** to open a generated project or Zephyr app example, either in a new window or in the current workspace.
-7. Select the project board and serial port from **Projects** or the status bar.
-8. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, **Upload & Monitor**, and **Monitor Project**.
+7. For generated Grove GPIO projects, use **Configure Pins** in **Projects** to update `boards/<target>.overlay` without editing the overlay by hand.
+8. Select the project board and serial port from **Projects** or the status bar.
+9. Use the status bar actions in the project workspace: **Build Project**, **Upload Project**, **Upload & Monitor**, and **Monitor Project**.
 
 Generated projects record the source repository path in `.vscode/settings.json`, so the status bar can find the same CLI and metadata context when the project is opened later.
+
+### Visual Grove pin configuration
+
+The pin configurator uses `seeed-zephyr show pins <board> <grove-ref> --json` to render the XIAO pinout. Power, reserved, fixed-bus, selectable, assigned, and incompatible pins are shown with different states. For selectable GPIO modules such as Grove Ultrasonic, saving writes the chosen role-to-pin mapping into the generated project's `boards/<target>.overlay` and updates `snapshot.json`.
 
 ### Updating from the editor
 

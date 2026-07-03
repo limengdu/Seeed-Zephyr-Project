@@ -1,4 +1,5 @@
 import * as path from "path";
+import * as fs from "fs";
 import * as vscode from "vscode";
 import { displayBoard, displayPort } from "../commands/projectSettings";
 import { detectProject } from "../statusBar";
@@ -35,14 +36,20 @@ export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode
     if (node instanceof ProjectNode) {
       const board = displayBoard(this.context, node.project);
       const port = displayPort(this.context, node.project);
-      return [
+      const actions: CatalogNode[] = [
         new ActionNode("Select Board", "seeedZephyr.selectProjectBoard", "circuit-board", board),
+      ];
+      if (isGroveProject(node.project.appDir)) {
+        actions.push(new ActionNode("Configure Pins", "seeedZephyr.configurePins", "symbol-parameter"));
+      }
+      actions.push(
         new ActionNode("Build Project", "seeedZephyr.projectBuild", "check"),
         new ActionNode("Upload Project", "seeedZephyr.projectFlash", "arrow-up"),
         new ActionNode("Select Port", "seeedZephyr.selectProjectPort", "plug", port),
         new ActionNode("Upload and Monitor Project", "seeedZephyr.projectFlashMonitor", "run-all"),
         new ActionNode("Monitor Project", "seeedZephyr.projectMonitor", "terminal"),
-      ];
+      );
+      return actions;
     }
     return [];
   }
@@ -66,4 +73,26 @@ export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode
     }
     return nodes;
   }
+}
+
+function isGroveProject(appDir: string): boolean {
+  const snapshot = path.join(appDir, "snapshot.json");
+  if (fs.existsSync(snapshot)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(snapshot, "utf-8")) as { source_asset?: unknown };
+      if (
+        typeof data.source_asset === "string" &&
+        (data.source_asset.startsWith("grove/") || data.source_asset.includes("/grove/"))
+      ) {
+        return true;
+      }
+    } catch {
+      return false;
+    }
+  }
+  const example = path.join(appDir, "example.yaml");
+  if (!fs.existsSync(example)) {
+    return false;
+  }
+  return fs.readFileSync(example, "utf-8").includes("kind: grove");
 }

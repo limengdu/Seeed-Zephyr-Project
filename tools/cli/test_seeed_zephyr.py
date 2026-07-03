@@ -373,8 +373,7 @@ class MonitorCommandTests(unittest.TestCase):
         run_command.assert_called_once_with(
             [
                 "/tmp/venv/bin/python",
-                "-m",
-                "serial.tools.miniterm",
+                str(seeed_zephyr.SERIAL_MONITOR_SCRIPT),
                 "/dev/cu.usbmodem1101",
                 "115200",
             ]
@@ -413,6 +412,30 @@ class MonitorCommandTests(unittest.TestCase):
 
         wait_detach.assert_called_once_with()
         run_monitor.assert_called_once_with("xiao_nrf52840", port=None, baud=115200)
+
+    def test_samd21_flash_monitor_redetects_serial_after_bossac(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_samd21",
+            example=None,
+            app=None,
+            port="/dev/cu.usbmodem11301",
+            monitor=True,
+            baud=115200,
+        )
+        board = {"id": "xiao_samd21", "vendor": "microchip", "target": "seeeduino_xiao"}
+
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "require_flash_tools"):
+                with mock.patch.object(seeed_zephyr, "run_west_build"):
+                    with mock.patch.object(
+                        seeed_zephyr, "run_west_flash", return_value="/dev/cu.usbmodem11301"
+                    ) as west_flash:
+                        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+                            with mock.patch.object(seeed_zephyr, "run_monitor") as run_monitor:
+                                seeed_zephyr.cmd_flash(args)
+
+        west_flash.assert_called_once_with("xiao_samd21", port="/dev/cu.usbmodem11301")
+        run_monitor.assert_called_once_with("xiao_samd21", port=None, baud=115200)
 
     def test_cmd_flash_uses_rom_boot_path_when_rom_bootloader_detected(self) -> None:
         args = seeed_zephyr.argparse.Namespace(
@@ -702,6 +725,7 @@ class CreateCommandTests(unittest.TestCase):
         args.output = kwargs["output"]
         args.force = kwargs.get("force", False)
         args.pins = kwargs.get("pins", None)
+        args.blank = kwargs.get("blank", False)
         return args
 
     def test_create_copies_example_and_writes_snapshot(self) -> None:
@@ -780,6 +804,138 @@ class CreateCommandTests(unittest.TestCase):
                     self.assertEqual(
                         snapshot["source_asset"], "examples/boards/xiao_esp32c6/blinky"
                     )
+
+
+class CreateBlankCommandTests(unittest.TestCase):
+    def _blank_args(self, output: str, **kwargs) -> seeed_zephyr.argparse.Namespace:
+        return seeed_zephyr.argparse.Namespace(
+            from_asset=kwargs.get("from_asset", None),
+            blank=kwargs.get("blank", True),
+            board_id=kwargs.get("board_id", "xiao_esp32c6"),
+            output=output,
+            force=kwargs.get("force", False),
+            pins=kwargs.get("pins", None),
+        )
+
+    def test_create_blank_writes_minimal_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "blank"
+            seeed_zephyr.cmd_create(self._blank_args(str(out)))
+
+            self.assertTrue((out / "CMakeLists.txt").is_file())
+            self.assertTrue((out / "prj.conf").is_file())
+            self.assertTrue((out / "src" / "main.c").is_file())
+
+            cmake = (out / "CMakeLists.txt").read_text(encoding="utf-8")
+            self.assertIn("project(blank)", cmake)
+            self.assertIn("find_package(Zephyr", cmake)
+
+            snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
+            self.assertEqual(snapshot["source_asset"], "blank")
+            self.assertEqual(snapshot["board"], "xiao_esp32c6")
+
+    def test_create_blank_rejects_from_asset(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self._blank_args(str(Path(tmp) / "blank"), from_asset="xiao_esp32c6/blinky")
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_create(args)
+            self.assertIn("--blank", str(ctx.exception))
+
+    def test_create_without_source_or_blank_errors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            args = self._blank_args(str(Path(tmp) / "blank"), blank=False, from_asset=None)
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_create(args)
+            self.assertIn("--from", str(ctx.exception))
+
+
+class SetPinsCommandTests(unittest.TestCase):
+    def _create_grove_project(
+        self,
+        tmp: str,
+        *,
+        from_asset: str = "grove/grove_ultrasonic_distance_sensor/basic_read",
+        board_id: str = "xiao_nrf52840",
+        pins: list[str] | None = None,
+    ) -> Path:
+        out = Path(tmp) / "proj"
+        create_args = seeed_zephyr.argparse.Namespace(
+            from_asset=from_asset,
+            board_id=board_id,
+            output=str(out),
+            force=False,
+            pins=pins,
+        )
+        seeed_zephyr.cmd_create(create_args)
+        return out
+
+    def _set_pins_args(
+        self, app: Path, *, board_id: str = "xiao_nrf52840", pins: list[str] | None = None
+    ) -> seeed_zephyr.argparse.Namespace:
+        return seeed_zephyr.argparse.Namespace(
+            board_id=board_id,
+            app=str(app),
+            pins=pins,
+            as_json=False,
+        )
+
+    def test_set_pins_writes_app_overlay_when_no_board_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # nRF52840 (xiao_ble) ships no board overlay, so the pin lands in app.overlay.
+            app = self._create_grove_project(tmp)
+            seeed_zephyr.cmd_set_pins(self._set_pins_args(app, pins=["signal=D3"]))
+
+            overlay = app / "app.overlay"
+            self.assertTrue(overlay.is_file())
+            self.assertIn("<&xiao_d 3 GPIO_ACTIVE_HIGH>", overlay.read_text(encoding="utf-8"))
+
+            snapshot = json.loads((app / "snapshot.json").read_text(encoding="utf-8"))
+            self.assertEqual(snapshot["board"], "xiao_nrf52840")
+            self.assertEqual(snapshot["pins"], {"signal": "D3"})
+
+    def test_set_pins_merges_into_board_overlay_and_keeps_console(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            # SAMD21 ships boards/seeeduino_xiao.overlay for the USB console; the pin must
+            # merge into it without dropping the console, and re-baking must not duplicate.
+            app = self._create_grove_project(tmp, board_id="xiao_samd21")
+            seeed_zephyr.cmd_set_pins(
+                self._set_pins_args(app, board_id="xiao_samd21", pins=["signal=D3"])
+            )
+            overlay = app / "boards" / "seeeduino_xiao.overlay"
+            text = overlay.read_text(encoding="utf-8")
+            self.assertIn("cdc_acm_uart0", text)
+            self.assertIn("<&xiao_d 3 GPIO_ACTIVE_HIGH>", text)
+
+            seeed_zephyr.cmd_set_pins(
+                self._set_pins_args(app, board_id="xiao_samd21", pins=["signal=D5"])
+            )
+            text2 = overlay.read_text(encoding="utf-8")
+            self.assertIn("cdc_acm_uart0", text2)
+            self.assertIn("<&xiao_d 5 GPIO_ACTIVE_HIGH>", text2)
+            self.assertNotIn("<&xiao_d 3 GPIO_ACTIVE_HIGH>", text2)
+            self.assertEqual(text2.count("ultrasonic-gpios"), 1)
+
+    def test_set_pins_rejects_reserved_pin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp)
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_set_pins(self._set_pins_args(app, pins=["signal=D7"]))
+
+            message = str(ctx.exception)
+            self.assertIn("reserved", message)
+            self.assertIn("console-uart", message)
+
+    def test_set_pins_rejects_fixed_bus_project(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(
+                tmp,
+                from_asset="grove/grove_scd41_co2_temperature_humidity_sensor/basic_read",
+                pins=None,
+            )
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_set_pins(self._set_pins_args(app, pins=["signal=D2"]))
+
+            self.assertIn("pin_policy=fixed-bus", str(ctx.exception))
 
 
 class UpdateCommandTests(unittest.TestCase):

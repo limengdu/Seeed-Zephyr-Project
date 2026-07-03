@@ -40,21 +40,16 @@ function isKnownProjectFolder(dir: string): boolean {
 }
 
 async function openProjectFolder(dir: string): Promise<void> {
-  const choice = await vscode.window.showInformationMessage(
-    `Open project at ${dir}`,
-    "Open in New Window",
-    "Add to Workspace",
+  // Add the project to the current window (no new OS window, keeps open tabs).
+  // 把项目加入当前窗口（不新开系统窗口，保留已打开的标签）。
+  const inserted = vscode.workspace.updateWorkspaceFolders(
+    vscode.workspace.workspaceFolders?.length ?? 0,
+    0,
+    { uri: vscode.Uri.file(dir) },
   );
-  if (choice === "Open in New Window") {
-    void vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(dir), true);
-  } else if (choice === "Add to Workspace") {
-    const inserted = vscode.workspace.updateWorkspaceFolders(
-      vscode.workspace.workspaceFolders?.length ?? 0,
-      0,
-      { uri: vscode.Uri.file(dir) },
-    );
-    if (!inserted) {
-      void vscode.window.showErrorMessage("Project folder could not be added to this workspace.");
-    }
+  if (!inserted) {
+    void vscode.window.showErrorMessage("Project folder could not be added to this window.");
+    return;
   }
+  void vscode.window.showInformationMessage(`Added ${path.basename(dir)} to this window.`);
 }

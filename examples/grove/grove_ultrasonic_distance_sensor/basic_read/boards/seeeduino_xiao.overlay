@@ -1,0 +1,21 @@
+/*
+ * SAMD21 has no separate serial chip: the console is USB CDC ACM provided by the
+ * firmware. This board overlay keeps the console; create/set-pins append the baked
+ * signal-pin block below it, so the console always survives a pin change.
+ *
+ * SAMD21 没有独立串口芯片：控制台由固件提供的 USB CDC ACM 承担。本板级 overlay 保留
+ * 控制台；create/set-pins 会把烘焙的信号引脚块追加在其后，因此改引脚不会丢失控制台。
+ */
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_0";
+	};
+};

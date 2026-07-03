@@ -1190,3 +1190,257 @@ Remaining:
   analog modules are contracted but not yet piloted with a real example.
 - nRF54L15 exposes D11-D15 beyond the standard 14-pin XIAO footprint in upstream
   Zephyr; its form-factor variant handling is an open question.
+
+## 2026-07-03 - Add visual Grove pin configurator
+
+Scope:
+- Added `seeed-zephyr set-pins <board_id> --app <dir> --pin role=Dn [--json]`.
+- Refactored Grove pin overlay baking so `create --pin` and `set-pins` share the
+  same `pins/pin.overlay.in` rendering path.
+- Added CLI tests for updating a generated Grove project overlay and `snapshot.json`,
+  reserved-pin rejection, and fixed-bus rejection.
+- Added an interactive VS Code webview panel for XIAO pin configuration:
+  `tools/vscode-extension/src/panels/pinConfiguratorPanel.ts` and
+  `tools/vscode-extension/src/panels/pinConfiguratorHtml.ts`.
+- Added the existing-project entry point `seeedZephyr.configurePins`, surfaced as
+  **Configure Pins** in the Projects tree for generated Grove projects.
+- Updated the create-project wizard so selectable-pin Grove examples open the pin
+  configurator before the project is generated.
+- Updated README.md, README.zh-CN.md, docs/en/getting-started.md, and
+  docs/zh/getting-started.md.
+
+Reason:
+- The CLI could already validate and apply Grove `--pin` selections, but editor users
+  had to edit overlay code manually after generation. The extension now exposes a
+  CubeMX-style workflow: pick a pin on the XIAO diagram, save, and let the CLI write
+  the generated project's per-board overlay.
+
+Result:
+- Selectable GPIO Grove examples, such as Grove Ultrasonic, can be configured from the
+  editor during project creation and after project creation.
+- Saving a pin assignment writes `boards/<target>.overlay` in the generated project
+  and updates `snapshot.json.pins`.
+- Fixed-bus modules remain read-only in the pin configurator and show their bus pins
+  as wiring guidance.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py` -> 89 tests OK.
+- `~/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py` -> 35 passed, 0 failed.
+- `cd tools/vscode-extension && npm run check-types` -> passed.
+- `cd tools/vscode-extension && npm run build` -> passed.
+
+Remaining:
+- The first visual configurator version covers selectable GPIO roles only. Analog free
+  selection and richer bus parameters remain future work.
+
+## 2026-07-03 - Add project creation sources and blank template
+
+Scope:
+- CLI `create` gained `--blank` (with `--from` now optional) to scaffold a minimal
+  board-agnostic Zephyr app (`CMakeLists.txt`, `prj.conf`, `src/main.c`, `snapshot.json`)
+  from built-in templates.
+- Added CLI tests for blank generation, `--from`/`--blank` mutual exclusion, and the
+  missing-source error.
+- Reworked the extension `createProject` wizard: when launched without a Catalog preset,
+  it first asks for a source kind (Grove module example / board example / blank project)
+  and routes accordingly.
+- Fixed the extension dev-preview launch config so the Extension Development Host opens
+  the repository root and builds first (`tools/vscode-extension/.vscode/launch.json`).
+- Updated README.md, README.zh-CN.md, docs/en/getting-started.md, docs/zh/getting-started.md.
+
+Reason:
+- Creating a Grove project (such as Ultrasonic) from the editor previously required
+  finding the inline Catalog button; the top-level Create Project only offered board
+  examples. Users also wanted a way to start an empty project. The wizard now exposes all
+  three sources from one entry point, and the Catalog keeps its expand-and-create flow.
+- The dev preview read a stale default repository clone because the Extension Development
+  Host opened no workspace folder, so Grove modules showed no examples.
+
+Result:
+- `seeed-zephyr create --blank --board <board> --output <dir>` scaffolds a blank project.
+- The editor Create Project entry offers Grove module example, board example, and blank
+  project, sharing one parent-folder/name/generate/open tail.
+- Pressing Run Extension opens the repository root in the dev host, so the Catalog shows
+  the workspace's Grove examples.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py` -> 92 tests OK.
+- `python3 tools/cli/seeed_zephyr.py create --blank --board xiao_esp32c6 --output /tmp/... ` -> wrote CMakeLists/prj.conf/src/main.c/snapshot.json.
+- `cd tools/vscode-extension && npm run check-types && npm run build` -> passed.
+
+Remaining:
+- The blank template is intentionally minimal (printk heartbeat). Scenario templates
+  (for example a GPIO or I2C starter) remain future work.
+
+## 2026-07-03 - Match pin configurator to the real XIAO layout
+
+Scope:
+- Corrected `metadata/form_factors/xiao.yaml` layout to the real XIAO pad order
+  (left: D0-D6; right: 5V, GND, 3V3, D10, D9, D8, D7 with USB-C at top).
+- Added board front-render images under `tools/vscode-extension/media/boards/<board_id>.png`
+  (resized from the official 2D visual assets).
+- The pin configurator now renders the real board image in the center instead of a
+  plain rectangle, falling back to the rectangle when an image is missing.
+- Threaded `extensionUri` into `PinConfiguratorPanel` (localResourceRoots + asWebviewUri)
+  and through the `createProject` and `configurePins` entry points.
+
+Reason:
+- The previous diagram mirrored the physical board (power pads and data pads were on
+  the wrong sides) and used an abstract rectangle. Matching the official pinout makes
+  wiring unambiguous.
+
+Result:
+- `show pins` reports left = D0-D6 and right = 5V/GND/3V3/D10-D7, so both the CLI text
+  view and the editor pinout follow the real board.
+- The configurator shows the actual XIAO board render per board id.
+
+Verification:
+- `~/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py` -> 35 passed, 0 failed.
+- `seeed-zephyr show pins xiao_samd21 grove/.../basic_read --json` -> left/right match the board.
+- `cd tools/vscode-extension && npm run check-types && npm run build` -> passed.
+
+## 2026-07-03 - Align pin rows to the board image pads
+
+Scope:
+- Added `tools/vscode-extension/media/boards/pads.json` with each board's pad band
+  (top/bottom fractions of the image height), measured from the board images.
+- Reworked the pin configurator into an overlay layout: the board image sits in the
+  center with two absolutely-positioned pin rails whose seven rows are distributed
+  across the measured pad band, so each row lines up with its physical pad. A dashed
+  lead line connects each row toward the board.
+- Kept a two-column fallback for when a board image or pad band is unavailable.
+- The panel now loads the pad band for the board and passes it to the renderer.
+
+Reason:
+- The rows previously sat in plain side columns that did not line up with the pads on
+  the board image. Distributing rows across the measured pad band makes the diagram
+  read like the official XIAO pinout.
+
+Result:
+- For boards with an image and pad band, the seven pin rows align vertically with the
+  board's seven pads on each side.
+
+Verification:
+- `cd tools/vscode-extension && npm run check-types && npm run build` -> passed.
+- Pad bands derived from the bundled board images (top ~0.20, bottom ~0.86).
+
+## 2026-07-03 - Fix baked pin overlay wiping the SAMD21 USB console
+
+Scope:
+- `bake_pin_overlay` now merges the selected pin into the overlay Zephyr actually
+  applies: when `boards/<target>.overlay` exists it appends a marked pin block there
+  (preserving a board console), otherwise it writes `app.overlay`. Re-baking is
+  idempotent via the marker block.
+- Ultrasonic example: `boards/seeeduino_xiao.overlay` now carries the USB CDC console
+  only (no duplicate pin), and `boards/seeeduino_xiao.conf` adds `CONFIG_SERIAL=y`.
+- Added CLI tests for the app.overlay path (nRF52840, no board overlay) and the
+  board-overlay merge path (SAMD21, console preserved, idempotent re-bake).
+
+Reason:
+- On XIAO SAMD21 the serial port is USB CDC ACM provided by the firmware. Baking the
+  pin previously overwrote `boards/seeeduino_xiao.overlay`, deleting the CDC console
+  node, so after upload the board enumerated as USB with no CDC function and the serial
+  port disappeared. Zephyr also ignores `app.overlay` when a board overlay exists, so
+  baking into `app.overlay` did not apply the pin on such boards. The bootloader was
+  never affected.
+
+Result:
+- Generated SAMD21 Grove projects keep the USB CDC console and gain the selected pin, so
+  the serial port is present after flashing. Boards without a board overlay keep using
+  `app.overlay` for the pin.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py` -> 93 tests OK.
+- `seeed-zephyr build xiao_samd21 grove/.../basic_read` and a generated project build ->
+  `.config` has CONFIG_USB_CDC_ACM=y, CONFIG_SERIAL=y, zephyr,console = &cdc_acm_uart0.
+- `~/zephyrproject/.venv/bin/python tools/validate_metadata/validate.py` -> 35 passed.
+
+## 2026-07-03 - Reconnecting serial monitor for non-Espressif boards
+
+Scope:
+- Added `tools/cli/serial_monitor.py`, a pyserial-based monitor that waits and
+  reconnects when the device drops off the USB bus, exiting only on Ctrl+].
+- Routed `run_monitor` and interactive `cmd_monitor` (non-Espressif path) through it
+  instead of `python -m serial.tools.miniterm`.
+- Added the helper to the package force-include so installed CLIs ship it.
+- Updated docs/en/getting-started.md and docs/zh/getting-started.md.
+
+Reason:
+- miniterm exits the moment the serial device disappears. On USB-CDC boards a reset or
+  replug drops the port, which ended the monitor. It should stay open and reconnect.
+
+Result:
+- The monitor streams output, forwards stdin, and on disconnect prints a waiting notice
+  and reconnects to the same port automatically. Ctrl+] quits and restores the terminal.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py` -> 93 tests OK.
+- pty-based check: the monitor streamed device bytes to stdout and, when the pty master
+  closed (simulated disconnect), returned into its reconnect wait without hanging.
+
+## 2026-07-03 - Fix Grove Ultrasonic echo always reading zero
+
+Scope:
+- Reworked `read_distance` in the Grove Ultrasonic example to mirror the Seeed
+  Arduino `pulseIn` sequence: after the trigger, switch the shared SIG pin to
+  `GPIO_INPUT | GPIO_PULL_DOWN`, wait for the line to settle LOW, then time the echo
+  from its rising edge to its falling edge.
+- Changed the distance formula to the Seeed ranger value (echo_us * 10 / 58 mm).
+
+Reason:
+- The old code went straight to "wait for HIGH", so the transient/floating HIGH on the
+  pin right after releasing the trigger was mistaken for the echo start; the next read
+  was LOW, giving a zero-width echo (Distance 0.0 cm, Echo 0 us) on every sample. The
+  official pulseIn first waits for the line to settle before timing the pulse.
+
+Result:
+- The echo is measured from the real rising edge, so a connected Grove Ultrasonic Ranger
+  reports live distances; a missing echo now yields a timeout rather than a false zero.
+
+Verification:
+- `seeed-zephyr build xiao_samd21 grove/grove_ultrasonic_distance_sensor/basic_read` ->
+  Build succeeded. Hardware read-back pending user confirmation.
+- Reference: Seeed_Arduino_UltrasonicRanger Ultrasonic.cpp (pulseIn, /29/2 cm).
+
+## 2026-07-03 - Keep created/opened projects in the current window
+
+Scope:
+- `createProject` and `openGenerated` now add the project to the current window via
+  `updateWorkspaceFolders` and drop the "Open in New Window" / "Open in This Window"
+  prompt buttons.
+
+Reason:
+- Creating or opening a project kept offering "Open in New Window", which spawned a
+  separate OS window and left the previous tabs behind. The desired PlatformIO-style
+  behavior is to surface the project in the current window without a new window.
+
+Result:
+- Both actions add the folder in place (no new OS window, no reload for a window that
+  already has a folder) and show a short "Added <name> to this window." notice.
+
+Verification:
+- `cd tools/vscode-extension && npm run check-types && npm run build` -> passed.
+- `rg "Open in New Window|openFolder" dist/extension.js` -> no matches remain.
+
+## 2026-07-03 - Prefer the repo CLI in a checkout and bump versions for release
+
+Scope:
+- `cliLocator` now prefers the repository's own CLI (scripts/seeed-zephyr) when the
+  repository is the open workspace, so contributor edits to the CLI take effect instead
+  of a separately installed/managed CLI selected in settings.
+- Bumped versions for release: CLI 0.3.2 -> 0.4.0, extension 0.2.1 -> 0.3.0, and the
+  extension's DEFAULT_MANAGED_CLI_VERSION to 0.4.0.
+
+Reason:
+- Creating projects through the editor kept invoking the previously installed managed
+  CLI (older bake logic that wiped the SAMD21 USB console overlay), because the settings
+  cliPath override won over the repo CLI. When the repo itself is the open workspace, the
+  repo CLI is the intended source of truth.
+
+Result:
+- In a repository checkout opened as the workspace, all editor CLI actions run the repo's
+  CLI. The version bump lets installed CLI/extension consumers pull the fixed release.
+
+Verification:
+- `PYTHONDONTWRITEBYTECODE=1 python3 tools/cli/test_seeed_zephyr.py` -> 93 tests OK.
+- `cd tools/vscode-extension && npm run check-types && npm run build` -> passed (0.3.0).

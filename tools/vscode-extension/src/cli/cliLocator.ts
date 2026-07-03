@@ -21,34 +21,71 @@ export function locateCli(repoRoot: string | undefined): CliInvocation {
     env.SEEED_ZEPHYR_REPO_ROOT = repoRoot;
   }
 
-  // 1. Explicit override from settings.
+  const python = config.get<string>("pythonPath") || "python3";
+
+  // 1. When the repository itself is the open workspace, prefer its bundled CLI so a
+  //    contributor's edits to the CLI take effect, instead of a separately installed
+  //    build selected in settings. End-user setups (repo not opened as a workspace)
+  //    keep using the configured/managed CLI below.
+  // 1. 当打开的工作区就是本仓库时，优先用仓库自带的 CLI，让贡献者对 CLI 的改动生效，
+  //    而不是设置里选择的另一份已安装 CLI。终端用户（未把仓库作为工作区打开）仍走下方
+  //    配置的/托管的 CLI。
+  if (repoRoot && isDevCheckoutWorkspace(repoRoot)) {
+    const dev = repoCliInvocation(repoRoot, python, env);
+    if (dev) {
+      return dev;
+    }
+  }
+
+  // 2. Explicit override from settings (installed / managed CLI).
   const override = config.get<string>("cliPath");
   if (override && commandAvailable(override)) {
     return { command: override, baseArgs: [], env, display: override };
   }
 
-  const python = config.get<string>("pythonPath") || "python3";
-
+  // 3. Repo CLI fallback when available.
   if (repoRoot) {
-    // 2. Repo wrapper script (sets SEEED_ZEPHYR_REPO_ROOT and forwards).
-    const wrapper = path.join(repoRoot, "scripts", "seeed-zephyr");
-    if (isExecutable(wrapper)) {
-      return { command: wrapper, baseArgs: [], env, display: "scripts/seeed-zephyr" };
-    }
-    // 3. Direct Python script (Windows fallback where the wrapper is not executable).
-    const script = path.join(repoRoot, "tools", "cli", "seeed_zephyr.py");
-    if (fs.existsSync(script)) {
-      return {
-        command: python,
-        baseArgs: [script],
-        env,
-        display: `${python} tools/cli/seeed_zephyr.py`,
-      };
+    const repo = repoCliInvocation(repoRoot, python, env);
+    if (repo) {
+      return repo;
     }
   }
 
   // 4. Installed console script on PATH.
   return { command: "seeed-zephyr", baseArgs: [], env, display: "seeed-zephyr" };
+}
+
+// Builds an invocation for the repository's own CLI (wrapper script, or the Python
+// entry point as a Windows-friendly fallback).
+// 构造调用仓库自带 CLI 的方式（wrapper 脚本，或作为 Windows 兜底的 Python 入口）。
+function repoCliInvocation(
+  repoRoot: string,
+  python: string,
+  env: NodeJS.ProcessEnv,
+): CliInvocation | undefined {
+  const wrapper = path.join(repoRoot, "scripts", "seeed-zephyr");
+  if (isExecutable(wrapper)) {
+    return { command: wrapper, baseArgs: [], env, display: "scripts/seeed-zephyr" };
+  }
+  const script = path.join(repoRoot, "tools", "cli", "seeed_zephyr.py");
+  if (fs.existsSync(script)) {
+    return {
+      command: python,
+      baseArgs: [script],
+      env,
+      display: `${python} tools/cli/seeed_zephyr.py`,
+    };
+  }
+  return undefined;
+}
+
+// True when repoRoot is both an open workspace folder and carries the CLI source,
+// i.e. the user is actively working inside a repository checkout.
+// 当 repoRoot 既是打开的工作区文件夹、又包含 CLI 源码时为真，即用户正在仓库检出里开发。
+function isDevCheckoutWorkspace(repoRoot: string): boolean {
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  const opened = folders.some((folder) => path.resolve(folder.uri.fsPath) === path.resolve(repoRoot));
+  return opened && fs.existsSync(path.join(repoRoot, "tools", "cli", "seeed_zephyr.py"));
 }
 
 function isExecutable(file: string): boolean {

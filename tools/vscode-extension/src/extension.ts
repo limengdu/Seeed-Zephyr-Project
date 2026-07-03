@@ -6,6 +6,7 @@ import { WelcomeTreeProvider } from "./views/welcomeTreeProvider";
 import { DetailPanel, DetailTarget } from "./panels/detailPanel";
 import { BoardNode, ExampleNode, GroveExampleNode } from "./views/treeItems";
 import { createProject, CreatePreset } from "./commands/createProject";
+import { configurePins } from "./commands/configurePins";
 import { openGenerated } from "./commands/openGenerated";
 import { updateRepository } from "./commands/updateRepository";
 import {
@@ -84,7 +85,12 @@ export function activate(context: vscode.ExtensionContext): void {
       DetailPanel.show(target),
     ),
     vscode.commands.registerCommand("seeedZephyr.createProject", (node?: unknown) =>
-      createProject(catalog.getRepoRoot(), catalog.getCatalog(), presetFromNode(node)),
+      createProject(
+        catalog.getRepoRoot(),
+        catalog.getCatalog(),
+        context.extensionUri,
+        presetFromNode(node),
+      ),
     ),
     vscode.commands.registerCommand("seeedZephyr.openGenerated", () => openGenerated()),
     vscode.commands.registerCommand("seeedZephyr.build", action("build")),
@@ -105,6 +111,9 @@ export function activate(context: vscode.ExtensionContext): void {
       }),
     ),
     vscode.commands.registerCommand("seeedZephyr.projectMonitor", projectAction("monitor")),
+    vscode.commands.registerCommand("seeedZephyr.configurePins", () =>
+      configurePinsCmd(catalog, projects, statusBar, context),
+    ),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       refreshAll();
     }),
@@ -187,6 +196,22 @@ async function selectProjectPortCmd(
   await selectProjectPort(context, project, projectRepoRoot(catalog));
   statusBar.refresh();
   projects.refresh();
+}
+
+async function configurePinsCmd(
+  catalog: CatalogTreeProvider,
+  projects: ProjectsTreeProvider,
+  statusBar: ProjectStatusBar,
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  const project = requireCurrentProject(statusBar);
+  if (!project) {
+    return;
+  }
+  await configurePins(projectRepoRoot(catalog), context, project, () => {
+    projects.refresh();
+    statusBar.refresh();
+  });
 }
 
 function requireCurrentProject(statusBar: ProjectStatusBar) {

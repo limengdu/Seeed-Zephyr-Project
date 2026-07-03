@@ -119,7 +119,7 @@ Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里
 
 ### 2. 安装编辑器插件
 
-**Seeed XIAO Zephyr Assistant** 插件把目录浏览、项目生成和运行按钮放进编辑器。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
+**Seeed XIAO Zephyr Assistant** 插件把目录浏览、项目生成、可视化 Grove 引脚配置和运行按钮放进编辑器。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 
 首次使用时，Welcome 和 Environment 视图会提供 CLI 检测、插件托管 CLI 安装、CLI 版本选择、CLI 路径选择和仓库目录选择。
 
@@ -195,6 +195,12 @@ seeed-zephyr create --from grove/grove_scd41_co2_temperature_humidity_sensor/bas
                     --board xiao_nrf52840 --output ./my-scd41
 ```
 
+也可以为某块板生成一个最小空白 Zephyr 项目，不复制任何示例：
+
+```sh
+seeed-zephyr create --blank --board xiao_esp32c6 --output ./my-app
+```
+
 ### 构建外部应用
 
 把命令行指向任意一个 Zephyr 应用目录（含 `CMakeLists.txt` 和 `prj.conf` 的目录）：
@@ -215,7 +221,7 @@ seeed-zephyr list ports --json
 
 ```sh
 seeed-zephyr update
-seeed-zephyr update --version 0.3.1
+seeed-zephyr update --version 0.3.2
 seeed-zephyr info
 ```
 
@@ -268,7 +274,7 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 ### 左侧栏布局
 
 - **Welcome** —— 安装最新版 CLI、创建/打开项目、更新仓库内容等常用入口。
-- **Projects** —— 创建项目、打开生成项目或 Zephyr app，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Upload & Monitor / Monitor。
+- **Projects** —— 创建项目、打开生成项目或 Zephyr app，配置 Grove GPIO 引脚，选择目标开发板和串口，并对当前工作区项目执行 Build / Upload / Upload & Monitor / Monitor。
 - **Environment** —— 按状态、仓库、CLI 三组管理环境。
 - **Catalog** —— 浏览 XIAO 开发板、Grove 模块、扩展板、验证徽章、Zephyr target、示例 metadata 和 Grove 示例状态矩阵。Catalog 默认显示，内部分类默认收起，需要时再展开。
 - **详情页** —— 点击目录项，会在侧边面板显示对应命令和 metadata。
@@ -288,14 +294,19 @@ Grove 模块示例**板级无关**：`examples/grove/` 下的一份源码通过�
 
 1. 从活动栏打开 Seeed XIAO Zephyr 左侧栏。
 2. 在 **Welcome** 里使用 **Install Latest CLI**，或打开 **Environment** 管理仓库和 CLI 设置。
-3. 在 **Projects** 里执行 **Create Project** 或 **Open Project**。
-4. 在 **Catalog** 里浏览板级示例或 Grove 示例。
-5. Grove 示例会先让你选择目标开发板。
+3. 在 **Projects** 里执行 **Create Project** 或 **Open Project**。**Create Project** 会先问从什么创建:Grove 模块示例、板级示例,或空白项目。
+4. 也可以在 **Catalog** 里浏览板级示例或 Grove 示例,用其行内的 **Create Project** 按钮。Grove 模块可以展开显示它的示例,和板子展开示例一样。
+5. Grove 示例会先让你选择目标开发板；可选引脚的 Grove 示例会在创建前打开引脚配置器。空白项目只需选一块板子,然后生成一个最小 Zephyr 应用。
 6. 使用 **Open Project** 打开生成项目或 Zephyr app 示例，可选择新窗口打开或加入当前工作区。
-7. 在 **Projects** 或状态栏里选择项目开发板和串口。
-8. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project**、**Upload & Monitor** 和 **Monitor Project** 操作。
+7. 对生成后的 Grove GPIO 项目，在 **Projects** 里使用 **Configure Pins** 更新 `boards/<target>.overlay`，无需手动改 overlay。
+8. 在 **Projects** 或状态栏里选择项目开发板和串口。
+9. 在项目工作区里使用状态栏的 **Build Project**、**Upload Project**、**Upload & Monitor** 和 **Monitor Project** 操作。
 
 生成项目会把来源仓库路径写进 `.vscode/settings.json`，后续重新打开项目时，状态栏也能找到同一套 CLI 和 metadata 上下文。
+
+### 可视化 Grove 引脚配置
+
+引脚配置器通过 `seeed-zephyr show pins <板子> <grove-ref> --json` 渲染 XIAO 引脚图。电源脚、保留脚、固定总线脚、可选脚、已分配脚和不兼容脚会以不同状态显示。对 Grove Ultrasonic 这类可选 GPIO 模块，保存后会把角色到引脚的映射写进生成项目的 `boards/<target>.overlay`，并更新 `snapshot.json`。
 
 ### 在编辑器里更新
 

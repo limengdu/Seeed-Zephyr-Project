@@ -1,59 +1,152 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
-import { Board, Catalog, Example, GroveExample } from "../model/types";
+import { Board, Catalog, Example, GroveExample, GroveModule } from "../model/types";
 import { locateCli } from "../cli/cliLocator";
 import { runCapture } from "../cli/cliBridge";
+import { PinAssignments, PinDiagramData } from "../panels/pinConfiguratorHtml";
+import { PinConfiguratorPanel } from "../panels/pinConfiguratorPanel";
 
 export type CreatePreset =
   | { board: Board; example?: Example }
   | { groveExample: GroveExample };
+
+type Cli = ReturnType<typeof locateCli>;
+
+// A fully-resolved project source, ready to hand to the CLI.
+// 一个已解析完成的项目来源，可直接交给 CLI。
+interface CreateSpec {
+  board: Board;
+  defaultName: string;
+  fromAsset?: string;
+  blank?: boolean;
+  pinAssignments?: PinAssignments;
+}
 
 // Runs the create-project wizard, then calls the CLI to generate the project.
 // 运行创建项目向导,然后调用 CLI 生成项目。
 export async function createProject(
   repoRoot: string | undefined,
   catalog: Catalog | undefined,
+  extensionUri: vscode.Uri,
   preset?: CreatePreset,
 ): Promise<void> {
   if (!repoRoot || !catalog) {
     void vscode.window.showErrorMessage("No seeed-zephyr repository found.");
     return;
   }
-
-  const groveExample = preset && "groveExample" in preset ? preset.groveExample : undefined;
-  const board = groveExample
-    ? await pickBoardForGroveExample(catalog, groveExample)
-    : (preset && "board" in preset ? preset.board : undefined) ?? (await pickBoard(catalog));
-  if (!board) {
+  const cli = locateCli(repoRoot);
+  const spec = preset
+    ? await specFromPreset(catalog, cli, extensionUri, preset)
+    : await specFromWizard(catalog, cli, extensionUri);
+  if (!spec) {
     return;
   }
-  if (!groveExample && board.examples.length === 0) {
+  await runCreate(repoRoot, cli, spec);
+}
+
+// Resolves a spec from a Catalog node click (board example or Grove example).
+// 从 Catalog 节点点击(板级示例或 Grove 示例)解析来源。
+async function specFromPreset(
+  catalog: Catalog,
+  cli: Cli,
+  extensionUri: vscode.Uri,
+  preset: CreatePreset,
+): Promise<CreateSpec | undefined> {
+  if ("groveExample" in preset) {
+    return specFromGroveExample(catalog, cli, extensionUri, preset.groveExample);
+  }
+  const board = preset.board;
+  if (board.examples.length === 0) {
     void vscode.window.showErrorMessage(`${board.id} has no examples to create from.`);
-    return;
+    return undefined;
   }
-  const boardExample = groveExample
-    ? undefined
-    : preset && "board" in preset && preset.example
-      ? preset.example
-      : await pickExample(board);
-  if (!groveExample && !boardExample) {
-    return;
+  const example = preset.example ?? (await pickExample(board));
+  if (!example) {
+    return undefined;
   }
-  let source: string;
-  let defaultName: string;
-  if (groveExample) {
-    source = `grove/${groveExample.moduleId}/${groveExample.demo}`;
-    defaultName = `${board.id}_${groveExample.moduleId}_${groveExample.demo}`;
-  } else {
-    const example = boardExample;
-    if (!example) {
-      return;
-    }
-    source = `${board.id}/${example.demo}`;
-    defaultName = `${board.id}_${example.demo}`;
-  }
+  return {
+    board,
+    fromAsset: `${board.id}/${example.demo}`,
+    defaultName: `${board.id}_${example.demo}`,
+  };
+}
 
+// Asks for the source kind first, then routes to Grove / board / blank flows.
+// 先询问来源类型,再分别走 Grove / 板级 / 空白 流程。
+async function specFromWizard(
+  catalog: Catalog,
+  cli: Cli,
+  extensionUri: vscode.Uri,
+): Promise<CreateSpec | undefined> {
+  const kind = await pickSourceKind();
+  if (!kind) {
+    return undefined;
+  }
+  if (kind === "grove") {
+    const module = await pickGroveModule(catalog);
+    if (!module) {
+      return undefined;
+    }
+    const example = await pickGroveExample(module);
+    if (!example) {
+      return undefined;
+    }
+    return specFromGroveExample(catalog, cli, extensionUri, example);
+  }
+  if (kind === "board") {
+    const board = await pickBoard(catalog);
+    if (!board) {
+      return undefined;
+    }
+    const example = await pickExample(board);
+    if (!example) {
+      return undefined;
+    }
+    return {
+      board,
+      fromAsset: `${board.id}/${example.demo}`,
+      defaultName: `${board.id}_${example.demo}`,
+    };
+  }
+  const board = await pickAnyBoard(catalog);
+  if (!board) {
+    return undefined;
+  }
+  return { board, blank: true, defaultName: `${board.id}_app` };
+}
+
+// Resolves a Grove example into a spec: pick a board, then optional pin configuration.
+// 把一个 Grove 示例解析成来源:选板子,并做可选的引脚配置。
+async function specFromGroveExample(
+  catalog: Catalog,
+  cli: Cli,
+  extensionUri: vscode.Uri,
+  example: GroveExample,
+): Promise<CreateSpec | undefined> {
+  const board = await pickBoardForGroveExample(catalog, example);
+  if (!board) {
+    return undefined;
+  }
+  const source = `grove/${example.moduleId}/${example.demo}`;
+  let pinAssignments: PinAssignments | undefined;
+  if (example.pinPolicy === "selectable") {
+    pinAssignments = await pickPinsForCreate(cli, extensionUri, board.id, source);
+    if (pinAssignments === undefined) {
+      return undefined;
+    }
+  }
+  return {
+    board,
+    fromAsset: source,
+    defaultName: `${board.id}_${example.moduleId}_${example.demo}`,
+    pinAssignments,
+  };
+}
+
+// Shared tail: pick a parent folder and name, call the CLI, then offer to open the project.
+// 公共收尾:选择父目录与名称,调用 CLI,然后询问是否打开项目。
+async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<void> {
   const parent = await vscode.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
@@ -66,26 +159,25 @@ export async function createProject(
 
   const name = await vscode.window.showInputBox({
     prompt: "Project folder name",
-    value: defaultName,
+    value: spec.defaultName,
   });
   if (!name) {
     return;
   }
 
   const output = path.join(parent[0].fsPath, name);
-  const cli = locateCli(repoRoot);
+  const createArgs = [
+    "create",
+    "--board",
+    spec.board.id,
+    "--output",
+    output,
+    ...(spec.blank ? ["--blank"] : ["--from", spec.fromAsset ?? ""]),
+    ...pinArgs(spec.pinAssignments),
+  ];
   const result = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: `Creating ${name}...` },
-    () =>
-      runCapture(cli, [
-        "create",
-        "--from",
-        source,
-        "--board",
-        board.id,
-        "--output",
-        output,
-      ]),
+    () => runCapture(cli, createArgs),
   );
 
   if (!result.ok) {
@@ -95,20 +187,82 @@ export async function createProject(
 
   writeProjectSettings(output, repoRoot);
 
-  const choice = await vscode.window.showInformationMessage(
-    `Created project at ${output}`,
-    "Open in New Window",
-    "Add to Workspace",
+  // Add the project to the current window (PlatformIO-style). Adding a folder never
+  // spawns a new OS window and keeps the open tabs (catalog, pin configurator) in place.
+  // 把项目加入当前窗口（PlatformIO 风格）。加入文件夹不会新开系统窗口，也保留已打开的标签。
+  vscode.workspace.updateWorkspaceFolders(
+    vscode.workspace.workspaceFolders?.length ?? 0,
+    0,
+    { uri: vscode.Uri.file(output) },
   );
-  if (choice === "Open in New Window") {
-    void vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(output), true);
-  } else if (choice === "Add to Workspace") {
-    vscode.workspace.updateWorkspaceFolders(
-      vscode.workspace.workspaceFolders?.length ?? 0,
-      0,
-      { uri: vscode.Uri.file(output) },
-    );
+  void vscode.window.showInformationMessage(`Added ${name} to this window.`);
+}
+
+type SourceKind = "grove" | "board" | "blank";
+
+async function pickSourceKind(): Promise<SourceKind | undefined> {
+  const pick = await vscode.window.showQuickPick(
+    [
+      {
+        label: "$(circuit-board) Grove module example",
+        description: "Cross-board sensor or actuator example",
+        sourceKind: "grove" as SourceKind,
+      },
+      {
+        label: "$(chip) Board example",
+        description: "Minimal demo for a specific XIAO board",
+        sourceKind: "board" as SourceKind,
+      },
+      {
+        label: "$(new-file) Blank project",
+        description: "Empty Zephyr application for a XIAO board",
+        sourceKind: "blank" as SourceKind,
+      },
+    ],
+    { placeHolder: "Create a project from..." },
+  );
+  return pick?.sourceKind;
+}
+
+async function pickPinsForCreate(
+  cli: Cli,
+  extensionUri: vscode.Uri,
+  boardId: string,
+  source: string,
+): Promise<PinAssignments | undefined> {
+  const pinsResult = await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: "Loading pinout..." },
+    () => runCapture(cli, ["show", "pins", boardId, source, "--json"]),
+  );
+  if (!pinsResult.ok) {
+    void vscode.window.showErrorMessage(`Pinout load failed: ${pinsResult.message}`);
+    return undefined;
   }
+  let data: PinDiagramData;
+  try {
+    data = JSON.parse(pinsResult.stdout) as PinDiagramData;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    void vscode.window.showErrorMessage(`Pinout output is not valid JSON: ${detail}`);
+    return undefined;
+  }
+  return PinConfiguratorPanel.show({
+    title: "Configure Grove Pins",
+    mode: "create",
+    data,
+    extensionUri,
+  });
+}
+
+function pinArgs(assignments: PinAssignments | undefined): string[] {
+  if (!assignments) {
+    return [];
+  }
+  const args: string[] = [];
+  for (const [role, pin] of Object.entries(assignments)) {
+    args.push("--pin", `${role}=${pin}`);
+  }
+  return args;
 }
 
 // Records the source repo in the generated project so its status bar finds the CLI.
@@ -134,6 +288,54 @@ async function pickBoard(catalog: Catalog): Promise<Board | undefined> {
     { placeHolder: "Select a board" },
   );
   return pick?.board;
+}
+
+// Board picker for blank projects: any board that has a usable Zephyr target.
+// 空白项目的板子选择器:任意具备可用 Zephyr target 的板子。
+async function pickAnyBoard(catalog: Catalog): Promise<Board | undefined> {
+  const pick = await vscode.window.showQuickPick(
+    catalog.boards
+      .filter((board) => board.status !== "unsupported")
+      .map((board) => ({
+        label: board.displayName,
+        description: `${board.id} - ${board.zephyrTarget}`,
+        board,
+      })),
+    { placeHolder: "Select a board for the blank project" },
+  );
+  return pick?.board;
+}
+
+async function pickGroveModule(catalog: Catalog): Promise<GroveModule | undefined> {
+  const modules = catalog.modules.filter((module) => module.examples.length > 0);
+  if (modules.length === 0) {
+    void vscode.window.showErrorMessage("No Grove examples are available in this repository.");
+    return undefined;
+  }
+  const pick = await vscode.window.showQuickPick(
+    modules.map((module) => ({
+      label: module.displayName,
+      description: `${module.interface} - ${module.examples.length} example(s)`,
+      module,
+    })),
+    { placeHolder: "Select a Grove module" },
+  );
+  return pick?.module;
+}
+
+async function pickGroveExample(module: GroveModule): Promise<GroveExample | undefined> {
+  if (module.examples.length === 1) {
+    return module.examples[0];
+  }
+  const pick = await vscode.window.showQuickPick(
+    module.examples.map((example) => ({
+      label: example.demo,
+      description: example.interface,
+      example,
+    })),
+    { placeHolder: `Select an example from ${module.displayName}` },
+  );
+  return pick?.example;
 }
 
 async function pickBoardForGroveExample(

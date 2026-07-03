@@ -186,6 +186,22 @@ seeed-zephyr build xiao_nrf52840 grove/grove_scd41_co2_temperature_humidity_sens
 seeed-zephyr show pins xiao_esp32c6 grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
 ```
 
+### 在编辑器里创建项目
+
+在 Seeed XIAO Zephyr Assistant 里，**Create Project** 会先问你从什么创建：
+
+- **Grove 模块示例** —— 选一个模块（如 Grove Ultrasonic）、一个 demo,再选一块板。
+- **板级示例** —— 选一块板,再选它的某个 demo。
+- **空白项目** —— 选一块板,生成一个最小 Zephyr 应用。
+
+也可以从 **Catalog** 开始:展开某个 Grove 模块看到它的示例,用行内的 **Create Project** 按钮,和板子展开示例的方式一样。命令行上,`seeed-zephyr create --blank --board <板子> --output <目录>` 会生成同样的空白项目。
+
+### 在编辑器里配置 Grove GPIO 引脚
+
+Grove Ultrasonic 这类可选引脚示例，可以在 Seeed XIAO Zephyr Assistant 里用图形界面配置。通过插件创建项目时，引脚配置器会在项目写入前打开。已有的生成项目打开为工作区后，在 **Projects** 里选择 **Configure Pins**。
+
+保存后，插件会把角色到引脚的映射写进 `boards/<target>.overlay`，并更新 `snapshot.json`。I2C 传感器这类固定总线模块会高亮显示接线位置，作为只读参考。
+
 ## 4. 常用 CLI 命令
 
 列出开发板和示例：
@@ -289,11 +305,13 @@ ESP32 系列查看串口日志可以运行：
 seeed-zephyr monitor xiao_esp32c6
 ```
 
-非 Espressif 开发板会使用 Zephyr venv 中的 pyserial miniterm 打开串口：
+非 Espressif 开发板会使用 Zephyr venv 中的可重连串口监视器打开串口：
 
 ```sh
 seeed-zephyr monitor xiao_samd21
 ```
+
+设备从 USB 掉线时（例如复位或重新插拔），监视器不会退出，而是保持等待并自动重连。按 `Ctrl+]` 退出。
 
 如果省略 `--port`，CLI 会尝试自动检测一个 USB 串口设备。
 

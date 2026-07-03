@@ -2,7 +2,7 @@
   "name": "seeed-xiao-zephyr-assistant",
   "displayName": "Seeed XIAO Zephyr Assistant",
   "description": "Discover and create XIAO + Grove Zephyr examples, then hand build/flash to Zephyr tooling.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "seeed-studio",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -196,6 +196,12 @@
         "command": "seeedZephyr.projectMonitor",
         "title": "Monitor Project",
         "category": "Seeed XIAO"
+      },
+      {
+        "command": "seeedZephyr.configurePins",
+        "title": "Configure Pins",
+        "category": "Seeed XIAO",
+        "icon": "$(symbol-parameter)"
       }
     ],
     "menus": {
@@ -209,6 +215,7 @@
         { "command": "seeedZephyr.openGenerated" },
         { "command": "seeedZephyr.selectProjectBoard" },
         { "command": "seeedZephyr.selectProjectPort" },
+        { "command": "seeedZephyr.configurePins" },
         { "command": "seeedZephyr.projectFlashMonitor" },
         { "command": "seeedZephyr.setupEnvironment" },
         { "command": "seeedZephyr.useExistingCli" },

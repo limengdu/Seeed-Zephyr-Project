@@ -3,6 +3,7 @@ import * as path from "path";
 import * as vscode from "vscode";
 import { Board, Example, ExpansionBoard, GroveExample, GroveModule } from "../model/types";
 import { escapeHtml, renderHtml } from "./webviewHtml";
+import { SEEED_PANEL_COLUMN } from "./panelColumn";
 
 // A detail view target chosen from the catalog tree.
 // 从目录树里选中的详情查看目标。
@@ -22,13 +23,13 @@ export class DetailPanel {
   static show(target: DetailTarget): void {
     if (DetailPanel.current) {
       DetailPanel.current.update(target);
-      DetailPanel.current.panel.reveal(vscode.ViewColumn.Beside);
+      DetailPanel.current.panel.reveal(SEEED_PANEL_COLUMN, true);
       return;
     }
     const panel = vscode.window.createWebviewPanel(
       "seeedZephyrDetail",
       "XIAO Detail",
-      vscode.ViewColumn.Beside,
+      SEEED_PANEL_COLUMN,
       { enableScripts: false, retainContextWhenHidden: true },
     );
     DetailPanel.current = new DetailPanel(panel);

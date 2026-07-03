@@ -55,21 +55,21 @@ pins:
 layout:
   orientation: usb-top
   left:
-    - 5V
-    - GND
-    - 3V3
     - D0
     - D1
     - D2
     - D3
+    - D4
+    - D5
+    - D6
   right:
+    - 5V
+    - GND
+    - 3V3
     - D10
     - D9
     - D8
     - D7
-    - D6
-    - D5
-    - D4
 buses:
   i2c:
     sda: D4

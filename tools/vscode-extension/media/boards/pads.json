@@ -1,0 +1,46 @@
+{
+  "xiao_esp32c3": {
+    "top": 0.2358,
+    "bottom": 0.8505
+  },
+  "xiao_esp32c5": {
+    "top": 0.228,
+    "bottom": 0.8391
+  },
+  "xiao_esp32c6": {
+    "top": 0.1829,
+    "bottom": 0.8792
+  },
+  "xiao_esp32s3": {
+    "top": 0.1763,
+    "bottom": 0.8278
+  },
+  "xiao_mg24": {
+    "top": 0.2216,
+    "bottom": 0.8516
+  },
+  "xiao_nrf52840": {
+    "top": 0.2051,
+    "bottom": 0.8462
+  },
+  "xiao_nrf54l15": {
+    "top": 0.2015,
+    "bottom": 0.8755
+  },
+  "xiao_ra4m1": {
+    "top": 0.2107,
+    "bottom": 0.8602
+  },
+  "xiao_rp2040": {
+    "top": 0.1916,
+    "bottom": 0.8563
+  },
+  "xiao_rp2350": {
+    "top": 0.1973,
+    "bottom": 0.8582
+  },
+  "xiao_samd21": {
+    "top": 0.1959,
+    "bottom": 0.8633
+  }
+}
