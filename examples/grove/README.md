@@ -43,7 +43,16 @@ expected_behavior: Prints CO2, temperature, and humidity every five seconds.
 
 For `pin_policy: selectable` modules (GPIO/analog), add a `pins:` list of roles with
 `default` and `allowed` pin sets. Fixed-bus modules (I2C/SPI/UART) need no pin selection.
-Use an inline list for `allowed`, for example `allowed: [D0, D1, D2]`.
+Use an inline list for `allowed`, for example `allowed: [D0, D1, D2]`. Board-specific
+selectable pin limits use `excluded_on_<board_id>` inside the role entry.
+
+```yaml
+pins:
+  - role: signal
+    default: D2
+    allowed: [D0, D1, D2, D3]
+    excluded_on_xiao_esp32c6: [D0]
+```
 
 ### Building
 
@@ -103,7 +112,16 @@ expected_behavior: Prints CO2, temperature, and humidity every five seconds.
 
 `pin_policy: selectable` 的模块（GPIO/模拟）需额外声明 `pins:` 角色列表，含 `default` 与
 `allowed` 引脚集合；fixed-bus 模块（I2C/SPI/UART）无需选引脚。
-`allowed` 使用行内列表，例如 `allowed: [D0, D1, D2]`。
+`allowed` 使用行内列表，例如 `allowed: [D0, D1, D2]`。按板限制可选引脚时，
+在对应角色内使用 `excluded_on_<board_id>`。
+
+```yaml
+pins:
+  - role: signal
+    default: D2
+    allowed: [D0, D1, D2, D3]
+    excluded_on_xiao_esp32c6: [D0]
+```
 
 ### 构建
 

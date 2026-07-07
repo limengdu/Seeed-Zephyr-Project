@@ -95,6 +95,7 @@ VALID_EXAMPLE_KINDS = {"board", "grove"}
 VALID_PIN_POLICIES = {"fixed-bus", "selectable"}
 VALID_CONNECTORS = {"xiao"}
 GROVE_PIN_REQUIRED_KEYS = {"role", "default", "allowed"}
+GROVE_PIN_BOARD_EXCLUSION_RE = re.compile(r"^excluded_on_([a-z0-9_]+)$")
 
 FORM_FACTOR_REQUIRED_KEYS = {
     "id",
@@ -569,14 +570,71 @@ def validate_grove_pins(result: ValidationResult, document: dict[str, Any]) -> N
         if not isinstance(pin, dict):
             result.fail(f"pins[{index}] must be a mapping")
             continue
-        validate_exact_keys(result, pin, GROVE_PIN_REQUIRED_KEYS)
+        validate_grove_pin_keys(result, pin)
         validate_non_empty_string(result, pin, "role")
         validate_non_empty_string(result, pin, "default")
         validate_string_list(result, pin, "allowed")
+        validate_grove_pin_board_exclusions(result, pin, index)
         if isinstance(pin.get("role"), str):
             if pin["role"] in roles:
                 result.fail(f"pins[{index}] duplicate role '{pin['role']}'")
             roles.add(pin["role"])
+
+
+def validate_grove_pin_keys(result: ValidationResult, pin: dict[str, Any]) -> None:
+    actual_keys = set(pin)
+    missing = sorted(GROVE_PIN_REQUIRED_KEYS - actual_keys)
+    extra = sorted(
+        key
+        for key in actual_keys - GROVE_PIN_REQUIRED_KEYS
+        if GROVE_PIN_BOARD_EXCLUSION_RE.fullmatch(key) is None
+    )
+
+    if missing:
+        result.fail(f"missing required keys: {', '.join(missing)}")
+    if extra:
+        result.fail(f"extra keys are not allowed: {', '.join(extra)}")
+
+
+def validate_grove_pin_board_exclusions(
+    result: ValidationResult, pin: dict[str, Any], index: int
+) -> None:
+    # Board-specific exclusions keep selectable pins valid for most boards while
+    # removing pins with known board-level conflicts.
+    # 按板排除用于保留大多数板子的可选引脚,同时移除存在板级冲突的引脚。
+    board_ids = known_board_ids_for_example(result)
+    allowed = pin.get("allowed")
+    allowed_set = set(allowed) if is_string_list(allowed) else set()
+
+    for key, value in pin.items():
+        match = GROVE_PIN_BOARD_EXCLUSION_RE.fullmatch(key)
+        if match is None:
+            continue
+
+        board_id = match.group(1)
+        if board_id not in board_ids:
+            result.fail(f"pins[{index}].{key} references unknown board '{board_id}'")
+
+        if not is_string_list(value):
+            result.fail(f"pins[{index}].{key} must be a list of strings")
+            continue
+
+        if not allowed_set:
+            continue
+        invalid_pins = sorted(set(value) - allowed_set)
+        if invalid_pins:
+            result.fail(
+                f"pins[{index}].{key} contains pins outside allowed: {', '.join(invalid_pins)}"
+            )
+
+
+def known_board_ids_for_example(result: ValidationResult) -> set[str]:
+    repo_root = result.path.parent.parent.parent.parent.parent
+    return {path.stem for path in (repo_root / "metadata" / "boards").glob("*.yaml")}
+
+
+def is_string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
 def validate_status_metadata(result: ValidationResult, document: dict[str, Any]) -> None:
