@@ -1,14 +1,15 @@
 /*
- * SAMD21 uses firmware-provided USB CDC ACM for console.
+ * RA4M1 uses firmware-provided USB CDC ACM for console and 1200-baud DFU entry.
  * The default Grove signal pin is D2; create/set-pins can override it.
  *
- * SAMD21 使用固件提供的 USB CDC ACM 作为控制台。
+ * RA4M1 使用固件提供的 USB CDC ACM 作为控制台和 1200 baud DFU 入口。
  * Grove 信号默认引脚为 D2；create/set-pins 可覆盖它。
  */
 
 / {
 	chosen {
 		zephyr,console = &cdc_acm_uart0;
+		zephyr,shell-uart = &cdc_acm_uart0;
 	};
 	zephyr,user {
 		ultrasonic-gpios = <&xiao_d 2 GPIO_ACTIVE_HIGH>;
@@ -18,6 +19,5 @@
 &zephyr_udc0 {
 	cdc_acm_uart0: cdc_acm_uart0 {
 		compatible = "zephyr,cdc-acm-uart";
-		label = "CDC_ACM_0";
 	};
 };

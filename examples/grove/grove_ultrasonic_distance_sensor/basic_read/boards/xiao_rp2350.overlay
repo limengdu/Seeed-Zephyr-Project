@@ -1,10 +1,12 @@
 /*
- * SAMD21 uses firmware-provided USB CDC ACM for console.
+ * RP2350 uses retained boot mode plus USB CDC ACM for console and UF2 entry.
  * The default Grove signal pin is D2; create/set-pins can override it.
  *
- * SAMD21 使用固件提供的 USB CDC ACM 作为控制台。
+ * RP2350 使用 retained boot mode 和 USB CDC ACM 作为控制台与 UF2 入口。
  * Grove 信号默认引脚为 D2；create/set-pins 可覆盖它。
  */
+
+#include <vendor/raspberrypi/rp2350-boot-mode-retention.dtsi>
 
 / {
 	chosen {
@@ -18,6 +20,5 @@
 &zephyr_udc0 {
 	cdc_acm_uart0: cdc_acm_uart0 {
 		compatible = "zephyr,cdc-acm-uart";
-		label = "CDC_ACM_0";
 	};
 };

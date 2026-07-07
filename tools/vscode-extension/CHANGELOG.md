@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0
+
+- Add hardware-tested Grove ultrasonic support across supported XIAO boards.
+- Improve Grove project creation, pin configuration, flashing, and serial monitoring flows.
+- Display board-specific chip pin labels in the pin configurator.
+
 ## 0.2.1
 
 - Keep environment setup, CLI selection, CLI version selection, and repository selection actions available from the Catalog title bar More Actions menu after setup.

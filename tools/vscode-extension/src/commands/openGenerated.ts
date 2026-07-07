@@ -39,17 +39,39 @@ function isKnownProjectFolder(dir: string): boolean {
   );
 }
 
-async function openProjectFolder(dir: string): Promise<void> {
-  // Add the project to the current window (no new OS window, keeps open tabs).
-  // 把项目加入当前窗口（不新开系统窗口，保留已打开的标签）。
-  const inserted = vscode.workspace.updateWorkspaceFolders(
-    vscode.workspace.workspaceFolders?.length ?? 0,
-    0,
-    { uri: vscode.Uri.file(dir) },
-  );
-  if (!inserted) {
-    void vscode.window.showErrorMessage("Project folder could not be added to this window.");
-    return;
+export async function openProjectFolder(dir: string): Promise<boolean> {
+  // Prefer adding the project to the current multi-root window, then reuse this
+  // window as a fallback when VS Code refuses a workspace-folder edit.
+  // 优先把项目加入当前多根工作区；当 VS Code 拒绝修改工作区时，复用当前窗口打开项目。
+  const uri = vscode.Uri.file(dir);
+  const name = path.basename(dir);
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  const alreadyOpen = folders.some((folder) => samePath(folder.uri.fsPath, dir));
+  if (alreadyOpen) {
+    void vscode.window.showInformationMessage(`${name} is already open in this window.`);
+    return true;
   }
-  void vscode.window.showInformationMessage(`Added ${path.basename(dir)} to this window.`);
+
+  const inserted = vscode.workspace.updateWorkspaceFolders(
+    folders.length,
+    0,
+    { uri },
+  );
+  if (inserted) {
+    void vscode.window.showInformationMessage(`Added ${name} to this window.`);
+    return true;
+  }
+
+  try {
+    await vscode.commands.executeCommand("vscode.openFolder", uri, { forceReuseWindow: true });
+    return true;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    void vscode.window.showErrorMessage(`Project folder could not be opened in this window: ${detail}`);
+    return false;
+  }
+}
+
+function samePath(left: string, right: string): boolean {
+  return path.resolve(left) === path.resolve(right);
 }

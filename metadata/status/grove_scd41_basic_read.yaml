@@ -4,7 +4,8 @@ zephyr_version: v4.4.0
 generated_on: 2026-07-02
 boards:
   - board_id: xiao_esp32c3
-    status: pending
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-07-07)
   - board_id: xiao_esp32c5
     status: excluded
     reason: listed in excluded_boards
@@ -12,20 +13,26 @@ boards:
     status: build-verified
     evidence: seeed-zephyr build (local, 2026-07-02)
   - board_id: xiao_esp32s3
-    status: pending
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-07-07)
   - board_id: xiao_mg24
-    status: pending
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-07-07)
   - board_id: xiao_nrf52840
     status: build-verified
     evidence: seeed-zephyr build (local, 2026-07-02)
   - board_id: xiao_nrf54l15
-    status: pending
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-07-07)
   - board_id: xiao_ra4m1
-    status: pending
+    status: excluded
+    reason: xiao_i2c connector label unavailable in Zephyr v4.4.0 board metadata
   - board_id: xiao_rp2040
     status: build-verified
     evidence: seeed-zephyr build (local, 2026-07-02)
   - board_id: xiao_rp2350
-    status: pending
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-07-07)
   - board_id: xiao_samd21
-    status: pending
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-07-07)

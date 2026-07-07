@@ -21,6 +21,7 @@ import {
 } from "./commands/environmentCommands";
 import {
   getEffectiveBoard,
+  getEffectivePort,
   resolveProjectPort,
   selectProjectBoard,
   selectProjectPort,
@@ -139,11 +140,8 @@ async function runProjectActionCmd(
   if (!board) {
     return;
   }
-  const needsPort = name === "flash" || name === "monitor";
-  const port = needsPort
-    ? await resolveProjectPort(context, project, projectRepoRoot(catalog))
-    : undefined;
-  if (needsPort && !port) {
+  const port = await resolveProjectActionPort(context, project, projectRepoRoot(catalog), name);
+  if (port === undefined && name === "monitor") {
     return;
   }
   projects.refresh();
@@ -167,6 +165,22 @@ async function resolveProjectBoard(
   }
   return selectProjectBoard(context, project, catalog.getCatalog());
 }
+
+async function resolveProjectActionPort(
+  context: vscode.ExtensionContext,
+  project: ProjectInfo,
+  repoRoot: string | undefined,
+  name: Action,
+): Promise<string | undefined> {
+  if (name === "monitor") {
+    return resolveProjectPort(context, project, repoRoot);
+  }
+  if (name === "flash") {
+    return getEffectivePort(context, project);
+  }
+  return undefined;
+}
+
 
 async function selectProjectBoardCmd(
   catalog: CatalogTreeProvider,
@@ -208,7 +222,7 @@ async function configurePinsCmd(
   if (!project) {
     return;
   }
-  await configurePins(projectRepoRoot(catalog), context, project, () => {
+  await configurePins(projectRepoRoot(catalog), context, project, catalog.getCatalog(), () => {
     projects.refresh();
     statusBar.refresh();
   });

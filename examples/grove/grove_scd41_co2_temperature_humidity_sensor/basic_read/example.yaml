@@ -9,4 +9,5 @@ pin_policy: fixed-bus
 # xiao_esp32c5 在 v4.4.0 基线中没有上游 Zephyr 板 target。
 excluded_boards:
   - xiao_esp32c5
+  - xiao_ra4m1
 expected_behavior: Prints CO2 (ppm), temperature (C), and relative humidity (%) every five seconds.

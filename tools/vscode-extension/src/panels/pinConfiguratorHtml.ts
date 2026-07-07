@@ -129,18 +129,72 @@ function canAssign(pin) {
   return allowed.has(pin.id) && !["power", "reserved", "bus", "incompatible"].includes(pin.status);
 }
 
+function twoDigit(value) {
+  return String(Number(value)).padStart(2, "0");
+}
+
+function formatChipPin(chipPin) {
+  if (!chipPin) {
+    return "";
+  }
+  const normalized = String(chipPin).trim().toLowerCase();
+  const match = /^([a-z]+)([a-z0-9]*)\\.(\\d+)$/.exec(normalized);
+  if (!match) {
+    return chipPin;
+  }
+
+  const controller = match[1] + match[2];
+  const suffix = match[2];
+  const pin = Number(match[3]);
+  const boardId = state.data.board_id;
+
+  if ((boardId.startsWith("xiao_esp") || boardId.startsWith("xiao_rp")) && controller.startsWith("gpio")) {
+    return "GPIO" + pin;
+  }
+  if (boardId.startsWith("xiao_nrf") && controller.startsWith("gpio")) {
+    const port = suffix || "0";
+    return "P" + Number(port) + "." + twoDigit(pin);
+  }
+  if (/^port[a-z]$/.test(controller)) {
+    return "P" + controller.slice(-1).toUpperCase() + twoDigit(pin);
+  }
+  if (controller.startsWith("port") && suffix) {
+    return "P" + suffix.toUpperCase() + twoDigit(pin);
+  }
+  if (controller.startsWith("ioport")) {
+    const port = suffix || "0";
+    return "P" + Number(port) + twoDigit(pin);
+  }
+  if (/^gpio[a-z]$/.test(controller)) {
+    return "P" + controller.slice(-1).toUpperCase() + twoDigit(pin);
+  }
+  return chipPin;
+}
+
+function pinMetaText(pin, assignedRole, chipLabel) {
+  const primary = assignedRole ?? pin.reason ?? pin.rail ?? (chipLabel ? "" : pin.status);
+  return [primary, chipLabel].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index).join(" · ");
+}
+
 function makePin(pin, side) {
   const assignedRole = assignedRoleForPin(pin.id);
+  const chipLabel = formatChipPin(pin.chip_pin);
   const button = document.createElement("button");
   button.className = ["pin", side, pin.status, assignedRole ? "assigned" : "",
     pin.status === "default" ? "is-default" : "", canAssign(pin) ? "clickable" : ""]
     .filter(Boolean)
     .join(" ");
   button.disabled = !canAssign(pin);
-  button.title = [pin.id, pin.chip_pin ? "chip " + pin.chip_pin : "", pin.reason ?? "", assignedRole ? "assigned to " + assignedRole : ""]
+  button.title = [
+    pin.id,
+    chipLabel ? "chip " + chipLabel : "",
+    pin.chip_pin && chipLabel !== pin.chip_pin ? "Zephyr " + pin.chip_pin : "",
+    pin.reason ?? "",
+    assignedRole ? "assigned to " + assignedRole : "",
+  ]
     .filter(Boolean)
     .join(" · ");
-  const meta = assignedRole ?? pin.reason ?? pin.chip_pin ?? pin.rail ?? pin.status;
+  const meta = pinMetaText(pin, assignedRole, chipLabel);
   const pinId = document.createElement("span");
   pinId.className = "pin-id";
   pinId.textContent = pin.id;

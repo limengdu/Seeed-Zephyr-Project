@@ -6,6 +6,7 @@ import { locateCli } from "../cli/cliLocator";
 import { runCapture } from "../cli/cliBridge";
 import { PinAssignments, PinDiagramData } from "../panels/pinConfiguratorHtml";
 import { PinConfiguratorPanel } from "../panels/pinConfiguratorPanel";
+import { openProjectFolder } from "./openGenerated";
 
 export type CreatePreset =
   | { board: Board; example?: Example }
@@ -182,16 +183,7 @@ async function runCreate(repoRoot: string, cli: Cli, spec: CreateSpec): Promise<
 
   writeProjectSettings(output, repoRoot);
 
-  // Add the project to the current window (PlatformIO-style). Adding a folder never
-  // spawns a new OS window and keeps the open tabs (catalog, pin configurator) in place.
-  // 把项目加入当前窗口（PlatformIO 风格）。加入文件夹不会新开系统窗口，也保留已打开的标签。
-  vscode.workspace.updateWorkspaceFolders(
-    vscode.workspace.workspaceFolders?.length ?? 0,
-    0,
-    { uri: vscode.Uri.file(output) },
-  );
-  void vscode.window.showInformationMessage(`Added ${name} to this window.`);
-  return true;
+  return openProjectFolder(output);
 }
 
 type SourceKind = "grove" | "board" | "blank";

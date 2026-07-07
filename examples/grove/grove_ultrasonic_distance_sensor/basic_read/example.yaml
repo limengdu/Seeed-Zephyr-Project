@@ -12,4 +12,5 @@ pins:
   - role: signal
     default: D2
     allowed: [D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10]
+    excluded_on_xiao_esp32c6: [D0]
 expected_behavior: Prints distance in centimeters once per second from the Grove Ultrasonic Ranger SIG pin.

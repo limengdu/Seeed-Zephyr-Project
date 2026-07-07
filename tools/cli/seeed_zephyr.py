@@ -124,6 +124,10 @@ RA4M1_DFU_WAIT_SECONDS = 10
 RA4M1_DFU_POLL_SECONDS = 0.5
 RA4M1_ROM_FLASH_SCRIPT = Path(__file__).resolve().parent / "ra4m1_rom_flash.py"
 RA4M1_DFU_BOOTLOADER_BIN = Path(__file__).resolve().parent / "bootloaders" / "ra4m1_dfu.bin"
+POST_FLASH_RESET_TIP = (
+    "Tip: After flashing, press RESET once if the board does not start or "
+    "the serial monitor shows no output."
+)
 # Reconnecting serial monitor helper (keeps waiting when the device drops).
 # 可重连的串口监视器助手（设备掉线时保持等待）。
 SERIAL_MONITOR_SCRIPT = Path(__file__).resolve().parent / "serial_monitor.py"
@@ -892,6 +896,22 @@ def board_pin_map(board_id: str) -> dict[str, str]:
     return result
 
 
+def role_excluded_pins(spec: dict[str, object], board_id: str) -> dict[str, str]:
+    # Returns pins that this role excludes for the selected board.
+    # 返回当前角色在所选板子上排除的引脚。
+    raw = spec.get(f"excluded_on_{board_id}")
+    if not isinstance(raw, list):
+        return {}
+    return {str(pin): "excluded-by-example" for pin in raw}
+
+
+def available_pins_for_role(spec: dict[str, object], board_id: str) -> list[str]:
+    allowed = [str(p) for p in (spec.get("allowed") or [])]
+    reserved = board_reserved_pins(board_id)
+    excluded = role_excluded_pins(spec, board_id)
+    return [pin for pin in allowed if pin not in reserved and pin not in excluded]
+
+
 def resolve_pin_assignment(
     example: dict[str, object], board_id: str, pins_arg: list[str] | None
 ) -> dict[str, str]:
@@ -936,14 +956,21 @@ def resolve_pin_assignment(
             raise CliError(f"Unknown pin role '{role}'. Roles: {', '.join(sorted(roles))}.")
         spec = roles[role]
         allowed = [str(p) for p in (spec.get("allowed") or [])]
+        excluded = role_excluded_pins(spec, board_id)
         if pin not in allowed:
             raise CliError(
                 f"Pin '{pin}' is not allowed for role '{role}'. Allowed: {', '.join(allowed)}."
             )
         if pin in reserved:
-            available = [p for p in allowed if p not in reserved]
+            available = available_pins_for_role(spec, board_id)
             raise CliError(
                 f"Pin '{pin}' is reserved on {board_id} ({reserved[pin]}). "
+                f"Available for '{role}': {', '.join(available)}."
+            )
+        if pin in excluded:
+            available = available_pins_for_role(spec, board_id)
+            raise CliError(
+                f"Pin '{pin}' is excluded for role '{role}' on {board_id}. "
                 f"Available for '{role}': {', '.join(available)}."
             )
         assignments[role] = pin
@@ -952,13 +979,19 @@ def resolve_pin_assignment(
         if role in assignments:
             continue
         default = str(spec.get("default", ""))
-        allowed = [str(p) for p in (spec.get("allowed") or [])]
+        excluded = role_excluded_pins(spec, board_id)
         if default in reserved:
-            available = [p for p in allowed if p not in reserved]
+            available = available_pins_for_role(spec, board_id)
             raise CliError(
                 f"Default pin '{default}' for role '{role}' is reserved on {board_id} "
                 f"({reserved[default]}). Specify --pin {role}=<Dn>. "
                 f"Available: {', '.join(available)}."
+            )
+        if default in excluded:
+            available = available_pins_for_role(spec, board_id)
+            raise CliError(
+                f"Default pin '{default}' for role '{role}' is excluded on {board_id}. "
+                f"Specify --pin {role}=<Dn>. Available: {', '.join(available)}."
             )
         assignments[role] = default
     return assignments
@@ -1130,6 +1163,13 @@ def run_command_capture(
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     )
+
+
+def print_captured_output(output: str) -> None:
+    if not output:
+        return
+    end = "" if output.endswith("\n") else "\n"
+    print(output, end=end, flush=True)
 
 
 def require_path_command(command: str, install_hint: str) -> None:
@@ -1697,6 +1737,17 @@ def prepare_ra4m1_dfu_bootloader(
     return selected_port
 
 
+def ra4m1_dfu_reset_timeout_after_download(result: subprocess.CompletedProcess[str]) -> bool:
+    output = result.stdout.lower()
+    return (
+        result.returncode != 0
+        and "download done" in output
+        and "done!" in output
+        and "error resetting after download" in output
+        and "libusb_error_timeout" in output
+    )
+
+
 def run_ra4m1_dfu_flash(port: str | None = None) -> str | None:
     dfu_util = dfu_util_path()
     if dfu_util is None:
@@ -1704,21 +1755,25 @@ def run_ra4m1_dfu_flash(port: str | None = None) -> str | None:
 
     image = prepare_ra4m1_dfu_image()
     selected_port = prepare_ra4m1_dfu_bootloader(port)
-    run_command(
-        [
-            str(dfu_util),
-            "--device",
-            RA4M1_DFU_VID_PID,
-            "-D",
-            str(image),
-            "-a",
-            RA4M1_DFU_ALT,
-            "-R",
-        ],
-        cwd=zephyr_workspace(),
-        env=west_command_env(),
-    )
-    return selected_port
+    command = [
+        str(dfu_util),
+        "--device",
+        RA4M1_DFU_VID_PID,
+        "-D",
+        str(image),
+        "-a",
+        RA4M1_DFU_ALT,
+        "-R",
+    ]
+    result = run_command_capture(command, cwd=zephyr_workspace(), env=west_command_env())
+    print_captured_output(result.stdout)
+    if result.returncode == 0:
+        return selected_port
+    if ra4m1_dfu_reset_timeout_after_download(result):
+        print("RA4M1 DFU download completed; waiting for the runtime serial port.", flush=True)
+        return selected_port
+
+    raise CliError(f"Command failed with status {result.returncode}: {' '.join(command)}")
 
 
 def uses_uf2_runner(board: dict[str, str]) -> bool:
@@ -1947,6 +2002,7 @@ def run_west_build(
     target = example.get("zephyr_target") or board["target"]
     example_dir = Path(str(example["path"]))
     display_name = _display_path(example_dir)
+    ensure_grove_target_board_files(example_dir, board_id)
     ensure_chip_blobs(board)
     print(f"Building {display_name} for {target}...", flush=True)
     command = ["build", "-p", "always", "-b", target]
@@ -2488,6 +2544,7 @@ def cmd_show_pins(args: argparse.Namespace) -> None:
     # 由示例默认值解析当前角色分配(此处不带 --pin)。
     roles: list[dict[str, object]] = []
     allowed_by_pin: dict[str, str] = {}
+    excluded_by_pin: dict[str, str] = {}
     assigned_by_pin: dict[str, str] = {}
     if pin_policy == "selectable" and isinstance(declared_pins, list):
         for spec in declared_pins:
@@ -2497,17 +2554,21 @@ def cmd_show_pins(args: argparse.Namespace) -> None:
             default = str(spec.get("default", "")).upper()
             allowed = spec.get("allowed")
             allowed_list = [str(p).upper() for p in allowed] if isinstance(allowed, list) else []
+            excluded = {pin.upper(): reason for pin, reason in role_excluded_pins(spec, args.board_id).items()}
+            effective_allowed = [p for p in allowed_list if p not in excluded]
             roles.append(
                 {
                     "role": role,
                     "assigned": default,
                     "default": default,
-                    "allowed": allowed_list,
+                    "allowed": effective_allowed,
                 }
             )
             if default:
                 assigned_by_pin[default] = role
-            for p in allowed_list:
+            for p, reason in excluded.items():
+                excluded_by_pin[p] = reason
+            for p in effective_allowed:
                 if p not in allowed_by_pin:
                     allowed_by_pin[p] = role
 
@@ -2545,6 +2606,9 @@ def cmd_show_pins(args: argparse.Namespace) -> None:
             if pid in assigned_by_pin:
                 row["status"] = "default"
                 row["role"] = assigned_by_pin[pid]
+            elif pid in excluded_by_pin:
+                row["status"] = "incompatible"
+                row["reason"] = excluded_by_pin[pid]
             elif pid in allowed_by_pin:
                 if interface == "analog" and pid not in analog:
                     row["status"] = "incompatible"
@@ -2629,8 +2693,77 @@ def _board_overlay_name(board_id: str) -> str:
     return board["target"].replace("/", "_")
 
 
+def _board_source_file_stems(board_id: str) -> list[str]:
+    # Returns legacy board file stems that may need to be copied to the Zephyr target stem.
+    # 返回可能需要复制到 Zephyr target stem 的旧板级文件名 stem。
+    board = require_board(board_id)
+    target_root = board["target"].split("/", 1)[0]
+    target_stem = _board_overlay_name(board_id)
+    stems: list[str] = []
+    for stem in (target_root, board["id"]):
+        if stem and stem != target_stem and stem not in stems:
+            stems.append(stem)
+    return stems
+
+
+def ensure_target_board_files(app_dir: Path, board_id: str) -> None:
+    # Copies legacy boards/<stem> files to the Zephyr target stem when needed.
+    # 在需要时把旧的 boards/<stem> 文件复制为 Zephyr target stem 文件。
+    boards_dir = app_dir / "boards"
+    if not boards_dir.is_dir():
+        return
+
+    target_stem = _board_overlay_name(board_id)
+    for suffix in (".conf", ".overlay"):
+        target = boards_dir / f"{target_stem}{suffix}"
+        if target.is_file():
+            continue
+        for stem in _board_source_file_stems(board_id):
+            source = boards_dir / f"{stem}{suffix}"
+            if source.is_file():
+                shutil.copy2(source, target)
+                break
+
+    migrate_baked_pin_block_to_board_overlay(app_dir, board_id)
+
+
+def ensure_grove_target_board_files(app_dir: Path, board_id: str) -> None:
+    # Applies target-stem board file materialization only to Grove apps.
+    # 仅对 Grove 应用补齐 target-stem 板级文件。
+    example_file = app_dir / "example.yaml"
+    if not example_file.is_file():
+        return
+    example = read_structured_yaml(example_file)
+    if example.get("kind") != "grove":
+        return
+
+    ensure_target_board_files(app_dir, board_id)
+
+    snapshot_file = app_dir / "snapshot.json"
+    board_overlay = app_dir / "boards" / f"{_board_overlay_name(board_id)}.overlay"
+    if (
+        snapshot_file.is_file()
+        and example.get("pin_policy") == "selectable"
+        and not board_overlay.is_file()
+    ):
+        assignments = resolve_pin_assignment(example, board_id, None)
+        if assignments:
+            bake_pin_overlay(app_dir, app_dir, board_id, assignments)
+    sanitize_baked_pin_overlay(app_dir, board_id, example)
+
+
 _PIN_BLOCK_BEGIN = "/* seeed-zephyr: baked pin selection (regenerated by create/set-pins) */"
 _PIN_BLOCK_END = "/* seeed-zephyr: end baked pin selection */"
+
+
+def _baked_pin_overlay_text(text: str) -> str | None:
+    begin = text.find(_PIN_BLOCK_BEGIN)
+    if begin == -1:
+        return None
+    end = text.find(_PIN_BLOCK_END, begin)
+    if end == -1:
+        return text[begin + len(_PIN_BLOCK_BEGIN):].strip()
+    return text[begin + len(_PIN_BLOCK_BEGIN):end].strip()
 
 
 def _strip_baked_pin_block(text: str) -> str:
@@ -2645,16 +2778,120 @@ def _strip_baked_pin_block(text: str) -> str:
     return text[:begin] + text[end + len(_PIN_BLOCK_END):]
 
 
+def _overlay_property_names(overlay_text: str) -> list[str]:
+    return re.findall(r"^\s*([A-Za-z0-9_,+-]+)\s*=", overlay_text, flags=re.MULTILINE)
+
+
+def _strip_overlay_properties(text: str, properties: list[str]) -> str:
+    # Removes default properties that a regenerated pin block replaces.
+    # 移除会被重新生成的引脚块替换的默认属性。
+    for prop in properties:
+        text = re.sub(
+            rf"^\s*{re.escape(prop)}\s*=\s*<[^;]+>;\n?",
+            "",
+            text,
+            flags=re.MULTILINE,
+        )
+    return text
+
+
+def migrate_baked_pin_block_to_board_overlay(app_dir: Path, board_id: str) -> None:
+    boards_dir = app_dir / "boards"
+    app_overlay = app_dir / "app.overlay"
+    if not boards_dir.is_dir() or not app_overlay.is_file():
+        return
+
+    app_text = app_overlay.read_text(encoding="utf-8")
+    rendered_overlay = _baked_pin_overlay_text(app_text)
+    if not rendered_overlay:
+        return
+
+    owner_board = board_id
+    snapshot_file = app_dir / "snapshot.json"
+    if snapshot_file.is_file():
+        try:
+            snapshot = json.loads(snapshot_file.read_text(encoding="utf-8"))
+            snapshot_board = snapshot.get("board") if isinstance(snapshot, dict) else None
+            if isinstance(snapshot_board, str):
+                require_board(snapshot_board)
+                owner_board = snapshot_board
+        except (CliError, json.JSONDecodeError):
+            owner_board = board_id
+
+    board_overlay = boards_dir / f"{_board_overlay_name(owner_board)}.overlay"
+    pin_block = f"{_PIN_BLOCK_BEGIN}\n{rendered_overlay}\n{_PIN_BLOCK_END}\n"
+    base = _strip_baked_pin_block(
+        board_overlay.read_text(encoding="utf-8") if board_overlay.is_file() else ""
+    )
+    base = _strip_overlay_properties(base, _overlay_property_names(rendered_overlay)).rstrip()
+    board_overlay.write_text(f"{base}\n\n{pin_block}" if base else pin_block, encoding="utf-8")
+
+    app_base = _strip_baked_pin_block(app_text).strip()
+    app_overlay.write_text((app_base + "\n") if app_base else "", encoding="utf-8")
+
+
+def _template_role_properties(template_text: str, example: dict[str, object]) -> dict[str, str]:
+    properties: dict[str, str] = {}
+    pins = example.get("pins")
+    if not isinstance(pins, list):
+        return properties
+    for spec in pins:
+        if not isinstance(spec, dict) or not spec.get("role"):
+            continue
+        role = str(spec["role"])
+        placeholder = f"@PIN_{role.upper()}@"
+        pattern = re.compile(
+            rf"([A-Za-z0-9_,+-]+)\s*=\s*<[^;]*{re.escape(placeholder)}[^;]*>;",
+            flags=re.MULTILINE,
+        )
+        match = pattern.search(template_text)
+        if match:
+            properties[role] = match.group(1)
+    return properties
+
+
+def read_baked_pin_assignments(app_dir: Path, overlay_file: Path, example: dict[str, object]) -> dict[str, str]:
+    template_file = app_dir / "pins" / "pin.overlay.in"
+    if not template_file.is_file() or not overlay_file.is_file():
+        return {}
+    rendered_overlay = _baked_pin_overlay_text(overlay_file.read_text(encoding="utf-8"))
+    if not rendered_overlay:
+        return {}
+    properties = _template_role_properties(template_file.read_text(encoding="utf-8"), example)
+    assignments: dict[str, str] = {}
+    for role, prop in properties.items():
+        pattern = re.compile(
+            rf"^\s*{re.escape(prop)}\s*=\s*<\s*&xiao_d\s+(\d+)\b[^;]*>;",
+            flags=re.MULTILINE,
+        )
+        matches = list(pattern.finditer(rendered_overlay))
+        if matches:
+            assignments[role] = f"D{int(matches[-1].group(1))}"
+    return assignments
+
+
+def sanitize_baked_pin_overlay(app_dir: Path, board_id: str, example: dict[str, object]) -> None:
+    if example.get("pin_policy") != "selectable":
+        return
+    overlay_file = app_dir / "boards" / f"{_board_overlay_name(board_id)}.overlay"
+    assignments = read_baked_pin_assignments(app_dir, overlay_file, example)
+    if not assignments:
+        return
+    pins = example.get("pins")
+    specs = {str(spec.get("role")): spec for spec in pins if isinstance(spec, dict) and spec.get("role")} if isinstance(pins, list) else {}
+    for role, pin in assignments.items():
+        spec = specs.get(role)
+        if isinstance(spec, dict) and pin not in available_pins_for_role(spec, board_id):
+            bake_pin_overlay(app_dir, app_dir, board_id, resolve_pin_assignment(example, board_id, None))
+            return
+
+
 def bake_pin_overlay(
     src_dir: Path, out_dir: Path, board_id: str, assignments: dict[str, str]
 ) -> Path:
-    # Bakes the selected pins into the devicetree overlay that Zephyr actually applies.
-    # Zephyr ignores app.overlay when boards/<target>.overlay exists, so the pin block is
-    # merged into that board overlay (alongside a board console) when present, and written
-    # to app.overlay otherwise. A marked block keeps re-baking idempotent.
-    # 将选定引脚烘焙进 Zephyr 真正会应用的 overlay。存在 boards/<target>.overlay 时 Zephyr
-    # 会忽略 app.overlay，因此把引脚块并入该板级 overlay（与板级控制台共存）；否则写入
-    # app.overlay。用标记块保证重复烘焙幂等。
+    # Bakes the selected pins into the current board devicetree overlay.
+    # The marked block keeps re-baking idempotent, and each board keeps its own pin block.
+    # 标记块保证重复烘焙幂等，并且每块板子保存自己的引脚块。
     template = src_dir / "pins" / "pin.overlay.in"
     if not template.is_file():
         raise CliError("Example declares selectable pins but has no pins/pin.overlay.in template.")
@@ -2666,17 +2903,23 @@ def bake_pin_overlay(
                 f"Pin overlay template is missing placeholder '{placeholder}' for role '{role}'."
             )
         text = text.replace(placeholder, str(pin_index(pin)))
-    pin_block = f"{_PIN_BLOCK_BEGIN}\n{text.strip()}\n{_PIN_BLOCK_END}\n"
+    rendered_overlay = text.strip()
+    pin_block = f"{_PIN_BLOCK_BEGIN}\n{rendered_overlay}\n{_PIN_BLOCK_END}\n"
+    rendered_properties = _overlay_property_names(rendered_overlay)
 
-    board_overlay = out_dir / "boards" / f"{_board_overlay_name(board_id)}.overlay"
-    if board_overlay.is_file():
-        base = _strip_baked_pin_block(board_overlay.read_text(encoding="utf-8")).rstrip()
-        board_overlay.write_text(f"{base}\n\n{pin_block}", encoding="utf-8")
-        return board_overlay
-
+    boards_dir = out_dir / "boards"
+    boards_dir.mkdir(parents=True, exist_ok=True)
+    board_overlay = boards_dir / f"{_board_overlay_name(board_id)}.overlay"
     app_overlay = out_dir / "app.overlay"
-    app_overlay.write_text(pin_block, encoding="utf-8")
-    return app_overlay
+    base = _strip_baked_pin_block(
+        board_overlay.read_text(encoding="utf-8") if board_overlay.is_file() else ""
+    )
+    base = _strip_overlay_properties(base, rendered_properties).rstrip()
+    board_overlay.write_text(f"{base}\n\n{pin_block}" if base else pin_block, encoding="utf-8")
+    if app_overlay.is_file():
+        app_base = _strip_baked_pin_block(app_overlay.read_text(encoding="utf-8")).strip()
+        app_overlay.write_text((app_base + "\n") if app_base else "", encoding="utf-8")
+    return board_overlay
 
 
 def load_app_grove_example(app_path: str) -> dict[str, object]:
@@ -2815,6 +3058,12 @@ def _cmd_create_board(args: argparse.Namespace) -> None:
     print(f"  seeed-zephyr build {args.board_id} --app {out_dir}", flush=True)
 
 
+def copy_grove_common_files(out_dir: Path) -> None:
+    common_dir = GROVE_EXAMPLES_DIR / "common"
+    if common_dir.is_dir():
+        shutil.copytree(common_dir, out_dir / "common", dirs_exist_ok=True)
+
+
 def _cmd_create_grove(args: argparse.Namespace) -> None:
     module_id, demo = parse_grove_ref(args.from_asset)
     if not demo:
@@ -2845,6 +3094,8 @@ def _cmd_create_grove(args: argparse.Namespace) -> None:
     out_dir = _prepare_output_dir(args.output, args.force)
     src_dir = Path(str(example["path"]))
     shutil.copytree(src_dir, out_dir, dirs_exist_ok=True)
+    copy_grove_common_files(out_dir)
+    ensure_target_board_files(out_dir, args.board_id)
 
     # Bake the chosen pins into the overlay Zephyr applies so the project is self-contained.
     # 把选定引脚固化进 Zephyr 会应用的 overlay,使生成的项目自包含。
@@ -2883,6 +3134,7 @@ def cmd_set_pins(args: argparse.Namespace) -> None:
         )
     assignments = resolve_pin_assignment(example, args.board_id, args.pins)
     app_dir = Path(str(example["path"]))
+    ensure_target_board_files(app_dir, args.board_id)
     overlay = bake_pin_overlay(app_dir, app_dir, args.board_id, assignments)
     update_snapshot_pins(app_dir, args.board_id, assignments)
     payload = {
@@ -2915,6 +3167,10 @@ def cmd_build(args: argparse.Namespace) -> None:
     run_west_build(args.board_id, example, extra_overlay=overlay)
 
 
+def print_post_flash_reset_tip() -> None:
+    print(POST_FLASH_RESET_TIP, flush=True)
+
+
 def cmd_flash(args: argparse.Namespace) -> None:
     example, overlay = resolve_build_example(args)
 
@@ -2935,6 +3191,8 @@ def cmd_flash(args: argparse.Namespace) -> None:
     else:
         run_west_build(args.board_id, example, extra_overlay=overlay)
         port = run_west_flash(args.board_id, port=args.port)
+
+    print_post_flash_reset_tip()
 
     if args.monitor:
         board = require_board(args.board_id)

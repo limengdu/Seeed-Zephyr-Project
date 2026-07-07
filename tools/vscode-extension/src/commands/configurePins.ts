@@ -6,6 +6,7 @@ import { runCapture } from "../cli/cliBridge";
 import { locateCli } from "../cli/cliLocator";
 import { getEffectiveBoard } from "./projectSettings";
 import type { ProjectInfo } from "../statusBar";
+import type { Catalog } from "../model/types";
 import {
   PinAssignments,
   PinDiagramData,
@@ -28,6 +29,7 @@ export async function configurePins(
   repoRoot: string | undefined,
   context: vscode.ExtensionContext,
   project: ProjectInfo,
+  catalog: Catalog | undefined,
   onSaved?: () => void,
 ): Promise<void> {
   // Opens the visual pin configurator for a generated Grove project and saves via CLI.
@@ -63,7 +65,7 @@ export async function configurePins(
   }
 
   const snapshot = readSnapshot(project.appDir);
-  const initialPins = readSnapshotPins(snapshot);
+  const initialPins = readEffectivePins(project.appDir, board, catalog, data, snapshot);
   await PinConfiguratorPanel.show({
     title: "Configure Grove Pins",
     mode: "edit",
@@ -152,6 +154,146 @@ function readSnapshotPins(snapshot: Snapshot): PinAssignments {
     }
   }
   return result;
+}
+
+function readDefaultPins(data: PinDiagramData): PinAssignments {
+  // Reads the example default role-to-pin mapping.
+  // 读取示例默认的角色到引脚映射。
+  const result: PinAssignments = {};
+  for (const role of data.roles) {
+    if (role.default) {
+      result[role.role] = role.default;
+    }
+  }
+  return result;
+}
+
+function sanitizePins(assignments: PinAssignments, data: PinDiagramData): PinAssignments {
+  // Keeps only pins that are currently allowed for each role.
+  // 只保留当前角色仍允许使用的引脚。
+  const result: PinAssignments = {};
+  for (const role of data.roles) {
+    const pin = assignments[role.role];
+    if (pin && role.allowed.includes(pin)) {
+      result[role.role] = pin;
+    }
+  }
+  return result;
+}
+
+function readEffectivePins(
+  appDir: string,
+  boardId: string,
+  catalog: Catalog | undefined,
+  data: PinDiagramData,
+  snapshot: Snapshot,
+): PinAssignments {
+  // Reads the current board pin mapping, then falls back to matching snapshot metadata.
+  // 读取当前板子的引脚映射，再回退到同一板子的 snapshot 元数据。
+  const overlayPins = sanitizePins(readOverlayPins(appDir, boardId, catalog, data), data);
+  if (Object.keys(overlayPins).length > 0) {
+    return overlayPins;
+  }
+  if (snapshot.board === boardId) {
+    const snapshotPins = sanitizePins(readSnapshotPins(snapshot), data);
+    if (Object.keys(snapshotPins).length > 0) {
+      return snapshotPins;
+    }
+  }
+  return readDefaultPins(data);
+}
+
+function readOverlayPins(
+  appDir: string,
+  boardId: string,
+  catalog: Catalog | undefined,
+  data: PinDiagramData,
+): PinAssignments {
+  const properties = rolePropertyNames(appDir, data);
+  if (Object.keys(properties).length === 0) {
+    return {};
+  }
+
+  for (const file of overlayCandidates(appDir, boardId, catalog)) {
+    if (!fs.existsSync(file)) {
+      continue;
+    }
+    const assignments = extractPinsFromOverlay(fs.readFileSync(file, "utf-8"), properties, data);
+    if (Object.keys(assignments).length > 0) {
+      return assignments;
+    }
+  }
+  return {};
+}
+
+function overlayCandidates(
+  appDir: string,
+  boardId: string,
+  catalog: Catalog | undefined,
+): string[] {
+  const target = boardOverlayTarget(boardId, catalog);
+  return [path.join(appDir, "boards", `${target.replace(/\//g, "_")}.overlay`)];
+}
+
+function boardOverlayTarget(boardId: string, catalog: Catalog | undefined): string {
+  const board = catalog?.boards.find((candidate) => candidate.id === boardId);
+  if (board?.zephyrTarget) {
+    return board.zephyrTarget;
+  }
+  if (boardId === "xiao_samd21") {
+    return "seeeduino_xiao";
+  }
+  return boardId;
+}
+
+function rolePropertyNames(appDir: string, data: PinDiagramData): Record<string, string> {
+  const templateFile = path.join(appDir, "pins", "pin.overlay.in");
+  if (!fs.existsSync(templateFile)) {
+    return {};
+  }
+  const template = fs.readFileSync(templateFile, "utf-8");
+  const result: Record<string, string> = {};
+  for (const role of data.roles) {
+    const placeholder = `@PIN_${role.role.toUpperCase()}@`;
+    const pattern = new RegExp(
+      `([A-Za-z0-9_,+-]+)\\s*=\\s*<[^;]*${escapeRegExp(placeholder)}[^;]*>;`,
+      "m",
+    );
+    const match = template.match(pattern);
+    if (match?.[1]) {
+      result[role.role] = match[1];
+    }
+  }
+  return result;
+}
+
+function extractPinsFromOverlay(
+  text: string,
+  properties: Record<string, string>,
+  data: PinDiagramData,
+): PinAssignments {
+  const result: PinAssignments = {};
+  for (const [role, property] of Object.entries(properties)) {
+    const pattern = new RegExp(
+      `${escapeRegExp(property)}\\s*=\\s*<\\s*&xiao_d\\s+(\\d+)\\b[^;]*>;`,
+      "g",
+    );
+    const matches = [...text.matchAll(pattern)];
+    const last = matches[matches.length - 1];
+    if (!last?.[1]) {
+      continue;
+    }
+    const pin = `D${Number(last[1])}`;
+    const roleData = data.roles.find((candidate) => candidate.role === role);
+    if (!roleData || roleData.allowed.includes(pin)) {
+      result[role] = pin;
+    }
+  }
+  return result;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function pinArgs(assignments: PinAssignments): string[] {

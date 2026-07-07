@@ -5,8 +5,8 @@ const TERMINAL_NAME = "Seeed XIAO Zephyr";
 
 export type Action = "build" | "flash" | "monitor" | "debug";
 
-// Runs a CLI action in a reused integrated terminal so real west output streams live.
-// 在复用的集成终端里跑 CLI 操作,让真实的 west 输出实时显示。
+// Runs a CLI action in a fresh integrated terminal so active monitors cannot consume commands.
+// 在新的集成终端里跑 CLI 操作，避免正在运行的监视器吞掉命令。
 export function runAction(
   repoRoot: string | undefined,
   action: Action,
@@ -22,7 +22,7 @@ export function runAction(
   }
   const commandLine = parts.map(quoteArg).join(" ");
 
-  const terminal = getTerminal(repoRoot);
+  const terminal = createActionTerminal(repoRoot, action);
   terminal.show();
   terminal.sendText(commandLine);
 }
@@ -51,21 +51,33 @@ export function runProjectAction(
   }
   const commandLine = parts.map(quoteArg).join(" ");
 
-  const terminal = getTerminal(repoRoot);
+  const terminal = createActionTerminal(repoRoot, action);
   terminal.show();
   terminal.sendText(commandLine);
 }
 
-function getTerminal(repoRoot: string | undefined): vscode.Terminal {
-  const existing = vscode.window.terminals.find((term) => term.name === TERMINAL_NAME);
-  if (existing) {
-    return existing;
-  }
+function createActionTerminal(
+  repoRoot: string | undefined,
+  action: Action,
+): vscode.Terminal {
   return vscode.window.createTerminal({
-    name: TERMINAL_NAME,
+    name: `${TERMINAL_NAME}: ${actionLabel(action)}`,
     cwd: repoRoot,
     env: repoRoot ? { SEEED_ZEPHYR_REPO_ROOT: repoRoot } : undefined,
   });
+}
+
+function actionLabel(action: Action): string {
+  switch (action) {
+    case "build":
+      return "Build";
+    case "flash":
+      return "Upload";
+    case "monitor":
+      return "Monitor";
+    case "debug":
+      return "Debug";
+  }
 }
 
 // Quotes an argument for a POSIX shell when it contains spaces or special characters.

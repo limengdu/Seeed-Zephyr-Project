@@ -1,0 +1,33 @@
+/*
+ * RP2350 uses retained boot mode plus USB CDC ACM for console and UF2 entry.
+ * The SCD41 is attached to the XIAO I2C connector.
+ *
+ * RP2350 使用 retained boot mode 和 USB CDC ACM 作为控制台与 UF2 入口。
+ * SCD41 连接到 XIAO I2C connector。
+ */
+
+#include <vendor/raspberrypi/rp2350-boot-mode-retention.dtsi>
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+&xiao_i2c {
+	status = "okay";
+
+	scd41: scd41@62 {
+		compatible = "sensirion,scd41";
+		reg = <0x62>;
+		/* mode 0: normal periodic measurement, 5 s interval. */
+		/* mode 0:正常周期测量,5 秒间隔。 */
+		mode = <0>;
+	};
+};

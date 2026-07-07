@@ -1,8 +1,8 @@
 /*
- * SAMD21 uses firmware-provided USB CDC ACM for console.
+ * RP2040 uses firmware-provided USB CDC ACM for console and 1200-baud UF2 entry.
  * The default Grove signal pin is D2; create/set-pins can override it.
  *
- * SAMD21 使用固件提供的 USB CDC ACM 作为控制台。
+ * RP2040 使用固件提供的 USB CDC ACM 作为控制台和 1200 baud UF2 入口。
  * Grove 信号默认引脚为 D2；create/set-pins 可覆盖它。
  */
 
@@ -18,6 +18,5 @@
 &zephyr_udc0 {
 	cdc_acm_uart0: cdc_acm_uart0 {
 		compatible = "zephyr,cdc-acm-uart";
-		label = "CDC_ACM_0";
 	};
 };

@@ -18,47 +18,98 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/sys/time_units.h>
 
-#if defined(CONFIG_USB_DEVICE_STACK)
-#include <zephyr/usb/usb_device.h>
-#endif
+#include "xiao_board_runtime.h"
 
 #define TRIGGER_SETTLE_US 2
-#define TRIGGER_PULSE_US 12
-#define ECHO_START_TIMEOUT_US 5000
-#define ECHO_HIGH_TIMEOUT_US 38000
+#define TRIGGER_PULSE_US 5
+#define PULSE_TIMEOUT_US 1000000
+#define MIN_VALID_ECHO_US 100
+#define POLL_STEP_US 1
 #define SAMPLE_INTERVAL_MS 1000
 
 static const struct gpio_dt_spec signal =
 	GPIO_DT_SPEC_GET(DT_PATH(zephyr_user), ultrasonic_gpios);
 
-static int init_console_transport(void)
+static uint32_t elapsed_us_since(uint32_t start_cycle)
 {
-#if defined(CONFIG_USB_DEVICE_STACK)
-	int ret = usb_enable(NULL);
-
-	if (ret != 0) {
-		printk("USB device initialization failed: %d\n", ret);
-		return ret;
-	}
-#endif
-
-	return 0;
+	/* Converts the current cycle-counter delta to elapsed microseconds. */
+	/* 将当前时钟周期差换算为已经过去的微秒数。 */
+	return k_cyc_to_us_floor32(k_cycle_get_32() - start_cycle);
 }
 
-static int wait_for_level(int expected_level, uint32_t timeout_us, uint64_t *cycle_out)
+static int wait_while_level(int held_level, uint32_t start_cycle, uint32_t timeout_us)
 {
-	uint64_t start = k_cycle_get_64();
+	/* Waits for a previous pulse at the requested level to finish. */
+	/* 等待指定电平上的上一段脉冲结束。 */
+	int level;
 
-	while (k_cyc_to_us_floor64(k_cycle_get_64() - start) < timeout_us) {
-		int level = gpio_pin_get_dt(&signal);
+	while (elapsed_us_since(start_cycle) < timeout_us) {
+		level = gpio_pin_get_dt(&signal);
+		if (level < 0) {
+			return level;
+		}
+		if (level != held_level) {
+			return 0;
+		}
 
+		k_busy_wait(POLL_STEP_US);
+	}
+
+	return -ETIMEDOUT;
+}
+
+static int wait_for_level(int expected_level, uint32_t start_cycle, uint32_t timeout_us,
+				  uint32_t *cycle_out)
+{
+	/* Waits for SIG to reach the requested level and records the edge cycle. */
+	/* 等待 SIG 到达指定电平，并记录边沿出现时的时钟周期。 */
+	int level;
+
+	while (elapsed_us_since(start_cycle) < timeout_us) {
+		level = gpio_pin_get_dt(&signal);
 		if (level < 0) {
 			return level;
 		}
 		if (level == expected_level) {
-			if (cycle_out != NULL) {
-				*cycle_out = k_cycle_get_64();
-			}
+			*cycle_out = k_cycle_get_32();
+			return 0;
+		}
+
+		k_busy_wait(POLL_STEP_US);
+	}
+
+	return -ETIMEDOUT;
+}
+
+static int pulse_in_high(uint32_t timeout_us, uint32_t *pulse_us)
+{
+	/* Mirrors pulse-width capture semantics with Zephyr cycle timestamps. */
+	/* 使用 Zephyr 时钟周期时间戳实现脉宽采集语义。 */
+	uint32_t capture_start_cycle = k_cycle_get_32();
+	uint32_t pulse_start_cycle;
+	uint32_t pulse_end_cycle;
+	uint32_t width_us;
+	int ret;
+
+	while (elapsed_us_since(capture_start_cycle) < timeout_us) {
+		ret = wait_while_level(1, capture_start_cycle, timeout_us);
+		if (ret < 0) {
+			return ret;
+		}
+
+		ret = wait_for_level(1, capture_start_cycle, timeout_us, &pulse_start_cycle);
+		if (ret < 0) {
+			return ret;
+		}
+
+		ret = wait_for_level(0, capture_start_cycle, timeout_us, &pulse_end_cycle);
+		if (ret < 0) {
+			return ret;
+		}
+
+		width_us = k_cyc_to_us_floor32(pulse_end_cycle - pulse_start_cycle);
+		if (width_us >= MIN_VALID_ECHO_US) {
+			*pulse_us = width_us;
 			return 0;
 		}
 	}
@@ -68,8 +119,6 @@ static int wait_for_level(int expected_level, uint32_t timeout_us, uint64_t *cyc
 
 static int read_distance(uint32_t *distance_mm, uint32_t *echo_us)
 {
-	uint64_t rise_cycle;
-	uint64_t fall_cycle;
 	int ret;
 
 	ret = gpio_pin_configure_dt(&signal, GPIO_OUTPUT_INACTIVE);
@@ -91,32 +140,19 @@ static int read_distance(uint32_t *distance_mm, uint32_t *echo_us)
 		return ret;
 	}
 
-	/* Read the echo on the same pin. A pull-down keeps the line defined LOW while the
-	 * module takes control, so the release transient is not mistaken for an echo. */
-	ret = gpio_pin_configure_dt(&signal, GPIO_INPUT | GPIO_PULL_DOWN);
+	/* Release SIG and measure the HIGH echo pulse on the same pin. */
+	/* 释放 SIG，并在同一引脚上测量 echo 高电平脉冲。 */
+	ret = gpio_pin_configure_dt(&signal, GPIO_INPUT);
 	if (ret < 0) {
 		return ret;
 	}
 
-	/* Skip the release transient: settle to LOW first, then time the echo from its
-	 * true rising edge to its falling edge (mirrors Arduino pulseIn semantics). */
-	ret = wait_for_level(0, ECHO_START_TIMEOUT_US, NULL);
+	ret = pulse_in_high(PULSE_TIMEOUT_US, echo_us);
 	if (ret < 0) {
 		return ret;
 	}
 
-	ret = wait_for_level(1, ECHO_START_TIMEOUT_US, &rise_cycle);
-	if (ret < 0) {
-		return ret;
-	}
-
-	ret = wait_for_level(0, ECHO_HIGH_TIMEOUT_US, &fall_cycle);
-	if (ret < 0) {
-		return ret;
-	}
-
-	*echo_us = (uint32_t)k_cyc_to_us_floor64(fall_cycle - rise_cycle);
-	/* Distance in mm: echo microseconds / 58 us-per-cm, scaled to mm (Seeed ranger). */
+	/* Distance in mm: echo microseconds / 29 / 2, scaled to mm. */
 	*distance_mm = (*echo_us * 10U) / 58U;
 
 	return 0;
@@ -124,7 +160,9 @@ static int read_distance(uint32_t *distance_mm, uint32_t *echo_us)
 
 int main(void)
 {
-	if (init_console_transport() != 0) {
+	int ret;
+
+	if (xiao_board_runtime_init() != 0) {
 		return 0;
 	}
 
@@ -138,10 +176,12 @@ int main(void)
 	}
 
 	while (1) {
+		xiao_board_runtime_poll();
+
 		uint32_t distance_mm = 0;
 		uint32_t echo_us = 0;
-		int ret = read_distance(&distance_mm, &echo_us);
 
+		ret = read_distance(&distance_mm, &echo_us);
 		if (ret == -ETIMEDOUT) {
 			printk("Distance: timeout\n");
 		} else if (ret < 0) {
@@ -151,7 +191,7 @@ int main(void)
 			       distance_mm / 10U, distance_mm % 10U, echo_us);
 		}
 
-		k_msleep(SAMPLE_INTERVAL_MS);
+		xiao_board_runtime_sleep_ms(SAMPLE_INTERVAL_MS);
 	}
 
 	return 0;

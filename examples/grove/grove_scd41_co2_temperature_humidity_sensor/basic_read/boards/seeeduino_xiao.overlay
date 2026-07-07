@@ -1,0 +1,32 @@
+/*
+ * SAMD21 uses firmware-provided USB CDC ACM for console.
+ * The SCD41 is attached to the XIAO I2C connector.
+ *
+ * SAMD21 使用固件提供的 USB CDC ACM 作为控制台。
+ * SCD41 连接到 XIAO I2C connector。
+ */
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
+
+&zephyr_udc0 {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+		label = "CDC_ACM_0";
+	};
+};
+
+&xiao_i2c {
+	status = "okay";
+
+	scd41: scd41@62 {
+		compatible = "sensirion,scd41";
+		reg = <0x62>;
+		/* mode 0: normal periodic measurement, 5 s interval. */
+		/* mode 0:正常周期测量,5 秒间隔。 */
+		mode = <0>;
+	};
+};

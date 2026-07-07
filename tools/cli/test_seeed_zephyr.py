@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 import seeed_zephyr
+import serial_monitor
 
 
 class FlashHintTests(unittest.TestCase):
@@ -138,13 +139,17 @@ class FlashHintTests(unittest.TestCase):
                     with mock.patch.object(
                         seeed_zephyr, "prepare_ra4m1_dfu_bootloader", return_value=None
                     ) as prepare_dfu:
-                        with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                        with mock.patch.object(
+                            seeed_zephyr,
+                            "run_command_capture",
+                            return_value=seeed_zephyr.subprocess.CompletedProcess([], 0, stdout=""),
+                        ) as run_command_capture:
                             selected_port = seeed_zephyr.run_west_flash("xiao_ra4m1")
 
         self.assertIsNone(selected_port)
         prepare.assert_called_once_with()
         prepare_dfu.assert_called_once_with(None)
-        run_command.assert_called_once_with(
+        run_command_capture.assert_called_once_with(
             [
                 str(dfu_util),
                 "--device",
@@ -158,6 +163,32 @@ class FlashHintTests(unittest.TestCase):
             cwd=seeed_zephyr.zephyr_workspace(),
             env=seeed_zephyr.west_command_env(),
         )
+
+    def test_xiao_ra4m1_flash_accepts_reset_timeout_after_download(self) -> None:
+        board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
+        dfu_util = seeed_zephyr.Path("/tmp/dfu-util")
+        image = seeed_zephyr.Path("/tmp/zephyr.ra4m1.dfu.bin")
+        output = (
+            "Download done.\n"
+            "DFU state(2) = dfuIDLE, status(0) = No error condition is present\n"
+            "Done!\n"
+            "dfu-util: error resetting after download: LIBUSB_ERROR_TIMEOUT\n"
+        )
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "prepare_ra4m1_dfu_image", return_value=image):
+                with mock.patch.object(seeed_zephyr, "dfu_util_path", return_value=dfu_util):
+                    with mock.patch.object(
+                        seeed_zephyr, "prepare_ra4m1_dfu_bootloader", return_value="/dev/cu.usbmodem1101"
+                    ):
+                        with mock.patch.object(
+                            seeed_zephyr,
+                            "run_command_capture",
+                            return_value=seeed_zephyr.subprocess.CompletedProcess([], 74, stdout=output),
+                        ):
+                            selected_port = seeed_zephyr.run_west_flash("xiao_ra4m1")
+
+        self.assertEqual(selected_port, "/dev/cu.usbmodem1101")
 
     def test_ra4m1_dfu_image_excludes_option_setting_section(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -437,6 +468,54 @@ class MonitorCommandTests(unittest.TestCase):
         west_flash.assert_called_once_with("xiao_samd21", port="/dev/cu.usbmodem11301")
         run_monitor.assert_called_once_with("xiao_samd21", port=None, baud=115200)
 
+    def test_cmd_flash_prints_reset_tip_after_upload(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_samd21",
+            example=None,
+            app=None,
+            port="/dev/cu.usbmodem11301",
+            monitor=False,
+            baud=115200,
+        )
+
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "require_flash_tools"):
+                with mock.patch.object(seeed_zephyr, "run_west_build"):
+                    with mock.patch.object(seeed_zephyr, "run_west_flash", return_value="/dev/cu.usbmodem11301"):
+                        with contextlib.redirect_stdout(io.StringIO()) as output:
+                            seeed_zephyr.cmd_flash(args)
+
+        self.assertIn(seeed_zephyr.POST_FLASH_RESET_TIP, output.getvalue())
+
+    def test_cmd_flash_monitor_prints_reset_tip_before_monitor(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_samd21",
+            example=None,
+            app=None,
+            port="/dev/cu.usbmodem11301",
+            monitor=True,
+            baud=115200,
+        )
+        events: list[str] = []
+        board = {"id": "xiao_samd21", "vendor": "microchip", "target": "seeeduino_xiao"}
+
+        def capture_tip() -> None:
+            events.append("tip")
+
+        def capture_monitor(*_args: object, **_kwargs: object) -> None:
+            events.append("monitor")
+
+        with mock.patch.object(seeed_zephyr, "select_example", return_value={"path": "example"}):
+            with mock.patch.object(seeed_zephyr, "require_flash_tools"):
+                with mock.patch.object(seeed_zephyr, "run_west_build"):
+                    with mock.patch.object(seeed_zephyr, "run_west_flash", return_value="/dev/cu.usbmodem11301"):
+                        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+                            with mock.patch.object(seeed_zephyr, "print_post_flash_reset_tip", side_effect=capture_tip):
+                                with mock.patch.object(seeed_zephyr, "run_monitor", side_effect=capture_monitor):
+                                    seeed_zephyr.cmd_flash(args)
+
+        self.assertEqual(events, ["tip", "monitor"])
+
     def test_cmd_flash_uses_rom_boot_path_when_rom_bootloader_detected(self) -> None:
         args = seeed_zephyr.argparse.Namespace(
             board_id="xiao_ra4m1", example=None, app=None, port=None, monitor=False, baud=115200
@@ -609,6 +688,136 @@ class ExampleConfigTests(unittest.TestCase):
         self.assertIn("CONFIG_CDC_ACM_SERIAL_PID=0x0049", prj_conf)
         self.assertIn('zephyr,console = &cdc_acm_uart0;', app_overlay)
         self.assertIn('compatible = "zephyr,cdc-acm-uart";', app_overlay)
+
+
+class GroveExampleRuntimeTests(unittest.TestCase):
+    GROVE_EXAMPLES = (
+        seeed_zephyr._REPO_ROOT / "examples/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read",
+        seeed_zephyr._REPO_ROOT / "examples/grove/grove_ultrasonic_distance_sensor/basic_read",
+    )
+
+    def test_grove_examples_use_shared_board_runtime(self) -> None:
+        common_dir = seeed_zephyr._REPO_ROOT / "examples/grove/common"
+        common_c = (common_dir / "xiao_board_runtime.c").read_text(encoding="utf-8")
+        common_h = (common_dir / "xiao_board_runtime.h").read_text(encoding="utf-8")
+
+        self.assertIn("xiao_board_runtime_init", common_h)
+        self.assertIn("CONFIG_SOC_SERIES_RA4M1", common_c)
+        self.assertIn("CONFIG_RETENTION_BOOT_MODE", common_c)
+        self.assertIn("CONFIG_SOC_FAMILY_NORDIC_NRF", common_c)
+        self.assertIn("UART_LINE_CTRL_BAUD_RATE", common_c)
+        self.assertIn("sys_reboot(SYS_REBOOT_COLD)", common_c)
+
+        for example_dir in self.GROVE_EXAMPLES:
+            with self.subTest(example=example_dir.name):
+                cmake = (example_dir / "CMakeLists.txt").read_text(encoding="utf-8")
+                main_c = (example_dir / "src/main.c").read_text(encoding="utf-8")
+                self.assertIn("xiao_board_runtime.c", cmake)
+                self.assertIn("target_include_directories", cmake)
+                self.assertIn('#include "xiao_board_runtime.h"', main_c)
+                self.assertIn("xiao_board_runtime_init()", main_c)
+                self.assertIn("xiao_board_runtime_poll()", main_c)
+                self.assertIn("xiao_board_runtime_sleep_ms", main_c)
+
+    def test_grove_examples_carry_usb_console_board_configs(self) -> None:
+        shared_expected = {
+            "seeeduino_xiao.conf": ("CONFIG_USB_DEVICE_STACK=y", "CONFIG_UART_LINE_CTRL=y"),
+            "seeeduino_xiao.overlay": ("zephyr,console = &cdc_acm_uart0", 'compatible = "zephyr,cdc-acm-uart"'),
+            "xiao_nrf52840.conf": ("CONFIG_BOOT_DELAY=500", "CONFIG_UART_LINE_CTRL=y"),
+            "xiao_ble.conf": ("CONFIG_BOOT_DELAY=500", "CONFIG_UART_LINE_CTRL=y"),
+            "xiao_rp2040.conf": ("CONFIG_USB_DEVICE_STACK_NEXT=y", "CONFIG_UART_LINE_CTRL=y"),
+            "xiao_rp2040.overlay": ("zephyr,console = &cdc_acm_uart0", 'compatible = "zephyr,cdc-acm-uart"'),
+            "xiao_rp2350.conf": ("CONFIG_RETENTION_BOOT_MODE=y", "CONFIG_USB_DEVICE_STACK_NEXT=y"),
+            "xiao_rp2350.overlay": ("rp2350-boot-mode-retention.dtsi", "zephyr,console = &cdc_acm_uart0"),
+            "xiao_rp2350_rp2350a_m33.conf": ("CONFIG_RETENTION_BOOT_MODE=y", "CONFIG_USB_DEVICE_STACK_NEXT=y"),
+            "xiao_rp2350_rp2350a_m33.overlay": ("rp2350-boot-mode-retention.dtsi", "zephyr,console = &cdc_acm_uart0"),
+        }
+        per_example = {
+            "grove_scd41_basic_read": shared_expected,
+            "grove_ultrasonic_basic_read": {
+                **shared_expected,
+                "xiao_ra4m1.conf": ("CONFIG_FLASH_LOAD_OFFSET=0x4000", "CONFIG_USB_DEVICE_STACK_NEXT=y"),
+                "xiao_ra4m1.overlay": ("zephyr,console = &cdc_acm_uart0", 'compatible = "zephyr,cdc-acm-uart"'),
+            },
+        }
+
+        for example_dir in self.GROVE_EXAMPLES:
+            example_id = (example_dir / "example.yaml").read_text(encoding="utf-8").splitlines()[0].split(":", 1)[1].strip()
+            for filename, symbols in per_example[example_id].items():
+                with self.subTest(example=example_id, filename=filename):
+                    text = (example_dir / "boards" / filename).read_text(encoding="utf-8")
+                    for symbol in symbols:
+                        self.assertIn(symbol, text)
+
+    def test_scd41_excludes_boards_without_xiao_i2c(self) -> None:
+        example = (
+            seeed_zephyr._REPO_ROOT
+            / "examples/grove/grove_scd41_co2_temperature_humidity_sensor/basic_read/example.yaml"
+        ).read_text(encoding="utf-8")
+        status = (seeed_zephyr._REPO_ROOT / "metadata/status/grove_scd41_basic_read.yaml").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("- xiao_ra4m1", example)
+        self.assertIn("board_id: xiao_ra4m1", status)
+        self.assertIn("status: excluded", status)
+
+    def test_create_grove_project_copies_common_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_dir = seeed_zephyr.Path(tmpdir) / "generated"
+            args = mock.MagicMock()
+            args.from_asset = "grove/grove_ultrasonic_distance_sensor/basic_read"
+            args.board_id = "xiao_ra4m1"
+            args.output = str(out_dir)
+            args.force = False
+            args.pins = ["signal=D0"]
+
+            seeed_zephyr._cmd_create_grove(args)
+
+            self.assertTrue((out_dir / "common" / "xiao_board_runtime.c").is_file())
+            self.assertTrue((out_dir / "common" / "xiao_board_runtime.h").is_file())
+            self.assertTrue((out_dir / "boards" / "xiao_ra4m1.conf").is_file())
+            self.assertTrue((out_dir / "boards" / "xiao_ra4m1.overlay").is_file())
+
+
+
+class SerialMonitorTests(unittest.TestCase):
+    def test_empty_serial_read_stays_connected_when_port_is_present(self) -> None:
+        class FakeSerial:
+            port = "/dev/cu.usbmodem1301"
+
+            def read(self, size: int) -> bytes:
+                self.size = size
+                return b""
+
+        fake = FakeSerial()
+        with mock.patch.object(serial_monitor, "port_present", return_value=True) as present:
+            data = serial_monitor.read_serial_chunk(fake)
+
+        self.assertEqual(data, b"")
+        self.assertEqual(fake.size, serial_monitor.READ_CHUNK)
+        present.assert_called_once_with("/dev/cu.usbmodem1301")
+
+    def test_empty_serial_read_reconnects_when_port_disappears(self) -> None:
+        class FakeSerial:
+            port = "/dev/cu.usbmodem1301"
+
+            def read(self, _size: int) -> bytes:
+                return b""
+
+        with mock.patch.object(serial_monitor, "port_present", return_value=False):
+            data = serial_monitor.read_serial_chunk(FakeSerial())
+
+        self.assertIsNone(data)
+
+    def test_serial_read_exception_reconnects(self) -> None:
+        class FakeSerial:
+            port = "/dev/cu.usbmodem1301"
+
+            def read(self, _size: int) -> bytes:
+                raise serial_monitor.serial.SerialException("device lost")
+
+        self.assertIsNone(serial_monitor.read_serial_chunk(FakeSerial()))
 
 
 class MonitorInteractiveTests(unittest.TestCase):
@@ -786,6 +995,33 @@ class CreateCommandTests(unittest.TestCase):
             seeed_zephyr.cmd_create(self._make_args(output=str(out), force=True))
             self.assertTrue((out / "snapshot.json").is_file())
 
+    def test_create_grove_rp2350_writes_target_board_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "proj"
+            args = self._make_args(
+                from_asset="grove/grove_ultrasonic_distance_sensor/basic_read",
+                board_id="xiao_rp2350",
+                output=str(out),
+                pins=["signal=D0"],
+            )
+            seeed_zephyr.cmd_create(args)
+
+            conf = out / "boards" / "xiao_rp2350_rp2350a_m33.conf"
+            overlay = out / "boards" / "xiao_rp2350_rp2350a_m33.overlay"
+            self.assertTrue(conf.is_file())
+            self.assertTrue(overlay.is_file())
+
+            conf_text = conf.read_text(encoding="utf-8")
+            overlay_text = overlay.read_text(encoding="utf-8")
+            self.assertIn("CONFIG_USB_DEVICE_STACK_NEXT=y", conf_text)
+            self.assertIn("CONFIG_UART_LINE_CTRL=y", conf_text)
+            self.assertIn("zephyr,console = &cdc_acm_uart0", overlay_text)
+            self.assertIn("rp2350-boot-mode-retention.dtsi", overlay_text)
+            self.assertIn("<&xiao_d 0 GPIO_ACTIVE_HIGH>", overlay_text)
+
+            app_overlay_text = (out / "app.overlay").read_text(encoding="utf-8")
+            self.assertNotIn(seeed_zephyr._PIN_BLOCK_BEGIN, app_overlay_text)
+
     def test_create_accepts_from_asset_path_forms(self) -> None:
         forms = [
             "xiao_esp32c6/blinky",
@@ -879,19 +1115,109 @@ class SetPinsCommandTests(unittest.TestCase):
             as_json=False,
         )
 
-    def test_set_pins_writes_app_overlay_when_no_board_overlay(self) -> None:
+    def test_set_pins_writes_target_overlay_when_no_board_overlay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            # nRF52840 (xiao_ble) ships no board overlay, so the pin lands in app.overlay.
             app = self._create_grove_project(tmp)
             seeed_zephyr.cmd_set_pins(self._set_pins_args(app, pins=["signal=D3"]))
 
-            overlay = app / "app.overlay"
+            overlay = app / "boards" / "xiao_ble.overlay"
             self.assertTrue(overlay.is_file())
             self.assertIn("<&xiao_d 3 GPIO_ACTIVE_HIGH>", overlay.read_text(encoding="utf-8"))
+            self.assertNotIn(
+                seeed_zephyr._PIN_BLOCK_BEGIN,
+                (app / "app.overlay").read_text(encoding="utf-8"),
+            )
 
             snapshot = json.loads((app / "snapshot.json").read_text(encoding="utf-8"))
             self.assertEqual(snapshot["board"], "xiao_nrf52840")
             self.assertEqual(snapshot["pins"], {"signal": "D3"})
+
+    def test_set_pins_writes_slash_target_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_esp32c6")
+            seeed_zephyr.cmd_set_pins(
+                self._set_pins_args(app, board_id="xiao_esp32c6", pins=["signal=D1"])
+            )
+
+            overlay = app / "boards" / "xiao_esp32c6_esp32c6_hpcore.overlay"
+            self.assertTrue(overlay.is_file())
+            self.assertIn("<&xiao_d 1 GPIO_ACTIVE_HIGH>", overlay.read_text(encoding="utf-8"))
+            self.assertNotIn(
+                seeed_zephyr._PIN_BLOCK_BEGIN,
+                (app / "app.overlay").read_text(encoding="utf-8"),
+            )
+
+    def test_grove_build_materialization_scopes_legacy_app_pin_block(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_nrf52840", pins=["signal=D0"])
+            (app / "boards" / "xiao_ble.overlay").unlink()
+            app_overlay = app / "app.overlay"
+            app_overlay.write_text(
+                seeed_zephyr._PIN_BLOCK_BEGIN
+                + "\n/ {\n\tzephyr,user {\n\t\tultrasonic-gpios = <&xiao_d 0 GPIO_ACTIVE_HIGH>;\n\t};\n};\n"
+                + seeed_zephyr._PIN_BLOCK_END
+                + "\n",
+                encoding="utf-8",
+            )
+
+            seeed_zephyr.ensure_grove_target_board_files(app, "xiao_esp32c6")
+
+            owner_overlay = app / "boards" / "xiao_ble.overlay"
+            current_overlay = app / "boards" / "xiao_esp32c6_esp32c6_hpcore.overlay"
+            self.assertIn("<&xiao_d 0 GPIO_ACTIVE_HIGH>", owner_overlay.read_text(encoding="utf-8"))
+            self.assertIn("<&xiao_d 2 GPIO_ACTIVE_HIGH>", current_overlay.read_text(encoding="utf-8"))
+            self.assertNotIn(seeed_zephyr._PIN_BLOCK_BEGIN, app_overlay.read_text(encoding="utf-8"))
+
+    def test_set_pins_rejects_board_excluded_pin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_esp32c6")
+
+            with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                seeed_zephyr.cmd_set_pins(
+                    self._set_pins_args(app, board_id="xiao_esp32c6", pins=["signal=D0"])
+                )
+
+            message = str(ctx.exception)
+            self.assertIn("excluded", message)
+            self.assertIn("D1", message)
+            self.assertNotIn("D0,", message)
+
+    def test_show_pins_marks_board_excluded_pin_incompatible(self) -> None:
+        args = seeed_zephyr.argparse.Namespace(
+            board_id="xiao_esp32c6",
+            example_ref="grove/grove_ultrasonic_distance_sensor/basic_read",
+            as_json=True,
+        )
+
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            seeed_zephyr.cmd_show_pins(args)
+
+        payload = json.loads(output.getvalue())
+        d0 = next(pin for pin in payload["pins"] if pin["id"] == "D0")
+        role = payload["roles"][0]
+        self.assertEqual(d0["status"], "incompatible")
+        self.assertEqual(d0["reason"], "excluded-by-example")
+        self.assertEqual(role["default"], "D2")
+        self.assertNotIn("D0", role["allowed"])
+        self.assertIn("D1", role["allowed"])
+
+    def test_grove_build_materialization_resets_board_excluded_pin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_esp32c6")
+            overlay = app / "boards" / "xiao_esp32c6_esp32c6_hpcore.overlay"
+            overlay.write_text(
+                seeed_zephyr._PIN_BLOCK_BEGIN
+                + "\n/ {\n\tzephyr,user {\n\t\tultrasonic-gpios = <&xiao_d 0 GPIO_ACTIVE_HIGH>;\n\t};\n};\n"
+                + seeed_zephyr._PIN_BLOCK_END
+                + "\n",
+                encoding="utf-8",
+            )
+
+            seeed_zephyr.ensure_grove_target_board_files(app, "xiao_esp32c6")
+
+            text = overlay.read_text(encoding="utf-8")
+            self.assertIn("<&xiao_d 2 GPIO_ACTIVE_HIGH>", text)
+            self.assertNotIn("<&xiao_d 0 GPIO_ACTIVE_HIGH>", text)
 
     def test_set_pins_merges_into_board_overlay_and_keeps_console(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -914,6 +1240,52 @@ class SetPinsCommandTests(unittest.TestCase):
             self.assertIn("<&xiao_d 5 GPIO_ACTIVE_HIGH>", text2)
             self.assertNotIn("<&xiao_d 3 GPIO_ACTIVE_HIGH>", text2)
             self.assertEqual(text2.count("ultrasonic-gpios"), 1)
+
+    def test_grove_build_materialization_migrates_existing_app_pin_block(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_rp2350", pins=["signal=D0"])
+
+            target_overlay = app / "boards" / "xiao_rp2350_rp2350a_m33.overlay"
+            target_overlay.unlink()
+            app_overlay = app / "app.overlay"
+            app_overlay.write_text(
+                seeed_zephyr._PIN_BLOCK_BEGIN
+                + "\n/ {\n	zephyr,user {\n		ultrasonic-gpios = <&xiao_d 0 GPIO_ACTIVE_HIGH>;\n	};\n};\n"
+                + seeed_zephyr._PIN_BLOCK_END
+                + "\n",
+                encoding="utf-8",
+            )
+
+            seeed_zephyr.ensure_grove_target_board_files(app, "xiao_rp2350")
+
+            target_text = target_overlay.read_text(encoding="utf-8")
+            self.assertIn("zephyr,console = &cdc_acm_uart0", target_text)
+            self.assertIn("<&xiao_d 0 GPIO_ACTIVE_HIGH>", target_text)
+            self.assertEqual(app_overlay.read_text(encoding="utf-8"), "")
+
+    def test_set_pins_migrates_rp2350_pin_block_to_target_overlay(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_rp2350", pins=["signal=D0"])
+
+            target_overlay = app / "boards" / "xiao_rp2350_rp2350a_m33.overlay"
+            target_overlay.unlink()
+            app_overlay = app / "app.overlay"
+            app_overlay.write_text(
+                seeed_zephyr._PIN_BLOCK_BEGIN
+                + "\n/ {\n	zephyr,user {\n		ultrasonic-gpios = <&xiao_d 0 GPIO_ACTIVE_HIGH>;\n	};\n};\n"
+                + seeed_zephyr._PIN_BLOCK_END
+                + "\n",
+                encoding="utf-8",
+            )
+
+            seeed_zephyr.cmd_set_pins(
+                self._set_pins_args(app, board_id="xiao_rp2350", pins=["signal=D2"])
+            )
+
+            target_text = target_overlay.read_text(encoding="utf-8")
+            self.assertIn("zephyr,console = &cdc_acm_uart0", target_text)
+            self.assertIn("<&xiao_d 2 GPIO_ACTIVE_HIGH>", target_text)
+            self.assertEqual(app_overlay.read_text(encoding="utf-8"), "")
 
     def test_set_pins_rejects_reserved_pin(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

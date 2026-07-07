@@ -1,38 +1,38 @@
 example_id: grove_ultrasonic_basic_read
 example_ref: grove/grove_ultrasonic_distance_sensor/basic_read
 zephyr_version: v4.4.0
-generated_on: 2026-07-02
+generated_on: 2026-07-07
 boards:
   - board_id: xiao_esp32c3
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_esp32c5
     status: excluded
     reason: listed in excluded_boards
   - board_id: xiao_esp32c6
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_esp32s3
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_mg24
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_nrf52840
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_nrf54l15
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_ra4m1
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_rp2040
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_rp2350
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)
   - board_id: xiao_samd21
-    status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    status: hardware-tested
+    evidence: hardware run with expected distance output (local, 2026-07-07)

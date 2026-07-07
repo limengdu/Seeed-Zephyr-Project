@@ -75,6 +75,24 @@ def wait_for_port(port: str, stdin_fd: int | None) -> bool:
     return True
 
 
+def read_serial_chunk(ser: serial.Serial) -> bytes | None:
+    # Reads serial data. Empty bytes mean no data while the port is still present;
+    # None means the monitor should reconnect.
+    # 读取串口数据。空 bytes 表示端口仍在但暂无数据；None 表示需要重连。
+    try:
+        data = ser.read(READ_CHUNK)
+    except (OSError, serial.SerialException):
+        return None
+
+    if data:
+        return data
+
+    port = getattr(ser, "port", None) or getattr(ser, "name", None)
+    if isinstance(port, str) and not port_present(port):
+        return None
+    return b""
+
+
 def pump(ser: serial.Serial, stdin_fd: int | None) -> bool:
     # Streams the port until it drops (returns True to reconnect) or the user quits
     # (returns False). stdin bytes are forwarded to the device; Ctrl+] quits.
@@ -83,7 +101,7 @@ def pump(ser: serial.Serial, stdin_fd: int | None) -> bool:
     if _pending:
         try:
             ser.write(bytes(_pending))
-        except serial.SerialException:
+        except (OSError, serial.SerialException):
             return True
         _pending.clear()
 
@@ -95,13 +113,11 @@ def pump(ser: serial.Serial, stdin_fd: int | None) -> bool:
             return True
 
         if ser_fd in ready:
-            try:
-                data = os.read(ser_fd, READ_CHUNK)
-            except OSError:
+            data = read_serial_chunk(ser)
+            if data is None:
                 return True
-            if not data:  # EOF: the device went away
-                return True
-            write_out(data)
+            if data:
+                write_out(data)
 
         if stdin_fd is not None and stdin_fd in ready:
             try:
@@ -110,7 +126,7 @@ def pump(ser: serial.Serial, stdin_fd: int | None) -> bool:
                 if _pending:
                     ser.write(bytes(_pending))
                     _pending.clear()
-            except serial.SerialException:
+            except (OSError, serial.SerialException):
                 return True
 
 

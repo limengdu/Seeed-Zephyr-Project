@@ -14,6 +14,8 @@
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/sys/printk.h>
 
+#include "xiao_board_runtime.h"
+
 /* SCD41 single-shot measurement needs up to 5 seconds to produce a reading. */
 /* SCD41 单次测量最长需要 5 秒才能产生一次读数。 */
 #define SAMPLE_INTERVAL_MS 5000
@@ -43,6 +45,10 @@ static void print_sample(const struct device *dev)
 
 int main(void)
 {
+	if (xiao_board_runtime_init() != 0) {
+		return 0;
+	}
+
 	printk("*** Seeed XIAO Zephyr Base | grove: SCD41 basic_read | board: %s ***\n",
 	       CONFIG_BOARD);
 
@@ -52,8 +58,9 @@ int main(void)
 	}
 
 	while (1) {
+		xiao_board_runtime_poll();
 		print_sample(scd41);
-		k_msleep(SAMPLE_INTERVAL_MS);
+		xiao_board_runtime_sleep_ms(SAMPLE_INTERVAL_MS);
 	}
 
 	return 0;
