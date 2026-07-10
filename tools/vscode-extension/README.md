@@ -27,7 +27,10 @@ workspace) use the one-line installer in the
 The sidebar is organized into **Welcome**, **Projects**, **Environment**, and
 **Catalog** views. Use **Welcome** for common setup and project actions. Use
 **Projects** to create or open a project, select the project board and serial
-port, and run project actions including **Upload & Monitor**. Use
+port, and run project actions including **Upload & Monitor**. Every Zephyr
+project in the current multi-root workspace appears in this view. The active
+project is marked **Active**; select another project to switch the status bar,
+build, upload, and monitor target. Use
 **Environment** to check **Status**, update repository content from the
 **Repository** group, and manage the selected
 `seeed-zephyr` command from the **CLI** group. **Install Latest CLI** installs
@@ -53,6 +56,8 @@ Expansion Boards collapsed until opened.
 构建/烧录/监视会调用 `seeed-zephyr` CLI,用 `pip install seeed-zephyr` 安装即可。
 左侧栏分为 **Welcome**、**Projects**、**Environment** 和 **Catalog**。在 **Welcome**
 里放常用入口。在 **Projects** 里创建或打开项目、选择项目开发板和串口，并运行项目操作。
+当前多根工作区里的全部 Zephyr 项目都会显示在这里；当前项目带有 **Active** 标记，选择
+另一个项目即可同步切换状态栏以及构建、上传、监视的目标。
 在 **Environment** 里查看 **Status**，仓库内容放在 **Repository** 分组，CLI 工具版本
 放在 **CLI** 分组。**Install Latest CLI** 会安装最新发布的 CLI，并自动切换插件使用它；
 **Reinstall CLI** 会强制重新安装最新版；**Verify CLI** 会检查当前 CLI 版本和插件依赖的
@@ -82,6 +87,7 @@ Host. Open the repository root as a workspace folder so the catalog populates.
 
 ```sh
 npm run check-types   # type-check only
+npm test              # multi-project regression tests
 npm run build         # production bundle to dist/
 npm run package       # produce a .vsix with vsce
 ```

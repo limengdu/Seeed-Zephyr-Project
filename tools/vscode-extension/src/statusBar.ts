@@ -1,12 +1,9 @@
-import * as fs from "fs";
-import * as path from "path";
 import * as vscode from "vscode";
 import { displayBoard, displayPort } from "./commands/projectSettings";
+import { discoverProjects } from "./projectDiscovery";
+import type { ProjectInfo } from "./projectDiscovery";
 
-export interface ProjectInfo {
-  appDir: string;
-  board: string | undefined;
-}
+export type { ProjectInfo } from "./projectDiscovery";
 
 // Shows PlatformIO-style quick-action buttons when the workspace holds a Zephyr project.
 // 当工作区里有一个 Zephyr 工程时,显示 PlatformIO 风格的快捷操作按钮。
@@ -16,15 +13,11 @@ export class ProjectStatusBar {
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
-  // Re-detects the project and redraws the status bar buttons.
-  // 重新检测工程并重绘状态栏按钮。
-  refresh(): void {
-    this.project = detectProject();
+  // Redraws the status bar for the selected project.
+  // 为当前选中的项目重绘状态栏。
+  refresh(project: ProjectInfo | undefined): void {
+    this.project = project;
     this.render();
-  }
-
-  getProject(): ProjectInfo | undefined {
-    return this.project;
   }
 
   private render(): void {
@@ -72,31 +65,9 @@ export class ProjectStatusBar {
   }
 }
 
-// Detects a Zephyr project in any workspace folder: a snapshot.json or a Zephyr app.
-// 在任一工作区文件夹中检测 Zephyr 工程:snapshot.json 或一个 Zephyr 应用。
-export function detectProject(): ProjectInfo | undefined {
+// Detects all Zephyr projects in the current multi-root workspace.
+// 检测当前多根工作区中的全部 Zephyr 项目。
+export function detectProjects(): ProjectInfo[] {
   const folders = vscode.workspace.workspaceFolders ?? [];
-  for (const folder of folders) {
-    const dir = folder.uri.fsPath;
-    const snapshot = path.join(dir, "snapshot.json");
-    if (fs.existsSync(snapshot)) {
-      return { appDir: dir, board: readSnapshotBoard(snapshot) };
-    }
-    if (
-      fs.existsSync(path.join(dir, "CMakeLists.txt")) &&
-      fs.existsSync(path.join(dir, "prj.conf"))
-    ) {
-      return { appDir: dir, board: undefined };
-    }
-  }
-  return undefined;
-}
-
-function readSnapshotBoard(file: string): string | undefined {
-  try {
-    const data = JSON.parse(fs.readFileSync(file, "utf-8")) as { board?: unknown };
-    return typeof data.board === "string" ? data.board : undefined;
-  } catch {
-    return undefined;
-  }
+  return discoverProjects(folders.map((folder) => folder.uri.fsPath));
 }

@@ -357,6 +357,7 @@
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "check-types": "tsc --noEmit",
+    "test": "node test/runTests.js",
     "package": "vsce package"
   },
   "dependencies": {

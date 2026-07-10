@@ -2,15 +2,19 @@ import * as path from "path";
 import * as fs from "fs";
 import * as vscode from "vscode";
 import { displayBoard, displayPort } from "../commands/projectSettings";
-import { detectProject } from "../statusBar";
+import { resolveActiveProject } from "../projectDiscovery";
+import { detectProjects } from "../statusBar";
 import type { ProjectInfo } from "../statusBar";
 import { ActionNode, CatalogNode, MessageNode, ProjectNode } from "./treeItems";
+
+const ACTIVE_PROJECT_KEY = "seeedZephyr.activeProject";
 
 export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode> {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private project: ProjectInfo | undefined;
+  private projects: ProjectInfo[] = [];
+  private activeProjectPath: string | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.load();
@@ -21,8 +25,48 @@ export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode
     this._onDidChangeTreeData.fire();
   }
 
+  getActiveProject(): ProjectInfo | undefined {
+    return this.findProject(this.activeProjectPath);
+  }
+
+  findProject(project: ProjectInfo | undefined): ProjectInfo | undefined;
+  findProject(projectPath: string | undefined): ProjectInfo | undefined;
+  findProject(projectOrPath: ProjectInfo | string | undefined): ProjectInfo | undefined {
+    const projectPath = typeof projectOrPath === "string"
+      ? projectOrPath
+      : projectOrPath?.appDir;
+    if (!projectPath) {
+      return undefined;
+    }
+    return this.projects.find((project) => samePath(project.appDir, projectPath));
+  }
+
+  async selectProject(project: ProjectInfo): Promise<ProjectInfo | undefined> {
+    const selected = this.findProject(project);
+    if (!selected) {
+      return undefined;
+    }
+    this.activeProjectPath = selected.appDir;
+    await this.context.workspaceState.update(ACTIVE_PROJECT_KEY, selected.appDir);
+    this._onDidChangeTreeData.fire();
+    return selected;
+  }
+
   private load(): void {
-    this.project = detectProject();
+    const nextProjects = detectProjects();
+    const addedProject = this.projects.length > 0
+      ? nextProjects.find((project) => !this.findProject(project))
+      : undefined;
+    const savedProjectPath = this.context.workspaceState.get<string>(ACTIVE_PROJECT_KEY);
+    const activeProject = resolveActiveProject(nextProjects, [
+      addedProject?.appDir,
+      this.activeProjectPath,
+      savedProjectPath,
+    ]);
+
+    this.projects = nextProjects;
+    this.activeProjectPath = activeProject?.appDir;
+    void this.context.workspaceState.update(ACTIVE_PROJECT_KEY, this.activeProjectPath);
   }
 
   getTreeItem(node: CatalogNode): vscode.TreeItem {
@@ -37,17 +81,33 @@ export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode
       const board = displayBoard(this.context, node.project);
       const port = displayPort(this.context, node.project);
       const actions: CatalogNode[] = [
-        new ActionNode("Select Board", "seeedZephyr.selectProjectBoard", "circuit-board", board),
+        projectAction(
+          "Select Board",
+          "seeedZephyr.selectProjectBoard",
+          "circuit-board",
+          node.project,
+          board,
+        ),
       ];
       if (isGroveProject(node.project.appDir)) {
-        actions.push(new ActionNode("Configure Pins", "seeedZephyr.configurePins", "symbol-parameter"));
+        actions.push(projectAction(
+          "Configure Pins",
+          "seeedZephyr.configurePins",
+          "symbol-parameter",
+          node.project,
+        ));
       }
       actions.push(
-        new ActionNode("Build Project", "seeedZephyr.projectBuild", "check"),
-        new ActionNode("Upload Project", "seeedZephyr.projectFlash", "arrow-up"),
-        new ActionNode("Select Port", "seeedZephyr.selectProjectPort", "plug", port),
-        new ActionNode("Upload and Monitor Project", "seeedZephyr.projectFlashMonitor", "run-all"),
-        new ActionNode("Monitor Project", "seeedZephyr.projectMonitor", "terminal"),
+        projectAction("Build Project", "seeedZephyr.projectBuild", "check", node.project),
+        projectAction("Upload Project", "seeedZephyr.projectFlash", "arrow-up", node.project),
+        projectAction("Select Port", "seeedZephyr.selectProjectPort", "plug", node.project, port),
+        projectAction(
+          "Upload and Monitor Project",
+          "seeedZephyr.projectFlashMonitor",
+          "run-all",
+          node.project,
+        ),
+        projectAction("Monitor Project", "seeedZephyr.projectMonitor", "terminal", node.project),
       );
       return actions;
     }
@@ -59,20 +119,35 @@ export class ProjectsTreeProvider implements vscode.TreeDataProvider<CatalogNode
       new ActionNode("Create Project", "seeedZephyr.createProject", "new-folder"),
       new ActionNode("Open Project", "seeedZephyr.openGenerated", "folder-opened"),
     ];
-    if (this.project) {
-      nodes.push(
+    if (this.projects.length > 0) {
+      nodes.push(...this.projects.map((project) =>
         new ProjectNode(
-          path.basename(this.project.appDir),
-          this.project,
-          displayBoard(this.context, this.project),
-          displayPort(this.context, this.project),
+          path.basename(project.appDir),
+          project,
+          displayBoard(this.context, project),
+          displayPort(this.context, project),
+          samePath(project.appDir, this.activeProjectPath),
         ),
-      );
+      ));
     } else {
       nodes.push(new MessageNode("No project in the current workspace."));
     }
     return nodes;
   }
+}
+
+function projectAction(
+  label: string,
+  command: string,
+  icon: string,
+  project: ProjectInfo,
+  description?: string,
+): ActionNode {
+  return new ActionNode(label, command, icon, description, undefined, [project]);
+}
+
+function samePath(left: string, right: string | undefined): boolean {
+  return right !== undefined && path.resolve(left) === path.resolve(right);
 }
 
 function isGroveProject(appDir: string): boolean {

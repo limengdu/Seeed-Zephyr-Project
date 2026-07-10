@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Display every Zephyr project in a multi-root workspace and allow the active build, upload, and monitor target to be switched from the Projects view.
+
 ## 0.4.0
 
 - Add hardware-tested Grove ultrasonic support across supported XIAO boards.

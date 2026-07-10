@@ -36,18 +36,19 @@ export function activate(context: vscode.ExtensionContext): void {
   const environment = new EnvironmentTreeProvider(context);
   const catalog = new CatalogTreeProvider();
   const statusBar = new ProjectStatusBar(context);
-  statusBar.refresh();
+  statusBar.refresh(projects.getActiveProject());
 
   const refreshAll = () => {
     welcome.refresh();
     projects.refresh();
     environment.refresh();
     catalog.refresh();
-    statusBar.refresh();
+    statusBar.refresh(projects.getActiveProject());
   };
   const action = (name: Action) => (node?: unknown) => runActionFromNode(catalog, name, node);
   const projectAction =
-    (name: Action) => () => runProjectActionCmd(catalog, projects, statusBar, context, name);
+    (name: Action) => (project?: ProjectInfo) =>
+      runProjectActionCmd(catalog, projects, statusBar, context, name, project);
 
   context.subscriptions.push(
     vscode.window.registerTreeDataProvider("seeedZephyrWelcome", welcome),
@@ -85,6 +86,9 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.showDetail", (target: DetailTarget) =>
       DetailPanel.show(target),
     ),
+    vscode.commands.registerCommand("seeedZephyr.selectProject", (project?: ProjectInfo) =>
+      selectProjectCmd(projects, statusBar, project),
+    ),
     vscode.commands.registerCommand("seeedZephyr.createProject", (node?: unknown) =>
       createProject(
         catalog.getRepoRoot(),
@@ -98,22 +102,22 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("seeedZephyr.flash", action("flash")),
     vscode.commands.registerCommand("seeedZephyr.monitor", action("monitor")),
     vscode.commands.registerCommand("seeedZephyr.debug", action("debug")),
-    vscode.commands.registerCommand("seeedZephyr.selectProjectBoard", () =>
-      selectProjectBoardCmd(catalog, projects, statusBar, context),
+    vscode.commands.registerCommand("seeedZephyr.selectProjectBoard", (project?: ProjectInfo) =>
+      selectProjectBoardCmd(catalog, projects, statusBar, context, project),
     ),
-    vscode.commands.registerCommand("seeedZephyr.selectProjectPort", () =>
-      selectProjectPortCmd(catalog, projects, statusBar, context),
+    vscode.commands.registerCommand("seeedZephyr.selectProjectPort", (project?: ProjectInfo) =>
+      selectProjectPortCmd(catalog, projects, statusBar, context, project),
     ),
     vscode.commands.registerCommand("seeedZephyr.projectBuild", projectAction("build")),
     vscode.commands.registerCommand("seeedZephyr.projectFlash", projectAction("flash")),
-    vscode.commands.registerCommand("seeedZephyr.projectFlashMonitor", () =>
-      runProjectActionCmd(catalog, projects, statusBar, context, "flash", {
+    vscode.commands.registerCommand("seeedZephyr.projectFlashMonitor", (project?: ProjectInfo) =>
+      runProjectActionCmd(catalog, projects, statusBar, context, "flash", project, {
         monitorAfterFlash: true,
       }),
     ),
     vscode.commands.registerCommand("seeedZephyr.projectMonitor", projectAction("monitor")),
-    vscode.commands.registerCommand("seeedZephyr.configurePins", () =>
-      configurePinsCmd(catalog, projects, statusBar, context),
+    vscode.commands.registerCommand("seeedZephyr.configurePins", (project?: ProjectInfo) =>
+      configurePinsCmd(catalog, projects, statusBar, context, project),
     ),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       refreshAll();
@@ -129,11 +133,11 @@ async function runProjectActionCmd(
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
   name: Action,
+  requestedProject?: ProjectInfo,
   options: { monitorAfterFlash?: boolean } = {},
 ): Promise<void> {
-  const project = statusBar.getProject();
+  const project = await requireProject(projects, statusBar, requestedProject);
   if (!project) {
-    void vscode.window.showErrorMessage("No Zephyr project detected in this workspace.");
     return;
   }
   const board = await resolveProjectBoard(project, catalog, context);
@@ -145,7 +149,7 @@ async function runProjectActionCmd(
     return;
   }
   projects.refresh();
-  statusBar.refresh();
+  statusBar.refresh(projects.getActiveProject());
   runProjectAction(projectRepoRoot(catalog), name, board, project.appDir, {
     port,
     monitorAfterFlash: options.monitorAfterFlash,
@@ -187,14 +191,15 @@ async function selectProjectBoardCmd(
   projects: ProjectsTreeProvider,
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
+  requestedProject?: ProjectInfo,
 ): Promise<void> {
-  const project = requireCurrentProject(statusBar);
+  const project = await requireProject(projects, statusBar, requestedProject);
   if (!project) {
     return;
   }
   await selectProjectBoard(context, project, catalog.getCatalog());
-  statusBar.refresh();
   projects.refresh();
+  statusBar.refresh(projects.getActiveProject());
 }
 
 async function selectProjectPortCmd(
@@ -202,14 +207,15 @@ async function selectProjectPortCmd(
   projects: ProjectsTreeProvider,
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
+  requestedProject?: ProjectInfo,
 ): Promise<void> {
-  const project = requireCurrentProject(statusBar);
+  const project = await requireProject(projects, statusBar, requestedProject);
   if (!project) {
     return;
   }
   await selectProjectPort(context, project, projectRepoRoot(catalog));
-  statusBar.refresh();
   projects.refresh();
+  statusBar.refresh(projects.getActiveProject());
 }
 
 async function configurePinsCmd(
@@ -217,22 +223,52 @@ async function configurePinsCmd(
   projects: ProjectsTreeProvider,
   statusBar: ProjectStatusBar,
   context: vscode.ExtensionContext,
+  requestedProject?: ProjectInfo,
 ): Promise<void> {
-  const project = requireCurrentProject(statusBar);
+  const project = await requireProject(projects, statusBar, requestedProject);
   if (!project) {
     return;
   }
   await configurePins(projectRepoRoot(catalog), context, project, catalog.getCatalog(), () => {
     projects.refresh();
-    statusBar.refresh();
+    statusBar.refresh(projects.getActiveProject());
   });
 }
 
-function requireCurrentProject(statusBar: ProjectStatusBar) {
-  const project = statusBar.getProject();
+async function selectProjectCmd(
+  projects: ProjectsTreeProvider,
+  statusBar: ProjectStatusBar,
+  project: ProjectInfo | undefined,
+): Promise<void> {
+  if (!project) {
+    return;
+  }
+  const selected = await projects.selectProject(project);
+  if (!selected) {
+    void vscode.window.showErrorMessage("This Zephyr project is no longer in the workspace.");
+    return;
+  }
+  statusBar.refresh(selected);
+}
+
+// Resolves a tree-project argument and makes it the active status-bar target.
+// 解析项目树传入的项目,并把它设为状态栏当前操作目标。
+async function requireProject(
+  projects: ProjectsTreeProvider,
+  statusBar: ProjectStatusBar,
+  requestedProject?: ProjectInfo,
+): Promise<ProjectInfo | undefined> {
+  const project = requestedProject
+    ? projects.findProject(requestedProject)
+    : projects.getActiveProject();
   if (!project) {
     void vscode.window.showErrorMessage("No Zephyr project detected in this workspace.");
+    return undefined;
   }
+  if (requestedProject) {
+    await projects.selectProject(project);
+  }
+  statusBar.refresh(project);
   return project;
 }
 

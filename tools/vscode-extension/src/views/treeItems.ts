@@ -65,12 +65,24 @@ export class ProjectNode extends vscode.TreeItem {
     public readonly project: ProjectInfo,
     boardLabel: string,
     portLabel: string,
+    active: boolean,
   ) {
-    super(label, vscode.TreeItemCollapsibleState.Expanded);
-    this.description = `${boardLabel} - ${portLabel}`;
-    this.iconPath = new vscode.ThemeIcon("folder-active");
+    super(
+      label,
+      active
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.Collapsed,
+    );
+    this.description = `${active ? "Active - " : ""}${boardLabel} - ${portLabel}`;
+    this.iconPath = new vscode.ThemeIcon(active ? "folder-active" : "folder");
+    this.id = project.appDir;
     this.tooltip = project.appDir;
-    this.contextValue = "project";
+    this.contextValue = active ? "activeProject" : "project";
+    this.command = {
+      command: "seeedZephyr.selectProject",
+      title: "Select Project",
+      arguments: [project],
+    };
   }
 }
 
@@ -163,13 +175,14 @@ export class ActionNode extends vscode.TreeItem {
     icon: string,
     description?: string,
     tooltip?: string,
+    commandArguments: unknown[] = [],
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.contextValue = "welcomeAction";
     this.description = description;
     this.tooltip = tooltip ?? description;
     this.iconPath = new vscode.ThemeIcon(icon);
-    this.command = { command, title: label };
+    this.command = { command, title: label, arguments: commandArguments };
   }
 }
 
