@@ -11,6 +11,7 @@ contribution. Board-specific development notes belong under `boards/`.
 Documents:
 
 - [入门指南](getting-started.md)
+- [Zephyr 零基础课程](getting-started-with-zephyr/README.md)
 - [开发板说明](boards/README.md)
 
 ## 中文
@@ -23,4 +24,5 @@ Documents:
 文档：
 
 - [入门指南](getting-started.md)
+- [Zephyr 零基础课程](getting-started-with-zephyr/README.md)
 - [开发板说明](boards/README.md)

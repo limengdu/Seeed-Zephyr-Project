@@ -144,7 +144,7 @@ VALID_ZEPHYR_SUPPORT = {"sensor_driver", "gnss_driver", "display_driver", "adc",
 DRIVER_BACKED_SUPPORT = {"sensor_driver", "gnss_driver", "display_driver"}
 DRIVERLESS_SUPPORT = {"adc", "custom"}
 EXPANSION_BOARD_PORT_KEYS = {"id", "type", "label"}
-VALID_EXAMPLE_DEMOS = {"blinky", "hello_world"}
+VALID_EXAMPLE_DEMOS = {"blinky", "dac", "hello_world"}
 VALID_EXAMPLE_STATUSES = {
     "build-only",
     "hardware-tested",

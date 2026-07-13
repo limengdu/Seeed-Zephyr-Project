@@ -1,0 +1,6 @@
+id: xiao_samd21_dac
+board_id: xiao_samd21
+demo: dac
+zephyr_target: seeeduino_xiao
+validation_status: experimental
+expected_behavior: Outputs a 10-bit sawtooth ramp on D0 and reports selected DAC values while a USB serial monitor is connected.

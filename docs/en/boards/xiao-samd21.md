@@ -85,6 +85,37 @@ Exit the monitor:
 Ctrl+]
 ```
 
+## Runtime Loop Timing for Upload and Monitor
+
+The XIAO SAMD21 upload path uses the active USB CDC serial port to request the
+BOSSA bootloader. Zephyr changes the port to `1200` baud, its SAMD21 BOSSA
+callback records the bootloader magic value, and the board resets. The
+`seeed-zephyr` command then waits for the bootloader port before flashing and
+waits for the runtime USB CDC port before opening the monitor.
+
+Keep continuous application work divided into short iterations so the USB work
+queue can remain responsive:
+
+- End each normal loop iteration with a scheduler-aware delay such as
+  `k_msleep()` or `k_usleep()`.
+- Check `UART_LINE_CTRL_DTR` before recurring `printk()` output so runtime logs
+  are produced while a host monitor is connected.
+- Keep high-resolution busy-wait sections bounded, then return to a
+  scheduler-aware delay at regular intervals.
+
+Example structure:
+
+```c
+if ((value % DAC_LOG_INTERVAL) == 0U && console_is_connected()) {
+	printk("DAC value: %u\n", value);
+}
+
+k_msleep(DAC_STEP_DELAY_MS);
+```
+
+This structure keeps the application workload, automatic BOSSA upload request,
+and reconnecting serial monitor working together.
+
 ## Manual Bootloader Mode
 
 Use this only as the recovery path when automatic flashing cannot enter

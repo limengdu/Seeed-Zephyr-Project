@@ -18,8 +18,10 @@ Documentation in this tree is split by scope:
 Start with:
 
 - [English Getting Started](en/getting-started.md)
+- [Getting Started with Zephyr Course](en/getting-started-with-zephyr/README.md)
 - [English Board Notes](en/boards/README.md)
 - [中文入门指南](zh/getting-started.md)
+- [Zephyr 零基础课程](zh/getting-started-with-zephyr/README.md)
 - [中文开发板说明](zh/boards/README.md)
 
 ## 中文
@@ -38,6 +40,8 @@ Start with:
 推荐入口：
 
 - [English Getting Started](en/getting-started.md)
+- [Getting Started with Zephyr Course](en/getting-started-with-zephyr/README.md)
 - [English Board Notes](en/boards/README.md)
 - [中文入门指南](zh/getting-started.md)
+- [Zephyr 零基础课程](zh/getting-started-with-zephyr/README.md)
 - [中文开发板说明](zh/boards/README.md)
