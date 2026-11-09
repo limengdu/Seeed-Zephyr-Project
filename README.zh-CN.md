@@ -9,7 +9,7 @@
 一眼看清 Seeed Studio XIAO 开发板在 Zephyr 上能做什么、哪些示例已通过验证，并用一条命令从全新检出走到烧录固件。
 
 [![Metadata Validation](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml/badge.svg)](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml)
-[![Zephyr](https://img.shields.io/badge/Zephyr-v4.4.0-7929d3)](https://docs.zephyrproject.org/4.4.0/)
+[![Zephyr](https://img.shields.io/badge/Zephyr-v4.5.0-7929d3)](https://docs.zephyrproject.org/4.5.0/)
 [![Boards](https://img.shields.io/badge/XIAO%20boards-11%20tracked-00979d)](#支持的开发板)
 [![Platform](https://img.shields.io/badge/host-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#快速开始)
 
@@ -46,7 +46,7 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 
 ## 支持的开发板
 
-下表状态取自[构建矩阵](tools/build_matrix/results.md)，基线为 Zephyr **v4.4.0**。
+下表状态取自[构建矩阵](tools/build_matrix/results.md)，基线为 Zephyr **v4.5.0**。
 
 | 开发板 | 厂商 | Zephyr 目标 | 示例 | 状态 |
 | --- | --- | --- | --- | --- |
@@ -55,14 +55,14 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 | XIAO nRF54L15 | Nordic | `xiao_nrf54l15/nrf54l15/cpuapp` | `blinky` | 🔵 真机验证 |
 | XIAO MG24 | Silabs | `xiao_mg24` | `blinky` | 🔵 真机验证 |
 | XIAO RP2040 | Raspberry Pi | `xiao_rp2040` | `blinky` | 🔵 真机验证 |
-| XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33` | `blinky` | 🔵 真机验证 |
+| XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33_0` | `blinky` | 🔵 真机验证 |
 | XIAO ESP32-C6 | Espressif | `xiao_esp32c6/esp32c6/hpcore` | `blinky` | 🔵 真机验证 |
 | XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 真机验证 |
 | XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 真机验证 · 板载无 LED |
 | XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 真机验证 · USB DFU |
-| XIAO ESP32-C5 | Espressif | `xiao_esp32c5` | `hello_world` | ⛔ v4.4.0 暂无目标 |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `hello_world` | 🟢 构建验证 |
 
-**图例** —— 🔵 真实硬件验证通过 · 🟢 CI 中可干净构建 · ⛔ 已在册，但所选 Zephyr 基线尚未提供该板级目标。
+**图例** —— 🔵 真实硬件验证通过 · 🟢 在当前基线下可干净构建，待真机验证。
 
 各开发板特有的烧录、复位、bootloader 行为，详见[板级说明](docs/zh/boards/README.md)。
 
@@ -328,7 +328,7 @@ Windows（WSL2）：
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
 ```
 
-setup 会准备 Zephyr 工作区、安装 Python 虚拟环境与 `west`、下载 Zephyr v4.4.0 和 SDK、获取各板所需的烧录工具，并询问你是否安装 `seeed-zephyr` 命令行。加 `--board <目标>` 可只下载单块板子的依赖。
+setup 会准备 Zephyr 工作区、安装 Python 虚拟环境与 `west`、下载 Zephyr v4.5.0 和 SDK、获取各板所需的烧录工具，并询问你是否安装 `seeed-zephyr` 命令行。加 `--board <目标>` 可只下载单块板子的依赖。
 
 ## 仓库结构
 

@@ -14,7 +14,7 @@ seeed-zephyr flash xiao_rp2350 --monitor
 如果直接使用 Zephyr 命令，需要构建时加入 RP2 boot mode retention snippet：
 
 ```sh
-west build -p always -b xiao_rp2350/rp2350a/m33 -S rp2-boot-mode-retention <app>
+west build -p always -b xiao_rp2350/rp2350a/m33_0 -S rp2-boot-mode-retention <app>
 west flash
 ```
 

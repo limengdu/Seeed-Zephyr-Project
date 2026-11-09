@@ -5,9 +5,8 @@ demo: basic_read
 interface: i2c
 connector: xiao
 pin_policy: fixed-bus
-# xiao_esp32c5 has no upstream Zephyr board target in the v4.4.0 baseline.
-# xiao_esp32c5 在 v4.4.0 基线中没有上游 Zephyr 板 target。
+# xiao_ra4m1 has no xiao_i2c connector label in its upstream Zephyr devicetree.
+# xiao_ra4m1 的上游 Zephyr 设备树没有 xiao_i2c connector 标签。
 excluded_boards:
-  - xiao_esp32c5
   - xiao_ra4m1
 expected_behavior: Prints CO2 (ppm), temperature (C), and relative humidity (%) every five seconds.

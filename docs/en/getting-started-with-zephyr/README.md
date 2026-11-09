@@ -374,7 +374,7 @@ The fourth group is USB device support:
 
 ```conf
 CONFIG_USB_DEVICE_STACK=y
-CONFIG_DEPRECATION_TEST=y
+CONFIG_WARN_DEPRECATED=n
 CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"
 CONFIG_USB_DEVICE_PID=0x0004
 CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=n
@@ -383,7 +383,7 @@ CONFIG_USB_DEVICE_STACK_NEXT=n
 
 `CONFIG_USB_DEVICE_STACK=y` enables the USB device stack. A stack is a set of communication rules; Zephyr uses it to let the board appear as a USB device to the computer.
 
-`CONFIG_DEPRECATION_TEST=y` allows this example to continue using the legacy Zephyr USB device stack interfaces. This follows the USB configuration pattern used by the existing XIAO SAMD21 examples in this repository.
+`CONFIG_WARN_DEPRECATED=n` turns off Zephyr's warnings for deprecated options. This example uses the legacy Zephyr USB device stack, which Zephyr marks as deprecated, so this line keeps the build output clean. This follows the USB configuration pattern used by the existing XIAO SAMD21 examples in this repository.
 
 `CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"` sets the USB device name shown by the computer. The copied `blinky` name is changed to `DAC` so the device identity matches this example.
 
@@ -409,7 +409,7 @@ CONFIG_UART_CONSOLE=y
 CONFIG_STDOUT_CONSOLE=y
 CONFIG_UART_LINE_CTRL=y
 CONFIG_USB_DEVICE_STACK=y
-CONFIG_DEPRECATION_TEST=y
+CONFIG_WARN_DEPRECATED=n
 CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"
 CONFIG_USB_DEVICE_PID=0x0004
 CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=n
@@ -485,10 +485,10 @@ CONFIG_USB_DEVICE_STACK=y
 Enables the USB device stack. A stack is a set of communication rules; Zephyr uses it to let the board appear as a USB device to the computer.
 
 ```conf
-CONFIG_DEPRECATION_TEST=y
+CONFIG_WARN_DEPRECATED=n
 ```
 
-Allows the example to continue using the legacy Zephyr USB device stack interfaces. The existing XIAO SAMD21 examples in this repository use this USB configuration pattern.
+Turns off Zephyr's warnings for deprecated options. The example uses the legacy Zephyr USB device stack, which Zephyr marks as deprecated. The existing XIAO SAMD21 examples in this repository use this USB configuration pattern.
 
 ```conf
 CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"

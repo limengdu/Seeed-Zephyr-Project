@@ -217,7 +217,7 @@ def main() -> int:
     parser.add_argument("--example", help="Grove reference grove/<module>/<demo> (default: all).")
     parser.add_argument("--board", action="append", help="Limit builds to these board ids (repeatable).")
     parser.add_argument("--zephyr-workspace", default=os.path.expanduser("~/zephyrproject"))
-    parser.add_argument("--zephyr-version", default="v4.4.0")
+    parser.add_argument("--zephyr-version", default="v4.5.0")
     parser.add_argument("--no-build", action="store_true", help="Refresh the matrix without building.")
     args = parser.parse_args()
 

@@ -617,7 +617,7 @@ class BuildCommandTests(unittest.TestCase):
 
 
 class ExampleConfigTests(unittest.TestCase):
-    def test_rp2350_defaults_to_m33_target(self) -> None:
+    def test_rp2350_defaults_to_m33_0_target(self) -> None:
         board_file = seeed_zephyr._REPO_ROOT / "metadata/boards/xiao_rp2350.yaml"
         example_file = (
             seeed_zephyr._REPO_ROOT / "examples/boards/xiao_rp2350/blinky/example.yaml"
@@ -625,8 +625,20 @@ class ExampleConfigTests(unittest.TestCase):
         board = seeed_zephyr.read_flat_yaml(board_file)
         example = seeed_zephyr.read_flat_yaml(example_file)
 
-        self.assertEqual(board["zephyr_target"], "xiao_rp2350/rp2350a/m33")
-        self.assertEqual(example["zephyr_target"], "xiao_rp2350/rp2350a/m33")
+        self.assertEqual(board["zephyr_target"], "xiao_rp2350/rp2350a/m33_0")
+        self.assertEqual(example["zephyr_target"], "xiao_rp2350/rp2350a/m33_0")
+
+    def test_esp32c5_uses_hpcore_target(self) -> None:
+        board_file = seeed_zephyr._REPO_ROOT / "metadata/boards/xiao_esp32c5.yaml"
+        example_file = (
+            seeed_zephyr._REPO_ROOT / "examples/boards/xiao_esp32c5/hello_world/example.yaml"
+        )
+        board = seeed_zephyr.read_flat_yaml(board_file)
+        example = seeed_zephyr.read_flat_yaml(example_file)
+
+        self.assertEqual(board["zephyr_target"], "xiao_esp32c5/esp32c5/hpcore")
+        self.assertEqual(example["zephyr_target"], "xiao_esp32c5/esp32c5/hpcore")
+        self.assertNotIn("unsupported_reason", example)
 
     def test_rp2350_example_enables_usb_cdc_monitor_and_bootloader_request(self) -> None:
         example_dir = seeed_zephyr._REPO_ROOT / "examples/boards/xiao_rp2350/blinky"
@@ -729,8 +741,8 @@ class GroveExampleRuntimeTests(unittest.TestCase):
             "xiao_rp2040.overlay": ("zephyr,console = &cdc_acm_uart0", 'compatible = "zephyr,cdc-acm-uart"'),
             "xiao_rp2350.conf": ("CONFIG_RETENTION_BOOT_MODE=y", "CONFIG_USB_DEVICE_STACK_NEXT=y"),
             "xiao_rp2350.overlay": ("rp2350-boot-mode-retention.dtsi", "zephyr,console = &cdc_acm_uart0"),
-            "xiao_rp2350_rp2350a_m33.conf": ("CONFIG_RETENTION_BOOT_MODE=y", "CONFIG_USB_DEVICE_STACK_NEXT=y"),
-            "xiao_rp2350_rp2350a_m33.overlay": ("rp2350-boot-mode-retention.dtsi", "zephyr,console = &cdc_acm_uart0"),
+            "xiao_rp2350_rp2350a_m33_0.conf": ("CONFIG_RETENTION_BOOT_MODE=y", "CONFIG_USB_DEVICE_STACK_NEXT=y"),
+            "xiao_rp2350_rp2350a_m33_0.overlay": ("rp2350-boot-mode-retention.dtsi", "zephyr,console = &cdc_acm_uart0"),
         }
         per_example = {
             "grove_scd41_basic_read": shared_expected,
@@ -970,14 +982,41 @@ class CreateCommandTests(unittest.TestCase):
 
     def test_create_rejects_unsupported_source(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
+            examples_dir = Path(tmp) / "examples"
+            example_dir = examples_dir / "xiao_esp32c5" / "hello_world"
+            example_dir.mkdir(parents=True)
+            (example_dir / "example.yaml").write_text(
+                "id: xiao_esp32c5_hello_world\n"
+                "board_id: xiao_esp32c5\n"
+                "demo: hello_world\n"
+                "zephyr_target: xiao_esp32c5/esp32c5/hpcore\n"
+                "validation_status: unsupported\n"
+                "unsupported_reason: Fixture board target is unavailable.\n",
+                encoding="utf-8",
+            )
             args = self._make_args(
                 from_asset="xiao_esp32c5/hello_world",
                 board_id="xiao_esp32c5",
                 output=str(Path(tmp) / "proj"),
             )
-            with self.assertRaises(seeed_zephyr.CliError) as ctx:
-                seeed_zephyr.cmd_create(args)
+            with mock.patch.object(seeed_zephyr, "EXAMPLES_DIR", examples_dir):
+                with self.assertRaises(seeed_zephyr.CliError) as ctx:
+                    seeed_zephyr.cmd_create(args)
             self.assertIn("unsupported", str(ctx.exception).lower())
+
+    def test_create_esp32c5_hello_world(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "proj"
+            args = self._make_args(
+                from_asset="xiao_esp32c5/hello_world",
+                board_id="xiao_esp32c5",
+                output=str(out),
+            )
+            seeed_zephyr.cmd_create(args)
+
+            snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
+            self.assertEqual(snapshot["board"], "xiao_esp32c5")
+            self.assertEqual(snapshot["validation_status"], "build-only")
 
     def test_create_refuses_nonempty_output_without_force(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1006,8 +1045,8 @@ class CreateCommandTests(unittest.TestCase):
             )
             seeed_zephyr.cmd_create(args)
 
-            conf = out / "boards" / "xiao_rp2350_rp2350a_m33.conf"
-            overlay = out / "boards" / "xiao_rp2350_rp2350a_m33.overlay"
+            conf = out / "boards" / "xiao_rp2350_rp2350a_m33_0.conf"
+            overlay = out / "boards" / "xiao_rp2350_rp2350a_m33_0.overlay"
             self.assertTrue(conf.is_file())
             self.assertTrue(overlay.is_file())
 
@@ -1245,7 +1284,7 @@ class SetPinsCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             app = self._create_grove_project(tmp, board_id="xiao_rp2350", pins=["signal=D0"])
 
-            target_overlay = app / "boards" / "xiao_rp2350_rp2350a_m33.overlay"
+            target_overlay = app / "boards" / "xiao_rp2350_rp2350a_m33_0.overlay"
             target_overlay.unlink()
             app_overlay = app / "app.overlay"
             app_overlay.write_text(
@@ -1263,11 +1302,28 @@ class SetPinsCommandTests(unittest.TestCase):
             self.assertIn("<&xiao_d 0 GPIO_ACTIVE_HIGH>", target_text)
             self.assertEqual(app_overlay.read_text(encoding="utf-8"), "")
 
+    def test_grove_build_materialization_carries_previous_rp2350_target_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            app = self._create_grove_project(tmp, board_id="xiao_rp2350", pins=["signal=D5"])
+
+            boards = app / "boards"
+            for suffix in (".conf", ".overlay"):
+                (boards / f"xiao_rp2350_rp2350a_m33_0{suffix}").rename(
+                    boards / f"xiao_rp2350_rp2350a_m33{suffix}"
+                )
+
+            seeed_zephyr.ensure_grove_target_board_files(app, "xiao_rp2350")
+
+            target_text = (boards / "xiao_rp2350_rp2350a_m33_0.overlay").read_text(encoding="utf-8")
+            self.assertIn("zephyr,console = &cdc_acm_uart0", target_text)
+            self.assertIn("<&xiao_d 5 GPIO_ACTIVE_HIGH>", target_text)
+            self.assertTrue((boards / "xiao_rp2350_rp2350a_m33_0.conf").is_file())
+
     def test_set_pins_migrates_rp2350_pin_block_to_target_overlay(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             app = self._create_grove_project(tmp, board_id="xiao_rp2350", pins=["signal=D0"])
 
-            target_overlay = app / "boards" / "xiao_rp2350_rp2350a_m33.overlay"
+            target_overlay = app / "boards" / "xiao_rp2350_rp2350a_m33_0.overlay"
             target_overlay.unlink()
             app_overlay = app / "app.overlay"
             app_overlay.write_text(

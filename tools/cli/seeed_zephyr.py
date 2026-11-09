@@ -75,7 +75,7 @@ BUILD_MATRIX_SCRIPT = (_REPO_ROOT / "tools" / "build_matrix" / "run.sh") if _REP
 HARDWARE_LOG = (_REPO_ROOT / "AI use" / "HARDWARE_VERIFICATION.md") if _REPO_ROOT else None
 # Zephyr baseline version recorded in generated project snapshots.
 # 写入生成项目 snapshot 的 Zephyr 基线版本号。
-ZEPHYR_BASELINE = "v4.4.0"
+ZEPHYR_BASELINE = "v4.5.0"
 # Built-in templates for `create --blank` (minimal board-agnostic Zephyr app).
 # `create --blank` 使用的内置模板(最小、板级无关的 Zephyr 应用)。
 BLANK_CMAKELISTS = (
@@ -110,6 +110,9 @@ RP2_BOOTLOADER_WAIT_SECONDS = 10
 SERIAL_READY_WAIT_SECONDS = 10
 SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
+# Board file stems of earlier Zephyr targets, copied to the current target stem.
+# 早期 Zephyr target 的板级文件 stem，会复制为当前 target stem。
+PREVIOUS_TARGET_STEMS = {"xiao_rp2350": ("xiao_rp2350_rp2350a_m33",)}
 MG24_BOARD_ID = "xiao_mg24"
 MG24_PYOCD_TARGET = "EFR32MG24B220F1536IM48"
 RA4M1_BOARD_ID = "xiao_ra4m1"
@@ -2700,7 +2703,7 @@ def _board_source_file_stems(board_id: str) -> list[str]:
     target_root = board["target"].split("/", 1)[0]
     target_stem = _board_overlay_name(board_id)
     stems: list[str] = []
-    for stem in (target_root, board["id"]):
+    for stem in (*PREVIOUS_TARGET_STEMS.get(board["id"], ()), target_root, board["id"]):
         if stem and stem != target_stem and stem not in stems:
             stems.append(stem)
     return stems

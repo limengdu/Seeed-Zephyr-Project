@@ -374,7 +374,7 @@ CONFIG_UART_LINE_CTRL=y
 
 ```conf
 CONFIG_USB_DEVICE_STACK=y
-CONFIG_DEPRECATION_TEST=y
+CONFIG_WARN_DEPRECATED=n
 CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"
 CONFIG_USB_DEVICE_PID=0x0004
 CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=n
@@ -383,7 +383,7 @@ CONFIG_USB_DEVICE_STACK_NEXT=n
 
 `CONFIG_USB_DEVICE_STACK=y` 打开 USB 设备协议栈。协议栈就是一整套通信规则，Zephyr 靠它让开发板被电脑识别成 USB 设备。
 
-`CONFIG_DEPRECATION_TEST=y` 允许这个示例继续使用 Zephyr 的 legacy USB 设备栈相关接口。这里沿用仓库现有 XIAO SAMD21 示例的 USB 配置方式。
+`CONFIG_WARN_DEPRECATED=n` 关闭 Zephyr 对已弃用选项的警告。这个示例使用的 legacy USB 设备栈在 Zephyr 中被标记为弃用，这一行让构建输出保持干净。这里沿用仓库现有 XIAO SAMD21 示例的 USB 配置方式。
 
 `CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"` 设置电脑看到的 USB 设备名称。这里从 `blinky` 改成 `DAC`，是为了让设备名和当前示例一致。
 
@@ -409,7 +409,7 @@ CONFIG_UART_CONSOLE=y
 CONFIG_STDOUT_CONSOLE=y
 CONFIG_UART_LINE_CTRL=y
 CONFIG_USB_DEVICE_STACK=y
-CONFIG_DEPRECATION_TEST=y
+CONFIG_WARN_DEPRECATED=n
 CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"
 CONFIG_USB_DEVICE_PID=0x0004
 CONFIG_USB_DEVICE_INITIALIZE_AT_BOOT=n
@@ -485,10 +485,10 @@ CONFIG_USB_DEVICE_STACK=y
 打开 USB 设备协议栈。协议栈可以理解成一整套通信规则，Zephyr 通过它把开发板识别成 USB 设备。
 
 ```conf
-CONFIG_DEPRECATION_TEST=y
+CONFIG_WARN_DEPRECATED=n
 ```
 
-允许当前示例继续使用 Zephyr legacy USB 设备栈相关接口。本仓库现有 XIAO SAMD21 示例沿用了这套 USB 配置。
+关闭 Zephyr 对已弃用选项的警告。当前示例使用的 legacy USB 设备栈在 Zephyr 中被标记为弃用。本仓库现有 XIAO SAMD21 示例沿用了这套 USB 配置。
 
 ```conf
 CONFIG_USB_DEVICE_PRODUCT="Seeed XIAO SAMD21 DAC"

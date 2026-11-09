@@ -127,7 +127,7 @@ Install seeed-zephyr CLI? [Y/n]
 如果你通过 pip 或 Homebrew（方式 A 或 C）安装了 CLI，还需要 Zephyr 工具链。
 一键安装（方式 B）和从源码安装（方式 D）会自动处理这一步。
 
-`~/zephyrproject` 下的 Zephyr 工作区包含 Python venv、`west`、Zephyr v4.4.0、
+`~/zephyrproject` 下的 Zephyr 工作区包含 Python venv、`west`、Zephyr v4.5.0、
 Zephyr 包、SDK 和板级 blobs。克隆仓库并运行对应系统的 setup 脚本来安装：
 
 ```sh
@@ -140,8 +140,9 @@ bash ~/.seeed-zephyr-base/scripts/setup-macos.sh
 bash ~/.seeed-zephyr-base/scripts/setup-linux.sh
 ```
 
-setup 流程会准备 Zephyr 工作区，创建 Python venv，安装 `west`，下载 Zephyr v4.4.0，
-安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。通过 `--board` 选择 Espressif
+setup 流程会准备 Zephyr 工作区，创建 Python venv，安装 `west`，下载 Zephyr v4.5.0，
+安装 Zephyr Python 包和 SDK，并在需要时获取厂商 blobs。对已有工作区重新运行 setup，
+会把它切换到锁定的 Zephyr 版本，并同步更新各模块。通过 `--board` 选择 Espressif
 开发板时，setup 还会检查 Zephyr 自带的 `hal_espressif` 烧录和 monitor 工具是否可用。
 其他开发板也会处理对应的烧录工具，例如 SAMD21 的 `bossac`、MG24 的 PyOCD CMSIS pack、
 RA4M1 的 `dfu-util`。
@@ -263,25 +264,21 @@ curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/
 
 这张表由 `tools/build_matrix/run.sh` 生成。
 
-| 开发板 | board target | 仓库示例 | v4.4.0 状态 | 说明 |
+| 开发板 | board target | 仓库示例 | v4.5.0 状态 | 说明 |
 | --- | --- | --- | --- | --- |
 | XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
 | XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO ESP32-C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 硬件已验证；无板载 LED |
-| XIAO ESP32-C5 | `xiao_esp32c5` | `examples/boards/xiao_esp32c5/hello_world` | UNSUPPORTED | Zephyr v4.4.0 没有 XIAO target |
+| XIAO ESP32-C5 | `xiao_esp32c5/esp32c5/hpcore` | `examples/boards/xiao_esp32c5/hello_world` | PASS | 已通过构建验证；待真机验证 |
 | XIAO ESP32-C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 硬件已验证 |
 | XIAO ESP32-S3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | PASS | 硬件已验证 |
 | XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 硬件已验证；默认使用 Zephyr PyOCD runner |
 | XIAO nRF54L15 | `xiao_nrf54l15/nrf54l15/cpuapp` | `examples/boards/xiao_nrf54l15/blinky` | PASS | 硬件已验证 |
 | XIAO RA4M1 | `xiao_ra4m1` | `examples/boards/xiao_ra4m1/blinky` | PASS | 硬件已验证；使用 USB DFU bootloader |
 | XIAO RP2040 | `xiao_rp2040` | `examples/boards/xiao_rp2040/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
-| XIAO RP2350 | `xiao_rp2350/rp2350a/m33` | `examples/boards/xiao_rp2350/blinky` | PASS | 硬件已验证；M33 target |
+| XIAO RP2350 | `xiao_rp2350/rp2350a/m33_0` | `examples/boards/xiao_rp2350/blinky` | PASS | 硬件已验证；M33 target |
 
-`UNSUPPORTED` 的意思不是脚本写错了，而是当前固定使用的 Zephyr v4.4.0 里没有这个
-XIAO board target。XIAO ESP32-C5 已经有仓库 demo 记录，但要等选定 Zephyr 基线提供
-真实 `xiao_esp32c5` target 后才能构建。
-
-一句话总结：当前 10 个 target 能构建本仓库 demo，XIAO ESP32-C5 已记录但在当前基线下不可构建。
+一句话总结：已收录的 11 个 target 都能构建本仓库 demo，XIAO ESP32-C5 还差一次真机验证。
 
 ## 6. 烧录到开发板
 

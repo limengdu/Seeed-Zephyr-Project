@@ -1,38 +1,38 @@
 example_id: grove_scd41_basic_read
 example_ref: grove/grove_scd41_co2_temperature_humidity_sensor/basic_read
-zephyr_version: v4.4.0
-generated_on: 2026-07-02
+zephyr_version: v4.5.0
+generated_on: 2026-11-09
 boards:
   - board_id: xiao_esp32c3
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-07)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_esp32c5
-    status: excluded
-    reason: listed in excluded_boards
+    status: build-verified
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_esp32c6
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_esp32s3
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-07)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_mg24
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-07)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_nrf52840
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_nrf54l15
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-07)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_ra4m1
     status: excluded
-    reason: xiao_i2c connector label unavailable in Zephyr v4.4.0 board metadata
+    reason: xiao_i2c connector label unavailable in the upstream Zephyr board devicetree
   - board_id: xiao_rp2040
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_rp2350
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-07)
+    evidence: seeed-zephyr build (local, 2026-11-09)
   - board_id: xiao_samd21
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-07)
+    evidence: seeed-zephyr build (local, 2026-11-09)

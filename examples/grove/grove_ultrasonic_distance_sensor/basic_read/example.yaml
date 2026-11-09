@@ -5,9 +5,7 @@ demo: basic_read
 interface: gpio
 connector: xiao
 pin_policy: selectable
-# xiao_esp32c5 has no upstream Zephyr board target in the v4.4.0 baseline.
-excluded_boards:
-  - xiao_esp32c5
+excluded_boards: []
 pins:
   - role: signal
     default: D2

@@ -37,7 +37,7 @@ interface: i2c            # i2c | spi | uart | gpio | analog
 connector: xiao
 pin_policy: fixed-bus     # fixed-bus | selectable
 excluded_boards:          # default: all boards; list exceptions here
-  - xiao_esp32c5
+  - xiao_ra4m1
 expected_behavior: Prints CO2, temperature, and humidity every five seconds.
 ```
 
@@ -106,7 +106,7 @@ interface: i2c            # i2c | spi | uart | gpio | analog
 connector: xiao
 pin_policy: fixed-bus     # fixed-bus | selectable
 excluded_boards:          # 默认全板支持，此处列例外
-  - xiao_esp32c5
+  - xiao_ra4m1
 expected_behavior: Prints CO2, temperature, and humidity every five seconds.
 ```
 

@@ -9,7 +9,7 @@
 Discover what a Seeed Studio XIAO board can build on Zephyr, see which examples are verified, and go from a fresh checkout to flashing firmware with a single command.
 
 [![Metadata Validation](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml/badge.svg)](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml)
-[![Zephyr](https://img.shields.io/badge/Zephyr-v4.4.0-7929d3)](https://docs.zephyrproject.org/4.4.0/)
+[![Zephyr](https://img.shields.io/badge/Zephyr-v4.5.0-7929d3)](https://docs.zephyrproject.org/4.5.0/)
 [![Boards](https://img.shields.io/badge/XIAO%20boards-11%20tracked-00979d)](#supported-boards)
 [![Platform](https://img.shields.io/badge/host-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#quick-start)
 
@@ -46,7 +46,7 @@ You get the smallest verified example for each supported board, board and Grove 
 
 ## Supported Boards
 
-Status is taken from the [board build matrix](tools/build_matrix/results.md) against the Zephyr **v4.4.0** baseline.
+Status is taken from the [board build matrix](tools/build_matrix/results.md) against the Zephyr **v4.5.0** baseline.
 
 | Board | Vendor | Zephyr target | Example | Status |
 | --- | --- | --- | --- | --- |
@@ -55,14 +55,14 @@ Status is taken from the [board build matrix](tools/build_matrix/results.md) aga
 | XIAO nRF54L15 | Nordic | `xiao_nrf54l15/nrf54l15/cpuapp` | `blinky` | 🔵 Hardware-tested |
 | XIAO MG24 | Silabs | `xiao_mg24` | `blinky` | 🔵 Hardware-tested |
 | XIAO RP2040 | Raspberry Pi | `xiao_rp2040` | `blinky` | 🔵 Hardware-tested |
-| XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33` | `blinky` | 🔵 Hardware-tested |
+| XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33_0` | `blinky` | 🔵 Hardware-tested |
 | XIAO ESP32-C6 | Espressif | `xiao_esp32c6/esp32c6/hpcore` | `blinky` | 🔵 Hardware-tested |
 | XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 Hardware-tested |
 | XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 Hardware-tested · no on-board LED |
 | XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 Hardware-tested · USB DFU |
-| XIAO ESP32-C5 | Espressif | `xiao_esp32c5` | `hello_world` | ⛔ No target in v4.4.0 |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `hello_world` | 🟢 Build-verified |
 
-**Legend** — 🔵 verified on real hardware · 🟢 builds cleanly in CI · ⛔ tracked, but the selected Zephyr baseline provides no board target yet.
+**Legend** — 🔵 verified on real hardware · 🟢 builds cleanly against the baseline, hardware run pending.
 
 Board-specific flashing, reset, and bootloader behavior is documented in [board notes](docs/en/boards/README.md).
 
@@ -330,7 +330,7 @@ Windows (WSL2):
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
 ```
 
-Setup prepares the Zephyr workspace, installs the Python venv and `west`, downloads Zephyr v4.4.0 and the SDK, fetches per-board flash tools, and offers to install the `seeed-zephyr` CLI. Pass `--board <target>` to limit board-specific downloads to one board.
+Setup prepares the Zephyr workspace, installs the Python venv and `west`, downloads Zephyr v4.5.0 and the SDK, fetches per-board flash tools, and offers to install the `seeed-zephyr` CLI. Pass `--board <target>` to limit board-specific downloads to one board.
 
 ## Repository Structure
 

@@ -15,13 +15,13 @@ Each `<example_id>.yaml` file:
 ```yaml
 example_id: grove_scd41_basic_read
 example_ref: grove/<module>/<demo>
-zephyr_version: v4.4.0
-generated_on: 2026-07-02
+zephyr_version: v4.5.0
+generated_on: 2026-11-09
 boards:
   - board_id: xiao_esp32c6
     status: build-verified
-    evidence: seeed-zephyr build (local, 2026-07-02)
-  - board_id: xiao_esp32c5
+    evidence: seeed-zephyr build (local, 2026-11-09)
+  - board_id: xiao_ra4m1
     status: excluded
     reason: listed in excluded_boards
   - board_id: xiao_esp32s3

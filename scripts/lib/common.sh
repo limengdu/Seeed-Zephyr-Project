@@ -15,7 +15,7 @@ if [[ -z "${REPO_ROOT:-}" ]]; then
   REPO_ROOT="$(cd "$COMMON_SCRIPT_DIR/../.." && pwd)"
 fi
 
-ZEPHYR_VERSION="${ZEPHYR_VERSION:-v4.4.0}"
+ZEPHYR_VERSION="${ZEPHYR_VERSION:-v4.5.0}"
 ZEPHYR_WORKSPACE="${ZEPHYR_WORKSPACE:-$HOME/zephyrproject}"
 SETUP_SCRIPT_NAME="${SETUP_SCRIPT_NAME:-scripts/setup-macos.sh}"
 SETUP_PLATFORM_LABEL="${SETUP_PLATFORM_LABEL:-platform}"
@@ -484,6 +484,35 @@ ensure_venv_and_west() {
   fi
 }
 
+# Moves an existing Zephyr manifest checkout to the configured version tag.
+# 把已有的 Zephyr manifest 仓库切换到配置的版本 tag。
+sync_manifest_revision() {
+  local manifest_path
+  local manifest_dir
+  local head_commit
+  local tag_commit
+
+  manifest_path="$(cd "$ZEPHYR_WORKSPACE" && "$WEST" config manifest.path)"
+  manifest_dir="$ZEPHYR_WORKSPACE/$manifest_path"
+  head_commit="$(git -C "$manifest_dir" rev-parse HEAD)"
+  tag_commit="$(git -C "$manifest_dir" rev-parse -q --verify "refs/tags/$ZEPHYR_VERSION^{commit}" || true)"
+
+  if [[ "$head_commit" == "$tag_commit" ]]; then
+    printf 'Zephyr manifest is already at %s.\n' "$ZEPHYR_VERSION"
+    return 0
+  fi
+
+  if [[ -n "$(git -C "$manifest_dir" status --porcelain --untracked-files=no)" ]]; then
+    fail "The Zephyr checkout at $manifest_dir has local changes. Commit or stash them, then rerun $SETUP_SCRIPT_NAME to move it to $ZEPHYR_VERSION."
+  fi
+
+  printf 'Moving the Zephyr manifest at %s to %s.\n' "$manifest_dir" "$ZEPHYR_VERSION"
+  # Shallow-fetch only the pinned tag, then detach HEAD on it.
+  # 仅浅获取锁定的 tag，然后把 HEAD 分离到该 tag。
+  git -C "$manifest_dir" fetch --depth=1 origin "refs/tags/$ZEPHYR_VERSION:refs/tags/$ZEPHYR_VERSION"
+  git -C "$manifest_dir" checkout --detach "refs/tags/$ZEPHYR_VERSION"
+}
+
 # Initializes or updates the Zephyr west workspace at the configured version.
 # 按配置版本初始化或更新 Zephyr west 工作区。
 ensure_workspace() {
@@ -491,6 +520,7 @@ ensure_workspace() {
   # TODO(mirrors): 在镜像策略验证后，添加可选的区域镜像配置。
   if [[ -d "$ZEPHYR_WORKSPACE/.west" ]]; then
     printf 'West workspace is already initialized at %s.\n' "$ZEPHYR_WORKSPACE"
+    sync_manifest_revision
   else
     printf 'Initializing west workspace at %s with Zephyr %s.\n' "$ZEPHYR_WORKSPACE" "$ZEPHYR_VERSION"
     # Shallow-clone the manifest repository at the pinned revision only.
