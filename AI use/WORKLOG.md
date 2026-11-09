@@ -30,6 +30,39 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-09 - Draft version-pair selection design
+
+Scope:
+- Added `AI use/zh/version-selection-design.md`.
+- Added `AI use/en/version-selection-design.md`.
+- Linked both from `AI use/zh/README.md` and `AI use/en/README.md`.
+
+Reason:
+- Users want to pick a CLI version together with the examples that match it,
+  instead of always following the repository's newest state. A repository
+  version and its pinned Zephyr version have to move as a pair: Zephyr v4.5.0
+  rewrites the RP2350 target name before board-file lookup, so an older
+  checkout builds cleanly while USB serial silently stops working.
+
+Result:
+- A design draft describes side-by-side Zephyr workspaces under
+  `~/zephyrproject/<version>`, a `metadata/versions.yaml` mapping of repository
+  tag to Zephyr version, snapshot-driven workspace selection in
+  `build --app`, and the `versions` / `install` / `use` commands.
+- The draft splits the work into two phases and records that it changes no
+  implemented behavior.
+
+Verification:
+- Checked the draft against the current code: `ZEPHYR_BASELINE`,
+  `snapshot.json` fields, `update --version`, `zephyr_workspace()`, and
+  `sync_manifest_revision()`.
+- Confirmed the repository has no git tags (`git tag` empty) and that
+  `build --app` does not read `snapshot.json`.
+
+Remaining:
+- The draft is awaiting review. No implementation is started, and the v4.5.0
+  baseline changes remain uncommitted.
+
 ## 2026-06-20 - Clarify documentation scope
 
 Scope:

@@ -8,6 +8,10 @@ These files explain the project mission, phases, roadmap, quality controls,
 glossary, onboarding model, and validation evidence. Future AI agents should
 read these documents before making strategic or architectural changes.
 
+Design documents:
+
+- `version-selection-design.md`: CLI version-pair selection design (draft).
+
 ## 中文
 
 这个目录保存英文版 AI 项目纲领文档。
