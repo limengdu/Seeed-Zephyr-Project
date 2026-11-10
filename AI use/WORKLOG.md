@@ -30,6 +30,56 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-10 - XIAO ESP32-C5 blinky and post-flash reset (release 0.5.1)
+
+Scope:
+- `examples/boards/xiao_esp32c5/blinky` replaces `hello_world` as the board
+  baseline demo. Board README, root READMEs, getting-started docs, and
+  `tools/build_matrix` point to `blinky`.
+- `tools/vscode-extension/src/cli/terminalRunner.ts`: Upload and Monitor close
+  earlier Upload and Monitor terminals before they start.
+- Release pair 0.5.1 / Zephyr v4.5.0 / SDK 1.0.1; CLI, extension, and
+  `DEFAULT_MANAGED_CLI_VERSION` are 0.5.1.
+
+Reason:
+- The board has a user LED (`led0` = GPIO27, active low), so the baseline demo
+  shows both a visible LED and serial output, matching the other XIAO boards.
+- After an upload the board must leave download mode and boot the new image.
+  The flash step ends with a reset command; a serial monitor that still holds
+  the port blocks that reset.
+
+Result:
+- Usage notes for XIAO ESP32-C5 (USB Serial/JTAG on the native USB port):
+  - Upload ends with a reset command. `west flash` runs esptool with
+    `--before default-reset --after hard-reset`, which toggles RTS over USB
+    Serial/JTAG; the chip reboots from flash and runs the new image without
+    pressing RESET. The serial log shows `boot:0x18 (SPI_FAST_FLASH_BOOT)` for a
+    normal boot.
+  - The serial port is held by one program at a time. Upload and Monitor run in
+    fresh terminals and close earlier Upload and Monitor terminals first, so the
+    flash reset reaches the chip. A log line `boot:0x28 (DOWNLOAD(UART0/USB))`
+    with `waiting for download` means the chip stayed in download mode; close
+    other programs on the port and press RESET, or replug USB.
+  - Monitor uses `west espressif monitor` (idf_monitor) at 115200 baud and
+    attaches to the running app without resetting it.
+  - Target is `xiao_esp32c5/esp32c5/hpcore` with a 48 MHz crystal, 8 MB flash,
+    DIO at 80 MHz, and app address 0x2000 (simple boot, no MCUboot).
+  - Download mode by hand: hold BOOT while plugging in USB.
+
+Verification:
+- Physical XIAO ESP32-C5 (revision v1.0) on `/dev/cu.usbmodem1201`, Zephyr
+  v4.5.0: `west flash` wrote 135296 bytes, verified the hash, reset via RTS, and
+  serial showed `*** Booting Zephyr OS build v4.5.0 ***`, the blinky banner, and
+  repeated `LED state: OFF/ON`. Flash followed by `west espressif monitor`
+  passed twice in a row without pressing RESET.
+- `python tools/validate_metadata/validate.py` -> 37 passed;
+  `tools/cli` unittest -> 117 tests OK; extension check-types, 7 tests, and
+  build passed. VS Code Marketplace, Open VSX, PyPI, and Homebrew show 0.5.1.
+
+Remaining:
+- Hardware-tested status for `xiao_esp32c5_blinky` follows the user's plugin
+  run on 0.5.1 and an entry in `HARDWARE_VERIFICATION.md`.
+
 ## 2026-11-09 - Measure single-workspace version switching
 
 Scope:
