@@ -9,6 +9,7 @@ import { createProject, CreatePreset } from "./commands/createProject";
 import { configurePins } from "./commands/configurePins";
 import { openGenerated } from "./commands/openGenerated";
 import { updateRepository } from "./commands/updateRepository";
+import { switchVersion } from "./commands/switchVersion";
 import {
   installManagedCli,
   reinstallManagedCli,
@@ -74,6 +75,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand("seeedZephyr.selectCliVersion", () =>
       selectManagedCliVersion(context, refreshAll),
+    ),
+    vscode.commands.registerCommand("seeedZephyr.switchVersion", () =>
+      switchVersion(catalog.getRepoRoot(), context, refreshAll),
     ),
     vscode.commands.registerCommand("seeedZephyr.verifyCli", () =>
       verifyCli(catalog.getRepoRoot(), context, refreshAll),

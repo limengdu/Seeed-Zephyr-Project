@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
+- Add **Switch Version** to move the examples, Zephyr workspace, and managed CLI to one published release together, with the active version pair shown in the Environment view.
 - Display every Zephyr project in a multi-root workspace and allow the active build, upload, and monitor target to be switched from the Projects view.
 
 ## 0.4.0

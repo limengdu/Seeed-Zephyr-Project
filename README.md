@@ -121,7 +121,7 @@ On Windows without WSL2, follow the PowerShell setup in the [Getting Started gui
 
 The **Seeed XIAO Zephyr Assistant** adds a catalog, project generator, visual Grove pin configurator, and run controls to the editor. Install it from the Extensions view of Cursor, Windsurf, VSCodium, Gitpod, or Eclipse Theia — search **Seeed XIAO Zephyr** — or from the [Open VSX listing](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant).
 
-On first use, the Welcome and Environment views offer setup actions for CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository folder selection.
+On first use, the Welcome and Environment views offer setup actions for CLI detection, managed CLI installation, CLI version selection, CLI path selection, and repository folder selection. **Switch Version** moves the examples, Zephyr workspace, and CLI to one release together.
 
 Use **Update Repository** in the Catalog title bar to refresh the examples and metadata read by the extension.
 

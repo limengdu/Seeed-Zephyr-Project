@@ -36,7 +36,7 @@ interface ManagedCliInstallOptions {
 
 const INSTALL_COMMAND =
   "curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash";
-const DEFAULT_MANAGED_CLI_VERSION = "0.4.0";
+const DEFAULT_MANAGED_CLI_VERSION = "0.5.0";
 const PYPI_VERSION_RETRIES = 3;
 const PYPI_VERSION_TIMEOUT_MS = 15000;
 const PIP_RETRIES = "5";
@@ -128,6 +128,22 @@ export async function reinstallManagedCli(
   await installManagedCliVersion(context, onUpdated, { forceReinstall: true });
 }
 
+// Installs one published seeed-zephyr version into extension storage; true on success.
+// 把指定的已发布 seeed-zephyr 版本装进插件存储目录；成功时返回 true。
+export function installManagedCliRelease(
+  context: vscode.ExtensionContext,
+  onUpdated: () => void,
+  version: string,
+): Promise<boolean> {
+  return installManagedCliVersion(context, onUpdated, { version });
+}
+
+// Reports whether the extension currently runs its own managed CLI.
+// 判断插件当前是否在使用它自己管理的 CLI。
+export function usesManagedCli(repoRoot: string | undefined, storagePath: string): boolean {
+  return resolveActiveCli(repoRoot, storagePath)?.source === "managed";
+}
+
 // Lets the user choose a published seeed-zephyr package version.
 // 让用户选择一个已发布的 seeed-zephyr 包版本。
 export async function selectManagedCliVersion(
@@ -188,13 +204,13 @@ async function installManagedCliVersion(
   context: vscode.ExtensionContext,
   onUpdated: () => void,
   options: ManagedCliInstallOptions,
-): Promise<void> {
+): Promise<boolean> {
   const { version, forceReinstall = false } = options;
   const storagePath = context.globalStorageUri.fsPath;
   const venvDir = managedCliVenvPath(storagePath);
   const python = await resolveManagedCliPython();
   if (!python) {
-    return;
+    return false;
   }
 
   const result = await vscode.window.withProgress<ProcessResult>(
@@ -241,24 +257,24 @@ async function installManagedCliVersion(
 
   if (!result.ok) {
     void vscode.window.showErrorMessage(`CLI install failed: ${result.message}`);
-    return;
+    return false;
   }
 
   const cliPath = managedCliPath(storagePath);
   const verification = await runProcess(cliPath, ["info", "--json"]);
   if (!verification.ok) {
     void vscode.window.showErrorMessage(`CLI installed but verification failed: ${verification.message}`);
-    return;
+    return false;
   }
   const installedVersion = parseCliVersion(verification.stdout);
   if (!installedVersion) {
     void vscode.window.showErrorMessage("CLI installed but version could not be read.");
-    return;
+    return false;
   }
   const compatibility = await verifyCliCompatibility(cliPath);
   if (!compatibility.ok) {
     void vscode.window.showErrorMessage(`CLI installed but compatibility check failed: ${compatibility.message}`);
-    return;
+    return false;
   }
 
   const config = vscode.workspace.getConfiguration("seeedZephyr");
@@ -266,6 +282,7 @@ async function installManagedCliVersion(
   await config.update("managedCliVersion", installedVersion, vscode.ConfigurationTarget.Global);
   onUpdated();
   void vscode.window.showInformationMessage(`CLI selected: seeed-zephyr ${installedVersion}`);
+  return true;
 }
 
 function installProgressTitle(version: string | undefined, forceReinstall: boolean): string {

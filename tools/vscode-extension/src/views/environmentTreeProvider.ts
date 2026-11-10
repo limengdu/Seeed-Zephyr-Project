@@ -1,8 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as vscode from "vscode";
+import { cachedReleases } from "../commands/switchVersion";
 import { detectEnvironment, EnvironmentState } from "../env/environment";
 import { locateRepoRoot } from "../repo/repoLocator";
+import { findRelease } from "../versions/releases";
+import { readVersionState, VersionState } from "../versions/versionState";
 import { ActionNode, CatalogNode, GroupNode, MessageNode } from "./treeItems";
 
 export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogNode> {
@@ -11,6 +14,7 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
 
   private repoRoot: string | undefined;
   private environment: EnvironmentState | undefined;
+  private versions: VersionState | undefined;
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.load();
@@ -28,6 +32,7 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
   private load(): void {
     this.repoRoot = locateRepoRoot();
     this.environment = detectEnvironment(this.repoRoot, this.context.globalStorageUri.fsPath);
+    this.versions = readVersionState(this.repoRoot, cachedReleases(this.context));
   }
 
   getTreeItem(node: CatalogNode): vscode.TreeItem {
@@ -39,6 +44,12 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
       const cliVersion = this.cliVersionLabel();
       return [
         new GroupNode("Status", "setupStatus", this.environment?.ready ? "ready" : "setup needed"),
+        new GroupNode(
+          "Version",
+          "setupVersion",
+          this.versionLabel(),
+          vscode.TreeItemCollapsibleState.Collapsed,
+        ),
         new GroupNode(
           "Repository",
           "setupRepository",
@@ -56,6 +67,9 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
     if (node instanceof GroupNode) {
       if (node.group === "setupStatus") {
         return this.statusNodes();
+      }
+      if (node.group === "setupVersion") {
+        return this.versionNodes();
       }
       if (node.group === "setupRepository") {
         return this.repositoryNodes();
@@ -93,6 +107,40 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
       nodes.push(new MessageNode("Version", version));
     }
 
+    return nodes;
+  }
+
+  private versionLabel(): string {
+    const examples = this.versions?.repoVersion ?? "unknown";
+    const zephyr = this.versions?.zephyrInstalled ?? "no Zephyr";
+    return `${examples} · Zephyr ${zephyr}`;
+  }
+
+  // Shows the active version pair and whether Zephyr matches the examples.
+  // 显示当前版本对，以及 Zephyr 是否与示例匹配。
+  private versionNodes(): CatalogNode[] {
+    const state = this.versions;
+    const expected = findRelease(state?.releases ?? [], state?.repoVersion)?.zephyr;
+    const nodes: CatalogNode[] = [
+      new MessageNode("Examples", state?.repoVersion ?? "unknown"),
+      new MessageNode(
+        "Zephyr",
+        state?.zephyrInstalled ? `${state.zephyrInstalled} in ${state.workspace}` : `not set up at ${state?.workspace}`,
+      ),
+    ];
+    if (expected && state?.zephyrInstalled && expected !== state.zephyrInstalled) {
+      nodes.push(
+        new MessageNode(`These examples use Zephyr ${expected}`, "Switch Version aligns them", "warning"),
+      );
+    }
+    nodes.push(
+      new ActionNode(
+        "Switch Version",
+        "seeedZephyr.switchVersion",
+        "versions",
+        "examples, Zephyr, and CLI",
+      ),
+    );
     return nodes;
   }
 
@@ -143,7 +191,7 @@ export class EnvironmentTreeProvider implements vscode.TreeDataProvider<CatalogN
         "Choose CLI Version",
         "seeedZephyr.selectCliVersion",
         "versions",
-        "specific version",
+        "CLI only",
       ),
       new ActionNode(
         "Use System CLI",

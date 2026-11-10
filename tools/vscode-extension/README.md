@@ -31,7 +31,8 @@ port, and run project actions including **Upload & Monitor**. Every Zephyr
 project in the current multi-root workspace appears in this view. The active
 project is marked **Active**; select another project to switch the status bar,
 build, upload, and monitor target. Use
-**Environment** to check **Status**, update repository content from the
+**Environment** to check **Status**, see the active version pair in the
+**Version** group, update repository content from the
 **Repository** group, and manage the selected
 `seeed-zephyr` command from the **CLI** group. **Install Latest CLI** installs
 the newest published CLI into extension storage and selects it automatically;
@@ -47,7 +48,13 @@ picker. In that picker, **Auto Detector** keeps automatic detection enabled, and
 a concrete port saves the user's selection for later upload and monitor actions.
 **Upload & Monitor** flashes the project and opens the serial monitor after upload.
 When testing from a source checkout, select the checkout's `scripts/seeed-zephyr`
-command. **Catalog** is visible by default, with Boards, Grove Modules, and
+command. **Switch Version** moves the examples, the Zephyr
+workspace, and the managed CLI to one release together, using the release list in
+`metadata/versions.yaml`: the newest release follows `main`, and an older release
+checks out its `v<version>` tag. The Zephyr workspace keeps every version it has
+used, so switching back to a version runs offline; blobs are restored from a
+cache in `<workspace>/.seeed-blob-cache`. The repository and the Zephyr checkout
+need a clean working tree before a switch. **Catalog** is visible by default, with Boards, Grove Modules, and
 Expansion Boards collapsed until opened.
 
 在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索
@@ -58,8 +65,8 @@ Expansion Boards collapsed until opened.
 里放常用入口。在 **Projects** 里创建或打开项目、选择项目开发板和串口，并运行项目操作。
 当前多根工作区里的全部 Zephyr 项目都会显示在这里；当前项目带有 **Active** 标记，选择
 另一个项目即可同步切换状态栏以及构建、上传、监视的目标。
-在 **Environment** 里查看 **Status**，仓库内容放在 **Repository** 分组，CLI 工具版本
-放在 **CLI** 分组。**Install Latest CLI** 会安装最新发布的 CLI，并自动切换插件使用它；
+在 **Environment** 里查看 **Status**，当前版本对显示在 **Version** 分组，仓库内容放在
+**Repository** 分组，CLI 工具版本放在 **CLI** 分组。**Install Latest CLI** 会安装最新发布的 CLI，并自动切换插件使用它；
 **Reinstall CLI** 会强制重新安装最新版；**Verify CLI** 会检查当前 CLI 版本和插件依赖的
 基础命令；**Choose CLI Version** 用于指定发布版本。插件托管 CLI 使用 Python 3.12 或更新
 版本，并会先查找可用 Python 再创建 venv。安装和重新安装会先验证 `info --json`、
@@ -68,6 +75,11 @@ CLI 提供；没有手动选择串口时，**Auto Port** 会使用检测到的�
 会打开检测结果选择框，其中 **Auto Detector** 会保持自动检测，选择具体端口则会保存给后续
 Upload 和 Monitor 使用。**Upload & Monitor** 会先上传项目，上传后直接打开串口监视器。
 从源码测试时，选择当前仓库里的 `scripts/seeed-zephyr`。
+**Switch Version** 会按 `metadata/versions.yaml` 里的版本列表，把示例、Zephyr 工作区和
+插件托管的 CLI 一起切换到同一个发布版本：最新版本跟随 `main`，较早的版本签出对应的
+`v<version>` tag。Zephyr 工作区会保留用过的每个版本，切换回已用过的版本时无需联网；
+blobs 从 `<workspace>/.seeed-blob-cache` 缓存还原。切换前，仓库和 Zephyr 签出的工作区
+需要保持干净。
 **Catalog** 默认显示，Boards、Grove Modules、Expansion Boards 默认收起。
 
 ## Develop

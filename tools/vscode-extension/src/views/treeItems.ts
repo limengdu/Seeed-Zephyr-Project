@@ -13,6 +13,7 @@ import type { ProjectInfo } from "../statusBar";
 
 export type GroupKind =
   | "setupStatus"
+  | "setupVersion"
   | "setupRepository"
   | "setupCli"
   | "boards"

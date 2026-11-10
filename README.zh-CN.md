@@ -121,7 +121,7 @@ Windows 未使用 WSL2 时，请按[入门指南](docs/zh/getting-started.md)里
 
 **Seeed XIAO Zephyr Assistant** 插件把目录浏览、项目生成、可视化 Grove 引脚配置和运行按钮放进编辑器。在 Cursor、Windsurf、VSCodium、Gitpod 或 Eclipse Theia 的扩展面板搜索 **Seeed XIAO Zephyr** 即可安装,也可从 [Open VSX 页面](https://open-vsx.org/extension/seeed-studio/seeed-xiao-zephyr-assistant)安装。
 
-首次使用时，Welcome 和 Environment 视图会提供 CLI 检测、插件托管 CLI 安装、CLI 版本选择、CLI 路径选择和仓库目录选择。
+首次使用时，Welcome 和 Environment 视图会提供 CLI 检测、插件托管 CLI 安装、CLI 版本选择、CLI 路径选择和仓库目录选择。**Switch Version** 会把示例、Zephyr 工作区和 CLI 一起切换到同一个发布版本。
 
 在 Catalog 标题栏点击 **Update Repository**，即可刷新插件读取的示例和 metadata。
 

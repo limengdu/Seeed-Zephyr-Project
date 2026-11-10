@@ -25,6 +25,18 @@ export async function updateRepository(
     return;
   }
 
+  // A detached checkout is a pinned release; Switch Version moves it to another one.
+  // 游离签出表示固定在某个发布版本；用 Switch Version 切换到其他版本。
+  const branch = await runGit(repoRoot, ["symbolic-ref", "-q", "HEAD"]);
+  if (!branch.ok) {
+    const tag = await runGit(repoRoot, ["describe", "--tags", "--exact-match"]);
+    const pinned = tag.ok ? tag.stdout.trim() : "a fixed commit";
+    void vscode.window.showInformationMessage(
+      `The repository is pinned to ${pinned}. Use Switch Version to move to the latest release.`,
+    );
+    return;
+  }
+
   const result = await vscode.window.withProgress<GitResult>(
     {
       location: vscode.ProgressLocation.Notification,

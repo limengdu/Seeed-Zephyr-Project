@@ -2,7 +2,7 @@
   "name": "seeed-xiao-zephyr-assistant",
   "displayName": "Seeed XIAO Zephyr Assistant",
   "description": "Discover and create XIAO + Grove Zephyr examples, then hand build/flash to Zephyr tooling.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "seeed-studio",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -92,6 +92,12 @@
         "title": "Reinstall CLI",
         "category": "Seeed XIAO",
         "icon": "$(debug-restart)"
+      },
+      {
+        "command": "seeedZephyr.switchVersion",
+        "title": "Switch Version",
+        "category": "Seeed XIAO",
+        "icon": "$(versions)"
       },
       {
         "command": "seeedZephyr.selectCliVersion",
@@ -206,25 +212,71 @@
     ],
     "menus": {
       "commandPalette": [
-        { "command": "seeedZephyr.showDetail", "when": "false" },
-        { "command": "seeedZephyr.build", "when": "false" },
-        { "command": "seeedZephyr.flash", "when": "false" },
-        { "command": "seeedZephyr.monitor", "when": "false" },
-        { "command": "seeedZephyr.debug", "when": "false" },
-        { "command": "seeedZephyr.createProject" },
-        { "command": "seeedZephyr.openGenerated" },
-        { "command": "seeedZephyr.selectProjectBoard" },
-        { "command": "seeedZephyr.selectProjectPort" },
-        { "command": "seeedZephyr.configurePins" },
-        { "command": "seeedZephyr.projectFlashMonitor" },
-        { "command": "seeedZephyr.setupEnvironment" },
-        { "command": "seeedZephyr.useExistingCli" },
-        { "command": "seeedZephyr.installManagedCli" },
-        { "command": "seeedZephyr.reinstallManagedCli" },
-        { "command": "seeedZephyr.selectCliVersion" },
-        { "command": "seeedZephyr.verifyCli" },
-        { "command": "seeedZephyr.selectCliPath" },
-        { "command": "seeedZephyr.recheckEnvironment" }
+        {
+          "command": "seeedZephyr.showDetail",
+          "when": "false"
+        },
+        {
+          "command": "seeedZephyr.build",
+          "when": "false"
+        },
+        {
+          "command": "seeedZephyr.flash",
+          "when": "false"
+        },
+        {
+          "command": "seeedZephyr.monitor",
+          "when": "false"
+        },
+        {
+          "command": "seeedZephyr.debug",
+          "when": "false"
+        },
+        {
+          "command": "seeedZephyr.createProject"
+        },
+        {
+          "command": "seeedZephyr.openGenerated"
+        },
+        {
+          "command": "seeedZephyr.selectProjectBoard"
+        },
+        {
+          "command": "seeedZephyr.selectProjectPort"
+        },
+        {
+          "command": "seeedZephyr.configurePins"
+        },
+        {
+          "command": "seeedZephyr.projectFlashMonitor"
+        },
+        {
+          "command": "seeedZephyr.setupEnvironment"
+        },
+        {
+          "command": "seeedZephyr.useExistingCli"
+        },
+        {
+          "command": "seeedZephyr.installManagedCli"
+        },
+        {
+          "command": "seeedZephyr.reinstallManagedCli"
+        },
+        {
+          "command": "seeedZephyr.switchVersion"
+        },
+        {
+          "command": "seeedZephyr.selectCliVersion"
+        },
+        {
+          "command": "seeedZephyr.verifyCli"
+        },
+        {
+          "command": "seeedZephyr.selectCliPath"
+        },
+        {
+          "command": "seeedZephyr.recheckEnvironment"
+        }
       ],
       "view/title": [
         {
