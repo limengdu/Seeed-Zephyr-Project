@@ -29,6 +29,7 @@ import {
 } from "./commands/projectSettings";
 import { Action, runAction, runProjectAction } from "./cli/terminalRunner";
 import { ProjectStatusBar } from "./statusBar";
+import { watchProjectFiles } from "./projectWatcher";
 import type { ProjectInfo } from "./statusBar";
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -39,12 +40,15 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new ProjectStatusBar(context);
   statusBar.refresh(projects.getActiveProject());
 
+  const refreshProjects = () => {
+    projects.refresh();
+    statusBar.refresh(projects.getActiveProject());
+  };
   const refreshAll = () => {
     welcome.refresh();
-    projects.refresh();
+    refreshProjects();
     environment.refresh();
     catalog.refresh();
-    statusBar.refresh(projects.getActiveProject());
   };
   const action = (name: Action) => (node?: unknown) => runActionFromNode(catalog, name, node);
   const projectAction =
@@ -101,7 +105,9 @@ export function activate(context: vscode.ExtensionContext): void {
         presetFromNode(node),
       ),
     ),
-    vscode.commands.registerCommand("seeedZephyr.openGenerated", () => openGenerated()),
+    vscode.commands.registerCommand("seeedZephyr.openGenerated", () => openGenerated(refreshProjects)),
+    vscode.commands.registerCommand("seeedZephyr.refreshProjects", refreshProjects),
+    watchProjectFiles(refreshProjects),
     vscode.commands.registerCommand("seeedZephyr.build", action("build")),
     vscode.commands.registerCommand("seeedZephyr.flash", action("flash")),
     vscode.commands.registerCommand("seeedZephyr.monitor", action("monitor")),

@@ -9,6 +9,7 @@ const output = path.join(os.tmpdir(), "seeed-zephyr-vscode-tests.cjs");
 
 esbuild.buildSync({
   entryPoints: [path.join(__dirname, "allTests.ts")],
+  alias: { vscode: path.join(__dirname, "mocks", "vscode.ts") },
   bundle: true,
   outfile: output,
   format: "cjs",

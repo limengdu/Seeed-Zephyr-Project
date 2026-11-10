@@ -2,7 +2,7 @@
   "name": "seeed-xiao-zephyr-assistant",
   "displayName": "Seeed XIAO Zephyr Assistant",
   "description": "Discover and create XIAO + Grove Zephyr examples, then hand build/flash to Zephyr tooling.",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "publisher": "seeed-studio",
   "license": "Apache-2.0",
   "icon": "media/icon.png",
@@ -145,6 +145,12 @@
         "title": "Open Project",
         "category": "Seeed XIAO",
         "icon": "$(folder-opened)"
+      },
+      {
+        "command": "seeedZephyr.refreshProjects",
+        "title": "Refresh Projects",
+        "category": "Seeed XIAO",
+        "icon": "$(refresh)"
       },
       {
         "command": "seeedZephyr.build",
@@ -298,6 +304,11 @@
           "command": "seeedZephyr.openGenerated",
           "when": "view == seeedZephyrProjects",
           "group": "navigation@2"
+        },
+        {
+          "command": "seeedZephyr.refreshProjects",
+          "when": "view == seeedZephyrProjects",
+          "group": "navigation@3"
         },
         {
           "command": "seeedZephyr.recheckEnvironment",

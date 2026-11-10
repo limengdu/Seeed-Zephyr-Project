@@ -30,6 +30,34 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-10 - Imported project list refresh (release 0.5.5)
+
+Scope:
+- Extension project import callback, project-file watcher, refresh command,
+  Projects toolbar, lifecycle regression tests, and extension README.
+- Release pair 0.5.5 / Zephyr v4.5.0 / SDK 1.0.1.
+
+Reason:
+- The project tree caches discovery results between workspace-folder changes.
+  Importing a folder already present in the workspace leaves that folder list
+  unchanged, while project files can appear after the initial scan.
+
+Result:
+- Open Project rescans after a successful import, including an already-open
+  folder. Root-level project-marker creation, changes, and removal update both
+  the project list and the active-project status bar.
+- Refresh Projects rescans from the Projects title bar or command palette.
+  Build-directory files leave project discovery unchanged.
+
+Verification:
+- A regression test reproduced an empty list after importing an already-open
+  folder whose project receipt appeared after the initial scan; the fix passes.
+- Extension typecheck, all 18 tests, and build passed. Tests cover import,
+  cancellation, generated and plain apps, marker lifecycle, workspace additions,
+  filtering build-directory changes, and watcher disposal.
+- Metadata validation passed all 43 checks; release versions and the Projects
+  refresh command registration/menu wiring were checked.
+
 ## 2026-11-10 - STM32C5 USB and automatic TinyUF2 uploads (release 0.5.4)
 
 Scope:

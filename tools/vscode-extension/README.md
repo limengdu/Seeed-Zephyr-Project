@@ -30,7 +30,9 @@ The sidebar is organized into **Welcome**, **Projects**, **Environment**, and
 port, and run project actions including **Upload & Monitor**. Every Zephyr
 project in the current multi-root workspace appears in this view. The active
 project is marked **Active**; select another project to switch the status bar,
-build, upload, and monitor target. Use
+build, upload, and monitor target. **Open Project** rescans the selected folder,
+including folders already in the workspace. Project-file changes update the list
+automatically; **Refresh Projects** in the Projects title bar rescans it on demand. Use
 **Environment** to check **Status**, see the active version pair in the
 **Version** group, update repository content from the
 **Repository** group, and manage the selected
@@ -64,7 +66,9 @@ Expansion Boards collapsed until opened.
 左侧栏分为 **Welcome**、**Projects**、**Environment** 和 **Catalog**。在 **Welcome**
 里放常用入口。在 **Projects** 里创建或打开项目、选择项目开发板和串口，并运行项目操作。
 当前多根工作区里的全部 Zephyr 项目都会显示在这里；当前项目带有 **Active** 标记，选择
-另一个项目即可同步切换状态栏以及构建、上传、监视的目标。
+另一个项目即可同步切换状态栏以及构建、上传、监视的目标。**Open Project** 会重新扫描选中的
+目录，包括已经在工作区里的目录。工程文件发生变化时，列表自动更新；点击 Projects 标题栏的
+**Refresh Projects** 按钮可立即重扫。
 在 **Environment** 里查看 **Status**，当前版本对显示在 **Version** 分组，仓库内容放在
 **Repository** 分组，CLI 工具版本放在 **CLI** 分组。**Install Latest CLI** 会安装最新发布的 CLI，并自动切换插件使用它；
 **Reinstall CLI** 会强制重新安装最新版；**Verify CLI** 会检查当前 CLI 版本和插件依赖的

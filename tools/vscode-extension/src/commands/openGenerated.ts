@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 
 // Opens a project folder and offers the same window choices used after creation.
 // 打开项目文件夹,并提供与创建完成后相同的窗口选择。
-export async function openGenerated(): Promise<void> {
+export async function openGenerated(onOpened?: () => void): Promise<void> {
   const folder = await vscode.window.showOpenDialog({
     canSelectFolders: true,
     canSelectFiles: false,
@@ -26,7 +26,9 @@ export async function openGenerated(): Promise<void> {
     }
   }
 
-  await openProjectFolder(dir);
+  if (await openProjectFolder(dir)) {
+    onOpened?.();
+  }
 }
 
 function isKnownProjectFolder(dir: string): boolean {

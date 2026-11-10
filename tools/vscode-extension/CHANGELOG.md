@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.5
+
+- Rescan Projects after Open Project, including folders already in the workspace.
+- Update the project list and active-project status bar when root-level `snapshot.json`, `CMakeLists.txt`, or `prj.conf` files change.
+- Add **Refresh Projects** to the Projects title bar and command palette.
+- Install seeed-zephyr 0.5.5 by default, paired with Zephyr v4.5.0 and SDK 1.0.1.
+
 ## 0.5.4
 
 - Enable XIAO STM32C5 USB with the 48 MHz clock and PA11/PA12 pin settings in the `blinky` board overlay.
