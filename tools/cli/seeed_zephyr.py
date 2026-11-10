@@ -3392,6 +3392,7 @@ def _cmd_create_grove(args: argparse.Namespace) -> None:
         "source_asset": f"examples/grove/{module_id}/{demo}",
         "board": args.board_id,
         "zephyr_version": ZEPHYR_BASELINE,
+        "validation_status": read_example_status(str(example["id"])).get(args.board_id, "pending"),
         "pins": assignments,
     }
     (out_dir / "snapshot.json").write_text(

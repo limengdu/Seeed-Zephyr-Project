@@ -30,6 +30,34 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-10 - Grove verification in project snapshots and catalog counts (release 0.5.3)
+
+Scope:
+- `tools/cli/seeed_zephyr.py`: generated Grove snapshots record the selected
+  board's matrix status in `validation_status`.
+- `tools/vscode-extension/src/model/groveStatus.ts` and `views/treeItems.ts`:
+  catalog summaries count hardware-tested, build-verified, pending, and other
+  recorded states separately.
+- `metadata/status/README.md`: project snapshot and catalog status semantics.
+- Release pair 0.5.3 / Zephyr v4.5.0 / SDK 1.0.1.
+
+Reason:
+- Grove verification is recorded per example and per board. Project snapshots
+  and catalog summaries carry the same distinction between hardware and build
+  evidence.
+
+Result:
+- Creating an ultrasonic project for RP2350 records `hardware-tested`; the same
+  example on ESP32-C5 records `build-verified`; LM20A records `pending`.
+- The ultrasonic catalog summary shows 10 hardware-tested boards, 1 build-verified
+  board, and 3 pending boards. The existing matrix supplies each status.
+
+Verification:
+- CLI regression tests reproduced the missing snapshot field for hardware-tested,
+  build-verified, pending, and absent matrix rows; the fix passes all 124 tests.
+- Extension typecheck, 10 tests, and build passed. Tests cover mixed catalog
+  counts and loading the board matrix from disk.
+
 ## 2026-11-10 - XIAO nRF54LM20A, nRF54LM20B, and STM32C5 (release 0.5.2)
 
 Scope:

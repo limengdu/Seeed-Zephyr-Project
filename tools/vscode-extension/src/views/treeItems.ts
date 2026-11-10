@@ -10,6 +10,7 @@ import {
 } from "../model/types";
 import type { DetailTarget } from "../panels/detailPanel";
 import type { ProjectInfo } from "../statusBar";
+import { summarizeGroveStatus } from "../model/groveStatus";
 
 export type GroupKind =
   | "setupStatus"
@@ -141,7 +142,7 @@ export class GroveExampleNode extends vscode.TreeItem {
   ) {
     super(example.demo, vscode.TreeItemCollapsibleState.None);
     const status = primaryGroveStatus(example);
-    this.description = summarizeGroveStatus(example);
+    this.description = summarizeGroveStatus(example.boardStatus);
     this.iconPath = statusIcon(status);
     this.tooltip = example.expectedBehavior;
     this.contextValue = "groveExample";
@@ -209,15 +210,4 @@ function primaryGroveStatus(example: GroveExample): GroveMatrixStatus {
     return "build-failed";
   }
   return example.boardStatus.length > 0 ? "pending" : "unknown";
-}
-
-function summarizeGroveStatus(example: GroveExample): string {
-  const verified = example.boardStatus.filter((row) =>
-    row.status === "build-verified" || row.status === "hardware-tested"
-  ).length;
-  const failed = example.boardStatus.filter((row) => row.status === "build-failed").length;
-  if (failed > 0) {
-    return `${verified} verified - ${failed} failed`;
-  }
-  return `${verified} verified`;
 }

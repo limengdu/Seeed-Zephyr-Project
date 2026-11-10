@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3
+
+- Show separate hardware-tested, build-verified, and pending board counts for each Grove example in the Catalog.
+- Save the selected board's Grove verification status in each generated project's `snapshot.json`, using the example's board matrix.
+- Install seeed-zephyr 0.5.3 by default.
+
 ## 0.5.2
 
 - Install seeed-zephyr 0.5.2 by default, which adds baseline `blinky` examples for XIAO nRF54LM20A, XIAO nRF54LM20B, and XIAO STM32C5.

@@ -38,6 +38,17 @@ boards:
 | `pending`        | Not yet built on this board.                                  |
 | `excluded`       | The example declares this board in `excluded_boards`.         |
 
+## Using status in projects
+
+Grove verification belongs to one example and one board. The Catalog lists
+hardware-tested, build-verified, and pending board counts separately. The board
+picker and the example detail panel display the status recorded for each board.
+
+Creating a Grove project copies that board's matrix status to `validation_status`
+in `snapshot.json`. A board without a matrix entry starts as `pending`. The
+snapshot records the source example's verification at creation time; the matrix
+keeps the current catalog evidence.
+
 ## Regenerating
 
 ```bash

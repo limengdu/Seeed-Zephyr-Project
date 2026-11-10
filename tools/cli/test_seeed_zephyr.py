@@ -1138,6 +1138,40 @@ class CreateCommandTests(unittest.TestCase):
             seeed_zephyr.cmd_create(self._make_args(output=str(out), force=True))
             self.assertTrue((out / "snapshot.json").is_file())
 
+    def test_create_grove_snapshot_records_selected_board_status(self) -> None:
+        cases = [
+            ("grove_ultrasonic_distance_sensor", "xiao_rp2350", "hardware-tested"),
+            ("grove_ultrasonic_distance_sensor", "xiao_esp32c5", "build-verified"),
+            ("grove_scd41_co2_temperature_humidity_sensor", "xiao_rp2350", "build-verified"),
+            ("grove_ultrasonic_distance_sensor", "xiao_nrf54lm20a", "pending"),
+        ]
+        for module_id, board_id, expected_status in cases:
+            with self.subTest(module_id=module_id, board_id=board_id):
+                with tempfile.TemporaryDirectory() as tmp:
+                    out = Path(tmp) / "proj"
+                    args = self._make_args(
+                        from_asset=f"grove/{module_id}/basic_read",
+                        board_id=board_id,
+                        output=str(out),
+                    )
+                    seeed_zephyr.cmd_create(args)
+
+                    snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
+                    self.assertEqual(snapshot.get("validation_status"), expected_status)
+
+    def test_create_grove_snapshot_defaults_to_pending_without_matrix(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "proj"
+            args = self._make_args(
+                from_asset="grove/grove_ultrasonic_distance_sensor/basic_read",
+                output=str(out),
+            )
+            with mock.patch.object(seeed_zephyr, "STATUS_DIR", Path(tmp) / "status"):
+                seeed_zephyr.cmd_create(args)
+
+            snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
+            self.assertEqual(snapshot.get("validation_status"), "pending")
+
     def test_create_grove_rp2350_writes_target_board_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "proj"
