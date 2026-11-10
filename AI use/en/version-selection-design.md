@@ -57,8 +57,8 @@ Gaps:
 ```text
 seeed-zephyr versions                 lists version pairs and what is installed
 seeed-zephyr install v1.1.0           installs that pair (repo checkout + matching Zephyr)
-seeed-zephyr use v1.1.0               makes that pair the active one
-seeed-zephyr build <board> --app .    picks the workspace from the project snapshot
+seeed-zephyr use v1.1.0               switches to that pair; about 10 s offline once installed
+seeed-zephyr build <board> --app .    checks the project snapshot and stops on a mismatch
 ```
 
 The `versions` output answers three questions at a glance: which pairs exist,
@@ -89,109 +89,137 @@ Conventions:
 - The metadata validator requires the repository's `ZEPHYR_BASELINE` constant to
   match the `zephyr` value of the newest row.
 
-## 6. Directory layout
+## 6. Storage: one workspace, several stored versions
 
-Zephyr workspaces sit side by side and share one SDK:
+The machine keeps a single Zephyr workspace, `~/zephyrproject`. Versions
+coexist as stored git objects inside that workspace, and exactly one version's
+source files are checked out at any time. Switching versions checks out a
+different stored version locally.
 
-```text
-~/zephyrproject/v4.4.0/      a complete west workspace
-~/zephyrproject/v4.5.0/      another complete west workspace
-~/zephyr-sdk-1.0.1/          shared; no reinstall while the SDK major matches
-```
+All three mechanisms are built into west, so no new dependency is needed:
 
-Repository checkouts sit side by side too:
+| Mechanism | Effect | Setting |
+| --- | --- | --- |
+| Module filter | Fetches only the modules this repository's boards use | `manifest.project-filter` |
+| Offline switch | Checks out another stored version from local objects | `west update -n` |
+| Blob cache | Caches blobs by sha256 and copies them locally on switch | `blobs.auto-cache` |
 
-```text
-~/.seeed-zephyr/versions/v1.0.0/    full checkout of that tag
-~/.seeed-zephyr/versions/v1.1.0/
-~/.seeed-zephyr/current              points at the active checkout
-```
+Modules kept by the filter: Zephyr itself plus cmsis, cmsis_6, hal_atmel,
+hal_espressif, hal_nordic, hal_renesas, hal_rpi_pico, hal_silabs, mbedtls,
+mcuboot, picolibc, segger, tf-psa-crypto, and zcbor. The list is derived from
+board metadata and grows with new boards (hal_stm32 joins with STM32C5).
 
-Side-by-side storage replaces in-place switching because an in-place switch
-removes the workspace an older project was built against. With both present,
-every generated project can return to the pair it was created with.
+Each installed version keeps a local ref `refs/seeed/<version>` in every
+module, so git garbage collection retains stored versions that are not checked
+out.
 
-Each Zephyr workspace costs multiple gigabytes, and west blobs are duplicated
-per workspace. The maintained default is the latest version plus the previous
-one; older versions are installed on request.
+The SDK stays shared at `~/zephyr-sdk-<version>`; pairs with the same `sdk`
+value in the mapping reuse it. The Python environment (`.venv`) is shared too,
+and setup installs the union of the requirement files of all installed
+versions.
 
-## 7. Workspace selection at build time
+## 7. Measurements
 
-`seeed-zephyr build <board> --app <dir>` selects in this order:
+Measured on 2026-11-09 in an isolated workspace, with v4.4.0 and v4.5.0 stored
+side by side and repository content taken from the commits before and after the
+baseline move:
+
+| Item | Result |
+| --- | --- |
+| Full workspace (68 modules, the user's current one) | 6.3 GB |
+| Filtered, one version | 2.2 GB |
+| Stored objects: one / two versions | 228 MB / 261 MB, 244 MB after gc |
+| Blob cache: two versions | 184 MB |
+| First install of a second version | sources 8 s + modules 36 s + blobs 274 s |
+| Switch between installed versions, no cache | sources ~10 s + blobs ~280 s |
+| Switch between installed versions, with cache | sources ~10 s + blobs 0-1 s, fully offline |
+| v4.4.0 build matrix | 10 pass, 1 unsupported, matching the v4.4.0-era record |
+| v4.5.0 build matrix after a switch | 11 pass |
+| RP2350 console, each version with its own repository | `&cdc_acm_uart0` for both |
+| Stored versions after git gc | all retained |
+
+Result: each extra stored version costs about 0.1-0.2 GB, and switching between
+installed versions takes about 10 s with no network access.
+
+## 8. Version check at build time
+
+`seeed-zephyr build <board> --app <dir>` decides as follows:
 
 1. Read `snapshot.json` in the directory and take `zephyr_version`.
-2. When that version's workspace is installed, build with it.
-3. A directory without `snapshot.json` (an example inside the repository, a
-   hand-written project) uses the currently selected pair.
-4. When the workspace is not installed, print the install command and stop
-   instead of downloading gigabytes unprompted.
-5. The `ZEPHYR_WORKSPACE` environment variable still wins, so the build matrix
-   and investigations keep their override.
+2. When it matches the version checked out in the workspace, build.
+3. When it differs and that version is installed, print both versions plus
+   `seeed-zephyr use <version>`, then stop.
+4. When it differs and that version is not installed, print
+   `seeed-zephyr install <version>`, then stop.
+5. A directory without `snapshot.json` (an example inside the repository, a
+   hand-written project) builds against the current version.
+6. `--allow-mismatch` skips the check for deliberate mismatched builds.
+7. The `ZEPHYR_WORKSPACE` environment variable still wins, for the build matrix.
 
-Mismatch notice: when the directory's `zephyr_version` differs from the
-workspace actually used, print one line naming both versions before building.
-The build continues after the notice, because investigations deliberately
-build mismatched combinations.
+The build stops on a mismatch because the RP2350 case shows a mismatched pair
+builds cleanly and fails on hardware. A switch takes about 10 s, so asking the
+user to confirm costs little.
 
-`info` gains two lines: the path of the Zephyr workspace in use, and that
-workspace's actual version. Both come from disk, not from the code constant.
+`info` gains two lines: the workspace path and the version checked out in it.
+Both are read from disk (Zephyr's `VERSION` file), not from the code constant.
 
-## 8. Relationship to existing mechanisms
+## 9. Relationship to existing mechanisms
 
-- `update --version` stays, and its meaning becomes "switch the active pair".
-  Internally it takes the same path as `use`, so there is one implementation.
-- The in-place migration in the setup scripts (`sync_manifest_revision`) runs
-  once, for a workspace that has no version subdirectory yet: it moves the
-  existing `~/zephyrproject` into `~/zephyrproject/v4.4.0/`. After that, version
-  directories never move each other. The signal is whether `.west` already
-  exists in the directory.
-- In package mode (pip, pipx, Homebrew) the examples and metadata travel with
-  the package version. `versions` and `use` operate on the side-by-side
-  checkouts and leave the installed package untouched. Homebrew installs still
-  cannot roll the package back through the package manager.
-- The VS Code extension reads metadata directly and filters out `unsupported`.
-  Its change is to drive version selection through the same CLI commands and to
-  show the active pair in the environment view. That step follows once the CLI
-  commands are stable.
+- `use <version>` does three things in order: checks the repository out at
+  that tag, moves Zephyr to the mapped version, and restores blobs from the
+  cache. `update --version` stays and takes the same path.
+- The existing `sync_manifest_revision` in the setup scripts is the first form
+  of the Zephyr switch step and is extended with two steps: writing the local
+  ref and restoring blobs from the cache.
+- The user's existing `~/zephyrproject` is upgraded in place without moving:
+  setup writes the module filter and cache settings and anchors the current
+  version. Module directories outside the filter (about 4 GB) become inactive
+  in west; setup lists them and moves them to the trash after the user
+  confirms.
+- In package mode (pip, pipx, Homebrew) examples and metadata travel with the
+  package version, and `use` switches the Zephyr workspace and the active pair
+  record. Homebrew installs still cannot roll the package back through the
+  package manager.
+- The VS Code extension follows once the CLI commands are stable: its version
+  picker calls the same commands, and the environment view shows the active
+  pair.
 
-## 9. Phases
+## 10. Phases
 
-Phase 1, so an existing project finds its own workspace:
+Phase 1, storage and version check (no new command):
 
-1. Workspaces move to per-version subdirectories, with the setup scripts
-   performing the one-time migration.
-2. `build --app` selects the workspace from `snapshot.json` and prints the
-   mismatch notice.
-3. `info` prints the real workspace path and version.
+1. Setup writes the module filter and blob cache settings and upgrades the
+   existing workspace in place.
+2. `build --app` checks the version from `snapshot.json` and stops with a
+   command on a mismatch.
+3. `info` prints the version checked out in the workspace.
 
-Phase 1 adds no command and needs no git tag. It is verifiable on its own: a
-project generated under v4.4.0 still builds against v4.4.0 when both workspaces
-exist on the machine.
-
-Phase 2, so users can choose a version:
+Phase 2, user version selection:
 
 1. Cut the first repository tag for the current baseline and add the mapping
    file.
-2. Implement `versions`, `install`, `use`, and the side-by-side checkouts.
-3. Update the getting-started docs to explain pairs and disk use.
+2. Implement `versions`, `install`, and `use`.
+3. Update the getting-started docs to explain pairs, disk use, and switching.
 4. Point the extension at the same commands.
 
-## 10. Verification
+## 11. Verification
 
-- Unit tests cover: workspace chosen from a snapshot, current pair used when
-  there is no snapshot, the install command printed when a workspace is
-  missing, the environment variable override, and the one-time migration
-  leaving an already migrated workspace in place.
-- One real build: with v4.4.0 and v4.5.0 workspaces coexisting, build the
-  RP2350 example against each and confirm the console node comes from that
-  version's board file.
-- Docs and command help stay in step: the new commands appear in
-  `seeed-zephyr --help` and in the getting-started guide.
+- Unit tests cover: matching versions build, an installed mismatch suggests
+  `use`, a missing version suggests `install`, no snapshot builds against the
+  current version, `--allow-mismatch` proceeds, and the environment variable
+  wins.
+- Switch script test: switch back and forth between two versions, every blob
+  verifies after each switch, and both stored versions survive git gc.
+- Real builds: each version with its own repository passes the build matrix,
+  and the RP2350 console lands on USB.
+- Still open: whether flash tools work across versions with the shared Python
+  environment; only builds are verified so far.
 
-## 11. Out of scope
+## 12. Out of scope
 
 - Example content and board coverage stay as they are. nRF54LM20A, nRF54LM20B,
   and STM32C5 continue on their own plans.
-- No new third-party dependency. Version switching uses git and west.
-- No automatic cleanup of old workspaces. Removing multi-gigabyte directories
-  stays an explicit user action.
+- No new third-party dependency. Switching uses only git and built-in west
+  features.
+- Installed versions and caches are never deleted automatically. Freeing disk
+  space stays an explicit user action.

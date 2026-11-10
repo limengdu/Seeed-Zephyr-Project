@@ -30,6 +30,36 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-09 - Measure single-workspace version switching
+
+Scope:
+- Rewrote sections 6-12 of `AI use/zh/version-selection-design.md` and
+  `AI use/en/version-selection-design.md`.
+
+Reason:
+- One full Zephyr workspace per version costs about 6.3 GB each. Storing
+  several versions in one filtered workspace needs measured evidence.
+
+Result:
+- The design now keeps one workspace with a west module filter, stores each
+  version's git objects with a `refs/seeed/<version>` anchor, switches offline
+  with `west update -n`, and serves blobs from `blobs.auto-cache`.
+- The build check stops on a snapshot version mismatch and prints the `use` or
+  `install` command.
+
+Verification:
+- Isolated workspace `/tmp/zephyr-research/ws-v4.5.0`: filtered size 2.2 GB;
+  objects for two versions 261 MB (244 MB after gc); blob cache 184 MB.
+- Switch between installed versions: about 10 s of sources plus 0-1 s of
+  blobs with the cache, about 280 s of blobs without it.
+- v4.4.0 matrix with the pre-baseline commit `16f93ad`: 10 pass, 1
+  unsupported. v4.5.0 matrix after switching back: 11 pass. RP2350 console is
+  `&cdc_acm_uart0` on both pairs. Both versions survive `git gc --prune=now`.
+
+Remaining:
+- Flash tools across versions with one shared Python environment are not yet
+  verified. Implementation awaits approval.
+
 ## 2026-11-09 - Draft version-pair selection design
 
 Scope:
