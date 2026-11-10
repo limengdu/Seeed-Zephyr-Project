@@ -56,10 +56,26 @@ export function runProjectAction(
   terminal.sendText(commandLine);
 }
 
+// Closes earlier Upload and Monitor terminals so the serial port belongs to the new action.
+// 关闭之前的 Upload 和 Monitor 终端，让串口只归新的操作使用。
+function releaseSerialTerminals(): void {
+  const serialNames = new Set(
+    (["flash", "monitor"] as Action[]).map((action) => `${TERMINAL_NAME}: ${actionLabel(action)}`),
+  );
+  for (const terminal of vscode.window.terminals) {
+    if (serialNames.has(terminal.name)) {
+      terminal.dispose();
+    }
+  }
+}
+
 function createActionTerminal(
   repoRoot: string | undefined,
   action: Action,
 ): vscode.Terminal {
+  if (action === "flash" || action === "monitor") {
+    releaseSerialTerminals();
+  }
   return vscode.window.createTerminal({
     name: `${TERMINAL_NAME}: ${actionLabel(action)}`,
     cwd: repoRoot,

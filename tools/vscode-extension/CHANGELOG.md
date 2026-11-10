@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1
+
+- Install seeed-zephyr 0.5.1 by default, whose XIAO ESP32-C5 example is `blinky`: it toggles the user LED and prints the LED state.
+- Close earlier Upload and Monitor terminals before a new upload or monitor starts, so the serial port is free for the new action.
+
 ## 0.5.0
 
 - Add **Switch Version** to move the examples, Zephyr workspace, and managed CLI to one published release together, with the active version pair shown in the Environment view.

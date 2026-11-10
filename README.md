@@ -60,7 +60,7 @@ Status is taken from the [board build matrix](tools/build_matrix/results.md) aga
 | XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 Hardware-tested |
 | XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 Hardware-tested · no on-board LED |
 | XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 Hardware-tested · USB DFU |
-| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `hello_world` | 🟢 Build-verified |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `blinky` | 🟢 Build-verified |
 
 **Legend** — 🔵 verified on real hardware · 🟢 builds cleanly against the baseline, hardware run pending.
 

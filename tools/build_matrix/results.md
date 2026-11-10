@@ -7,7 +7,7 @@ Values below come from real per-board repository example builds. The default exa
 | board id | vendor | example | final target | result (PASS/FAIL/UNSUPPORTED) | notes |
 | --- | --- | --- | --- | --- | --- |
 | xiao_esp32c3 | espressif | `examples/boards/xiao_esp32c3/hello_world` | `xiao_esp32c3` | PASS | Build succeeded. Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md. XIAO ESP32-C3 has no on-board LED; hello_world validates the board/toolchain baseline without LED hardware. |
-| xiao_esp32c5 | espressif | `examples/boards/xiao_esp32c5/hello_world` | `xiao_esp32c5/esp32c5/hpcore` | PASS | Build succeeded. hello_world validates the XIAO ESP32-C5 board/toolchain baseline through the USB serial console. |
+| xiao_esp32c5 | espressif | `examples/boards/xiao_esp32c5/blinky` | `xiao_esp32c5/esp32c5/hpcore` | PASS | Build succeeded. blinky validates the XIAO ESP32-C5 board/toolchain baseline through the user LED and USB serial console. |
 | xiao_esp32c6 | espressif | `examples/boards/xiao_esp32c6/blinky` | `xiao_esp32c6/esp32c6/hpcore` | PASS | Build succeeded. Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md. |
 | xiao_esp32s3 | espressif | `examples/boards/xiao_esp32s3/blinky` | `xiao_esp32s3/esp32s3/procpu` | PASS | Build succeeded. Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md. |
 | xiao_mg24 | silabs | `examples/boards/xiao_mg24/blinky` | `xiao_mg24` | PASS | Build succeeded. Hardware-tested example; see AI use/HARDWARE_VERIFICATION.md. |

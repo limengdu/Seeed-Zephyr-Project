@@ -631,7 +631,7 @@ class ExampleConfigTests(unittest.TestCase):
     def test_esp32c5_uses_hpcore_target(self) -> None:
         board_file = seeed_zephyr._REPO_ROOT / "metadata/boards/xiao_esp32c5.yaml"
         example_file = (
-            seeed_zephyr._REPO_ROOT / "examples/boards/xiao_esp32c5/hello_world/example.yaml"
+            seeed_zephyr._REPO_ROOT / "examples/boards/xiao_esp32c5/blinky/example.yaml"
         )
         board = seeed_zephyr.read_flat_yaml(board_file)
         example = seeed_zephyr.read_flat_yaml(example_file)
@@ -1004,11 +1004,11 @@ class CreateCommandTests(unittest.TestCase):
                     seeed_zephyr.cmd_create(args)
             self.assertIn("unsupported", str(ctx.exception).lower())
 
-    def test_create_esp32c5_hello_world(self) -> None:
+    def test_create_esp32c5_blinky(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "proj"
             args = self._make_args(
-                from_asset="xiao_esp32c5/hello_world",
+                from_asset="xiao_esp32c5/blinky",
                 board_id="xiao_esp32c5",
                 output=str(out),
             )

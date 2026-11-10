@@ -269,7 +269,7 @@ curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/
 | XIAO SAMD21 | `seeeduino_xiao` | `examples/boards/xiao_samd21/blinky` | PASS | 硬件已验证 |
 | XIAO nRF52840 | `xiao_ble` | `examples/boards/xiao_nrf52840/blinky` | PASS | 硬件已验证；重复烧录会自动请求 UF2 |
 | XIAO ESP32-C3 | `xiao_esp32c3` | `examples/boards/xiao_esp32c3/hello_world` | PASS | 硬件已验证；无板载 LED |
-| XIAO ESP32-C5 | `xiao_esp32c5/esp32c5/hpcore` | `examples/boards/xiao_esp32c5/hello_world` | PASS | 已通过构建验证；待真机验证 |
+| XIAO ESP32-C5 | `xiao_esp32c5/esp32c5/hpcore` | `examples/boards/xiao_esp32c5/blinky` | PASS | 已通过构建验证；待真机验证 |
 | XIAO ESP32-C6 | `xiao_esp32c6/esp32c6/hpcore` | `examples/boards/xiao_esp32c6/blinky` | PASS | 硬件已验证 |
 | XIAO ESP32-S3 | `xiao_esp32s3/esp32s3/procpu` | `examples/boards/xiao_esp32s3/blinky` | PASS | 硬件已验证 |
 | XIAO MG24 | `xiao_mg24` | `examples/boards/xiao_mg24/blinky` | PASS | 硬件已验证；默认使用 Zephyr PyOCD runner |

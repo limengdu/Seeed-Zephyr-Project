@@ -1,6 +1,0 @@
-id: xiao_esp32c5_hello_world
-board_id: xiao_esp32c5
-demo: hello_world
-zephyr_target: xiao_esp32c5/esp32c5/hpcore
-validation_status: build-only
-expected_behavior: Prints a heartbeat message on the Zephyr console.
