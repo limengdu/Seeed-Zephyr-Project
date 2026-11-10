@@ -1261,6 +1261,8 @@ def current_info() -> dict[str, str | None]:
         "git_commit": commit,
         "git_dirty": str(not repo_is_clean(_REPO_ROOT)).lower() if _REPO_ROOT else None,
         "zephyr_baseline": ZEPHYR_BASELINE,
+        "zephyr_workspace": str(zephyr_workspace()),
+        "zephyr_installed": zephyr_installed_version(zephyr_workspace()),
         "python": sys.executable,
     }
 
@@ -1276,6 +1278,8 @@ def print_info(info: dict[str, str | None]) -> None:
         ("Git commit", "git_commit"),
         ("Git dirty", "git_dirty"),
         ("Zephyr baseline", "zephyr_baseline"),
+        ("Zephyr workspace", "zephyr_workspace"),
+        ("Zephyr installed", "zephyr_installed"),
         ("Python", "python"),
     ]
     for label, key in labels:
@@ -1392,6 +1396,34 @@ def west_path() -> Path:
 
 def zephyr_workspace() -> Path:
     return Path(os.environ.get("ZEPHYR_WORKSPACE", str(Path.home() / "zephyrproject")))
+
+
+def zephyr_installed_version(workspace: Path) -> str | None:
+    # Reads the checked-out Zephyr version from the workspace VERSION file, e.g. "v4.5.0".
+    # 从工作区的 VERSION 文件读取当前签出的 Zephyr 版本，例如 "v4.5.0"。
+    manifest_path = "zephyr"
+    west_config = workspace / ".west" / "config"
+    if west_config.is_file():
+        match = re.search(
+            r"^\[manifest\][^\[]*?^path\s*=\s*(\S+)",
+            west_config.read_text(encoding="utf-8"),
+            re.MULTILINE | re.DOTALL,
+        )
+        if match:
+            manifest_path = match.group(1)
+
+    version_file = workspace / manifest_path / "VERSION"
+    if not version_file.is_file():
+        return None
+    fields = dict(
+        re.findall(r"^(\w+)\s*=\s*(.*?)\s*$", version_file.read_text(encoding="utf-8"), re.MULTILINE)
+    )
+    try:
+        version = f"v{fields['VERSION_MAJOR']}.{fields['VERSION_MINOR']}.{fields['PATCHLEVEL']}"
+    except KeyError:
+        return None
+    extra = fields.get("EXTRAVERSION", "")
+    return f"{version}-{extra}" if extra else version
 
 
 def zephyr_venv_python() -> Path:

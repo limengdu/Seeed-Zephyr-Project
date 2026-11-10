@@ -12,6 +12,9 @@ expansion boards, form factors, and validation status.
 - `form_factors/` — physical pin layout (e.g. the XIAO 14-pin footprint), the data
   source for the editor extension's pinout diagram.
 - `status/` — the Grove example x board build/hardware status matrix.
+- `versions.yaml` — release pairs: each `seeed-zephyr` version with the Zephyr
+  tag and SDK it was validated against, newest first. The repository tag for a
+  release is `v<version>`.
 
 Metadata should describe identity, discovery, category, interface, and validation
 links. Hardware pin truth should live in Zephyr-native files such as Devicetree,
@@ -26,6 +29,7 @@ overlays, and shields when those files are the correct source of truth.
 - `expansion_boards/`——扩展板身份与板载资源。
 - `form_factors/`——物理引脚排布（如 XIAO 14 脚封装），是编辑器插件引脚图的数据源。
 - `status/`——Grove 示例 × 板子 的构建/硬件状态矩阵。
+- `versions.yaml`——发布版本对：每个 `seeed-zephyr` 版本对应的 Zephyr tag 与 SDK 版本，最新的排在最前。每个版本在仓库里的 tag 是 `v<version>`。
 
 Metadata 应描述身份、发现信息、分类、接口和验证链接。当硬件引脚事实应由 Zephyr
 原生文件表达时，应放在 Devicetree、overlay 或 shield 中。

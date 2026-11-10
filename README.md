@@ -109,7 +109,7 @@ pipx upgrade seeed-zephyr
 curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 ```
 
-Show the active CLI version, install source, repository commit, and Zephyr baseline:
+Show the active CLI version, install source, repository commit, Zephyr baseline, and the Zephyr version installed in the workspace:
 
 ```sh
 seeed-zephyr info

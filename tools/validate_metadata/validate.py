@@ -136,6 +136,10 @@ DERIVED_KEYS = {
     "power",
 }
 
+RELEASE_KEYS = {"version", "zephyr", "sdk"}
+RELEASE_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+$")
+ZEPHYR_TAG_RE = re.compile(r"^v\d+\.\d+\.\d+$")
+
 VALID_FORM_FACTORS = {"xiao"}
 VALID_VERSION_POLICIES = {"latest_stable"}
 VALID_INTERFACES = {"i2c", "uart", "gpio", "analog", "spi"}
@@ -223,6 +227,12 @@ def collect_results(repo_root: Path) -> list[ValidationResult]:
         results.append(result)
     for path in example_paths:
         result = validate_file(path, validate_example_metadata, id_matches_filename=False)
+        results.append(result)
+    versions_path = repo_root / "metadata" / "versions.yaml"
+    if versions_path.is_file():
+        result = validate_file(
+            versions_path, validate_release_metadata, id_matches_filename=False
+        )
         results.append(result)
     return results
 
@@ -867,6 +877,61 @@ def validate_zephyr_support_consistency(
             result.fail(
                 "zephyr_compatible and zephyr_driver must be null for driverless support"
             )
+
+
+def validate_release_metadata(result: ValidationResult, document: dict[str, Any]) -> None:
+    # Checks release pairs and that the newest pair matches the repository pins.
+    # 检查发布版本对，并确认最新一对与仓库当前锁定的版本一致。
+    releases = document.get("releases")
+    if not isinstance(releases, list) or not releases:
+        result.fail("releases must be a non-empty list")
+        return
+
+    seen: set[str] = set()
+    for index, release in enumerate(releases):
+        if not isinstance(release, dict) or set(release) != RELEASE_KEYS:
+            result.fail(f"releases[{index}] must contain exactly: {', '.join(sorted(RELEASE_KEYS))}")
+            continue
+        version = str(release["version"])
+        if not RELEASE_VERSION_RE.match(version):
+            result.fail(f"releases[{index}].version must look like 0.5.0: {version}")
+        if not ZEPHYR_TAG_RE.match(str(release["zephyr"])):
+            result.fail(f"releases[{index}].zephyr must look like v4.5.0: {release['zephyr']}")
+        if not RELEASE_VERSION_RE.match(str(release["sdk"])):
+            result.fail(f"releases[{index}].sdk must look like 1.0.1: {release['sdk']}")
+        if version in seen:
+            result.fail(f"duplicate release version: {version}")
+        seen.add(version)
+
+    versions = [str(r.get("version")) for r in releases if isinstance(r, dict)]
+    if versions != sorted(versions, key=version_key, reverse=True):
+        result.fail("releases must be ordered newest first")
+
+    newest = releases[0] if isinstance(releases[0], dict) else {}
+    pins = {
+        "packages/seeed-zephyr/src/seeed_zephyr/__init__.py": (
+            r'__version__\s*=\s*"([^"]+)"', str(newest.get("version"))
+        ),
+        "tools/cli/seeed_zephyr.py": (
+            r'^ZEPHYR_BASELINE\s*=\s*"([^"]+)"', str(newest.get("zephyr"))
+        ),
+        "scripts/lib/common.sh": (
+            r'^ZEPHYR_VERSION="\$\{ZEPHYR_VERSION:-([^}]+)\}"', str(newest.get("zephyr"))
+        ),
+    }
+    for relpath, (pattern, expected) in pins.items():
+        path = REPO_ROOT / relpath
+        if not path.is_file():
+            continue
+        match = re.search(pattern, path.read_text(encoding="utf-8"), re.MULTILINE)
+        if not match:
+            result.fail(f"{relpath} has no recognizable version pin")
+        elif match.group(1) != expected:
+            result.fail(f"newest release pins {expected}, but {relpath} pins {match.group(1)}")
+
+
+def version_key(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in re.findall(r"\d+", version))
 
 
 def add_duplicate_id_errors(results: list[ValidationResult]) -> None:

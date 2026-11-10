@@ -109,7 +109,7 @@ pipx upgrade seeed-zephyr
 curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash
 ```
 
-查看当前 CLI 版本、安装来源、仓库提交和 Zephyr 基线：
+查看当前 CLI 版本、安装来源、仓库提交、Zephyr 基线，以及工作区里实际安装的 Zephyr 版本：
 
 ```sh
 seeed-zephyr info

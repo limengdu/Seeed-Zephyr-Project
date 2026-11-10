@@ -1538,6 +1538,41 @@ class InfoCommandTests(unittest.TestCase):
         self.assertEqual(data["data_source"], "bundled")
         self.assertEqual(data["git_commit"], "abc123")
         self.assertEqual(data["zephyr_baseline"], seeed_zephyr.ZEPHYR_BASELINE)
+        self.assertIn("zephyr_workspace", data)
+        self.assertIn("zephyr_installed", data)
+
+    def _write_workspace(self, root: Path, manifest_path: str, version_text: str) -> None:
+        (root / ".west").mkdir(parents=True)
+        (root / ".west" / "config").write_text(
+            f"[manifest]\npath = {manifest_path}\nfile = west.yml\n\n[zephyr]\nbase = {manifest_path}\n",
+            encoding="utf-8",
+        )
+        (root / manifest_path).mkdir(parents=True)
+        (root / manifest_path / "VERSION").write_text(version_text, encoding="utf-8")
+
+    def test_zephyr_installed_version_reads_workspace_version_file(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_workspace(
+                root,
+                "zephyr",
+                "VERSION_MAJOR = 4\nVERSION_MINOR = 5\nPATCHLEVEL = 0\nVERSION_TWEAK = 0\nEXTRAVERSION =\n",
+            )
+            self.assertEqual(seeed_zephyr.zephyr_installed_version(root), "v4.5.0")
+
+    def test_zephyr_installed_version_follows_manifest_path_and_extraversion(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self._write_workspace(
+                root,
+                "rtos",
+                "VERSION_MAJOR = 4\nVERSION_MINOR = 6\nPATCHLEVEL = 0\nEXTRAVERSION = rc1\n",
+            )
+            self.assertEqual(seeed_zephyr.zephyr_installed_version(root), "v4.6.0-rc1")
+
+    def test_zephyr_installed_version_is_none_without_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.assertIsNone(seeed_zephyr.zephyr_installed_version(Path(temp_dir)))
 
     def test_cmd_info_json_outputs_machine_readable_data(self) -> None:
         args = mock.MagicMock()
