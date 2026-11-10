@@ -30,6 +30,47 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-10 - STM32C5 USB and automatic TinyUF2 uploads (release 0.5.4)
+
+Scope:
+- `examples/boards/xiao_stm32c5/blinky`: USB clock/pin overlay, board USB
+  identity, 1200-baud TinyUF2 reset handling, and usage notes.
+- `tools/cli/seeed_zephyr.py`: serial bootloader request and TinyUF2 volume
+  recognition by label or board identity, with regression tests.
+- LM20A and STM32C5 blinky verification status, hardware records, build matrix,
+  board README, extension flash description, and release notes.
+- Release pair 0.5.4 / Zephyr v4.5.0 / SDK 1.0.1.
+
+Reason:
+- The Zephyr v4.5.0 STM32C5 board defaults leave the USB 48 MHz clock mux
+  disabled and USB pin settings unset. Applications need the clock and pins
+  enabled to enumerate after a TinyUF2 upload.
+- Automatic uploads use the application's 1200-baud serial request to enter
+  the factory TinyUF2 bootloader.
+
+Result:
+- STM32C5 blinky enables the 48 MHz HSE USB clock and PA11/PA12, enumerates as
+  `2886:00C5`, and handles consecutive uploads through the factory loader.
+- Upload recognizes `XIAOC5BOOT`, `XIAOSTM32C5`, and the board identity in
+  `INFO_UF2.TXT`. Manual double RESET entry remains available.
+- LM20A and STM32C5 blinky are hardware-tested. Fresh STM32C5 projects include
+  the overlay, USB configuration, and bootloader reset source.
+
+Verification:
+- STM32C5 blinky built for `xiao_stm32c5/stm32c5a3xx`; UF2 is 94208 bytes,
+  starts at `0x08008000`, and uses family id `0x00C5C5C5`.
+- Two consecutive physical-board uploads passed. The second entered TinyUF2
+  through the application's USB serial port at 1200 baud. Both restored
+  `/dev/cu.usbmodem1201` and produced the Zephyr boot banner plus alternating
+  `LED state: OFF` / `LED state: ON` lines.
+- `python tools/cli/test_seeed_zephyr.py` -> 133 tests OK.
+- `python tools/validate_metadata/validate.py` -> 43 passed.
+- Extension typecheck, 10 tests, and build passed.
+
+Remaining:
+- Apply board defaults directly when the Zephyr baseline includes the STM32C5
+  USB clock and pin settings; the overlay carries the maintenance TODO.
+
 ## 2026-11-10 - Grove verification in project snapshots and catalog counts (release 0.5.3)
 
 Scope:

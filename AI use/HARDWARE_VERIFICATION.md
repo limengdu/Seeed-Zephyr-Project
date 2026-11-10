@@ -34,6 +34,21 @@ Entry format:
 - Notes: ...
 ```
 
+## 2026-11-10 - xiao_stm32c5 - PASS
+
+- Board: `xiao_stm32c5`
+- Example: `examples/boards/xiao_stm32c5/blinky`
+- Result: `PASS`
+- Serial output: `*** Booting Zephyr OS build v4.5.0 ***`; `*** Seeed XIAO Zephyr Base | board: xiao_stm32c5 | demo: blinky ***`; repeated `LED state: OFF` and `LED state: ON` after both uploads.
+- Notes: Built `zephyr.uf2` (94208 bytes, start address `0x08008000`, family id `0x00C5C5C5`) with the USB clock/pin overlay and application USB id `2886:00C5`. The first upload copied the image to `/Volumes/XIAOC5BOOT` after manual double RESET entry, and the application enumerated on `/dev/cu.usbmodem1201`. The consecutive upload requested TinyUF2 through that port at 1200 baud, detected the boot volume, copied the image, and restored the application serial port automatically. Both serial captures contain the Zephyr boot banner and alternating LED state lines.
+
+## 2026-11-10 - xiao_nrf54lm20a - PASS
+
+- Board: `xiao_nrf54lm20a`
+- Example: `examples/boards/xiao_nrf54lm20a/blinky`
+- Result: `PASS`
+- Notes: The board tester confirmed that the published blinky example passed physical-board testing through the VS Code extension.
+
 ## 2026-11-10T00:00:00+08:00 - xiao_esp32c5 - PASS
 
 - Board: `xiao_esp32c5`

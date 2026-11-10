@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.4
+
+- Enable XIAO STM32C5 USB with the 48 MHz clock and PA11/PA12 pin settings in the `blinky` board overlay.
+- Request the STM32C5 TinyUF2 bootloader through USB serial at 1200 baud for consecutive uploads, and recognize boot volumes by label or board identity.
+- Mark the XIAO nRF54LM20A and STM32C5 `blinky` examples as hardware-tested.
+- Install seeed-zephyr 0.5.4 by default. Create a fresh STM32C5 `blinky` project to include the updated overlay, configuration, and source.
+
 ## 0.5.3
 
 - Show separate hardware-tested, build-verified, and pending board counts for each Grove example in the Catalog.

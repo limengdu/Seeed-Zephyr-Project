@@ -106,7 +106,7 @@ function flashMethod(board: Board): string {
       }
       return "PyOCD / J-Link";
     case "st":
-      return "TinyUF2 mass storage (double-tap RESET)";
+      return "TinyUF2 mass storage (1200-baud bootloader request)";
     default:
       return "see board notes";
   }

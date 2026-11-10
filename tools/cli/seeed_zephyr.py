@@ -114,8 +114,9 @@ UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
 # 由 CLI 自己把 UF2 镜像复制到引导盘的开发板。
 UF2_COPY_BOARD_IDS = {"xiao_stm32c5"}
 STM32C5_BOARD_ID = "xiao_stm32c5"
-STM32C5_BOOT_VOLUME_NAME = "XIAOC5BOOT"
-STM32C5_BOOT_VOLUME_ID = "2886:00C5"
+STM32C5_BOOT_VOLUME_NAMES = ("XIAOSTM32C5", "XIAOC5BOOT")
+STM32C5_APP_USB_ID = "2886:00c5"
+STM32C5_BOOTLOADER_WAIT_SECONDS = 30
 NRF54LM20B_BOARD_ID = "xiao_nrf54lm20b"
 NRF54LM20B_APP_USB_ID = "2886:8013"
 NRF54LM20B_LOADER_USB_ID = "2886:0013"
@@ -1988,9 +1989,9 @@ def run_nrf54lm20b_flash(port: str | None) -> str:
 def stm32c5_bootloader_hint() -> str:
     return (
         "XIAO STM32C5 flashing copies a UF2 image to the TinyUF2 boot volume "
-        f"{STM32C5_BOOT_VOLUME_NAME} (USB id {STM32C5_BOOT_VOLUME_ID}). "
-        "Double-tap RESET (twice within about half a second) to enter the "
-        "bootloader, then rerun the flash command."
+        f"{' / '.join(STM32C5_BOOT_VOLUME_NAMES)}. "
+        "Upload requests bootloader mode through the application USB serial port at 1200 baud. "
+        "Double-tap RESET to enter the bootloader manually, then rerun the flash command."
     )
 
 
@@ -2005,20 +2006,32 @@ def volume_info_text(mount: str) -> str:
 
 
 def stm32c5_boot_volume() -> str | None:
-    # Returns the mounted TinyUF2 volume that belongs to this board.
-    # 返回属于该开发板的已挂载 TinyUF2 引导盘。
+    # Matches the boot volume by its label or the board model in INFO_UF2.TXT.
+    # 按卷标或 INFO_UF2.TXT 中的开发板型号匹配引导盘。
+    matches: list[str] = []
     for mount in uf2_mounts():
-        info = volume_info_text(mount)
-        if STM32C5_BOOT_VOLUME_NAME in info or STM32C5_BOOT_VOLUME_ID in info:
-            return mount
-        if Path(mount).name == STM32C5_BOOT_VOLUME_NAME:
-            return mount
-    return None
+        info = re.sub(r"[^a-z0-9]", "", volume_info_text(mount).lower())
+        name = re.sub(r" \d+$", "", Path(mount).name).upper()
+        if (
+            name in STM32C5_BOOT_VOLUME_NAMES
+            or "xiaostm32c5" in info
+            or "xiaoc5boot" in info
+            or "stm32c5a3xiaoc5" in info
+        ):
+            matches.append(mount)
+    if len(matches) > 1:
+        raise CliError(
+            "Multiple XIAO STM32C5 UF2 boot volumes found: "
+            f"{', '.join(matches)}. Connect one XIAO STM32C5 for upload."
+        )
+    return matches[0] if matches else None
 
 
-def wait_for_stm32c5_boot_volume(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECONDS) -> str:
-    # Waits for the TinyUF2 boot volume to appear after a manual double reset.
-    # 等待手动双击复位后出现 TinyUF2 引导盘。
+def wait_for_stm32c5_boot_volume(
+    timeout_seconds: int = STM32C5_BOOTLOADER_WAIT_SECONDS,
+) -> str:
+    # Waits for the TinyUF2 boot volume after the board enters bootloader mode.
+    # 等待开发板进入引导模式后出现 TinyUF2 引导盘。
     deadline = time.monotonic() + timeout_seconds
 
     while time.monotonic() < deadline:
@@ -2030,6 +2043,31 @@ def wait_for_stm32c5_boot_volume(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECO
     raise CliError("Timed out waiting for the XIAO STM32C5 UF2 boot volume.")
 
 
+def prepare_stm32c5_bootloader(port: str | None) -> str:
+    # Requests TinyUF2 through the board's USB serial port and returns its volume.
+    # 通过开发板 USB 串口请求 TinyUF2 模式，并返回引导盘路径。
+    mount = stm32c5_boot_volume()
+    if mount is not None:
+        return mount
+
+    app_port = port or usb_device_port(STM32C5_APP_USB_ID)
+    if app_port is not None:
+        print(f"Requesting STM32C5 UF2 bootloader via {app_port} at 1200 baud...", flush=True)
+        try:
+            touch_serial_1200(app_port)
+        except CliError as error:
+            print(f"STM32C5 serial bootloader request: {error}", flush=True)
+
+    print(
+        "Waiting for the XIAO STM32C5 boot volume. Double-tap RESET for manual bootloader entry...",
+        flush=True,
+    )
+    try:
+        return wait_for_stm32c5_boot_volume()
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {stm32c5_bootloader_hint()}") from error
+
+
 def run_stm32c5_flash(port: str | None) -> str | None:
     # Copies the UF2 image onto the TinyUF2 boot volume.
     # 把 UF2 镜像复制到 TinyUF2 引导盘。
@@ -2039,17 +2077,7 @@ def run_stm32c5_flash(port: str | None) -> str | None:
             f"UF2 image was not found: {image}. Build the XIAO STM32C5 example before flashing."
         )
 
-    mount = stm32c5_boot_volume()
-    if mount is None:
-        print(
-            "Waiting for the XIAO STM32C5 boot volume. Double-tap RESET to enter the bootloader...",
-            flush=True,
-        )
-        try:
-            mount = wait_for_stm32c5_boot_volume()
-        except CliError as error:
-            raise CliError(f"{error}\nHint: {stm32c5_bootloader_hint()}") from error
-
+    mount = prepare_stm32c5_bootloader(port)
     destination = Path(mount) / image.name
     print(f"Copying {image.name} to {mount}...", flush=True)
     shutil.copyfile(image, destination)

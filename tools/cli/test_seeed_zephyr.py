@@ -162,6 +162,44 @@ class FlashHintTests(unittest.TestCase):
         self.assertEqual(loader_port, "/dev/cu.usbmodem1102")
         request.assert_called_once_with("/dev/cu.usbmodem1101")
 
+    def test_stm32c5_detects_documented_and_legacy_volume_names(self) -> None:
+        for name in ("XIAOSTM32C5", "XIAOC5BOOT", "XIAOSTM32C5 1"):
+            with self.subTest(name=name):
+                mount = f"/Volumes/{name}"
+                with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=[mount]):
+                    with mock.patch.object(seeed_zephyr, "volume_info_text", return_value=""):
+                        self.assertEqual(seeed_zephyr.stm32c5_boot_volume(), mount)
+
+    def test_stm32c5_detects_board_info_on_renamed_volume(self) -> None:
+        with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=["/Volumes/UNTITLED"]):
+            with mock.patch.object(
+                seeed_zephyr, "volume_info_text", return_value="Model: Seeed Studio XIAO STM32C5\n"
+            ):
+                self.assertEqual(seeed_zephyr.stm32c5_boot_volume(), "/Volumes/UNTITLED")
+
+    def test_stm32c5_detects_factory_board_id_on_renamed_volume(self) -> None:
+        with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=["/Volumes/UNTITLED"]):
+            with mock.patch.object(
+                seeed_zephyr,
+                "volume_info_text",
+                return_value="Model: Seeed XIAO C5\nBoard-ID: STM32C5A3-XIAO-C5\n",
+            ):
+                self.assertEqual(seeed_zephyr.stm32c5_boot_volume(), "/Volumes/UNTITLED")
+
+    def test_stm32c5_ignores_other_uf2_boards(self) -> None:
+        with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=["/Volumes/RPI-RP2"]):
+            with mock.patch.object(
+                seeed_zephyr, "volume_info_text", return_value="Board-ID: RPI-RP2\n"
+            ):
+                self.assertIsNone(seeed_zephyr.stm32c5_boot_volume())
+
+    def test_stm32c5_rejects_multiple_matching_volumes(self) -> None:
+        mounts = ["/Volumes/XIAOSTM32C5", "/Volumes/XIAOSTM32C5 1"]
+        with mock.patch.object(seeed_zephyr, "uf2_mounts", return_value=mounts):
+            with mock.patch.object(seeed_zephyr, "volume_info_text", return_value=""):
+                with self.assertRaisesRegex(seeed_zephyr.CliError, "Multiple XIAO STM32C5"):
+                    seeed_zephyr.stm32c5_boot_volume()
+
     def test_xiao_stm32c5_flash_copies_uf2_to_boot_volume(self) -> None:
         board = {"id": "xiao_stm32c5", "vendor": "st", "target": "xiao_stm32c5/stm32c5a3xx"}
 
@@ -182,24 +220,64 @@ class FlashHintTests(unittest.TestCase):
             seeed_zephyr.Path("/Volumes/XIAOC5BOOT/zephyr.uf2"),
         )
 
-    def test_xiao_stm32c5_flash_timeout_keeps_double_reset_hint(self) -> None:
-        board = {"id": "xiao_stm32c5", "vendor": "st", "target": "xiao_stm32c5/stm32c5a3xx"}
-
-        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+    def test_stm32c5_requests_bootloader_from_matching_usb_serial(self) -> None:
+        with mock.patch.object(seeed_zephyr, "stm32c5_boot_volume", return_value=None):
             with mock.patch.object(
-                seeed_zephyr, "zephyr_workspace", return_value=seeed_zephyr.Path("/tmp")
+                seeed_zephyr, "usb_device_port", return_value="/dev/cu.usbmodem1201"
+            ) as detect:
+                with mock.patch.object(seeed_zephyr, "touch_serial_1200") as touch:
+                    with mock.patch.object(
+                        seeed_zephyr, "wait_for_stm32c5_boot_volume", return_value="/Volumes/XIAOC5BOOT"
+                    ):
+                        mount = seeed_zephyr.prepare_stm32c5_bootloader(None)
+        self.assertEqual(mount, "/Volumes/XIAOC5BOOT")
+        detect.assert_called_once_with("2886:00c5")
+        touch.assert_called_once_with("/dev/cu.usbmodem1201")
+
+    def test_stm32c5_requests_bootloader_from_explicit_port(self) -> None:
+        with mock.patch.object(seeed_zephyr, "stm32c5_boot_volume", return_value=None):
+            with mock.patch.object(seeed_zephyr, "usb_device_port") as detect:
+                with mock.patch.object(seeed_zephyr, "touch_serial_1200") as touch:
+                    with mock.patch.object(
+                        seeed_zephyr, "wait_for_stm32c5_boot_volume", return_value="/Volumes/XIAOC5BOOT"
+                    ):
+                        seeed_zephyr.prepare_stm32c5_bootloader("/dev/cu.usbmodem1201")
+        detect.assert_not_called()
+        touch.assert_called_once_with("/dev/cu.usbmodem1201")
+
+    def test_stm32c5_skips_serial_request_with_boot_volume_present(self) -> None:
+        with mock.patch.object(
+            seeed_zephyr, "stm32c5_boot_volume", return_value="/Volumes/XIAOC5BOOT"
+        ):
+            with mock.patch.object(seeed_zephyr, "touch_serial_1200") as touch:
+                self.assertEqual(seeed_zephyr.prepare_stm32c5_bootloader(None), "/Volumes/XIAOC5BOOT")
+        touch.assert_not_called()
+
+    def test_stm32c5_keeps_waiting_after_serial_disconnection(self) -> None:
+        with mock.patch.object(seeed_zephyr, "stm32c5_boot_volume", return_value=None):
+            with mock.patch.object(
+                seeed_zephyr, "touch_serial_1200", side_effect=seeed_zephyr.CliError("Port disconnected")
             ):
-                with mock.patch.object(seeed_zephyr.Path, "exists", return_value=True):
-                    with mock.patch.object(seeed_zephyr, "stm32c5_boot_volume", return_value=None):
-                        with mock.patch.object(
-                            seeed_zephyr,
-                            "wait_for_stm32c5_boot_volume",
-                            side_effect=seeed_zephyr.CliError(
-                                "Timed out waiting for the XIAO STM32C5 UF2 boot volume."
-                            ),
-                        ):
-                            with self.assertRaises(seeed_zephyr.CliError) as context:
-                                seeed_zephyr.run_west_flash("xiao_stm32c5")
+                with mock.patch.object(
+                    seeed_zephyr, "wait_for_stm32c5_boot_volume", return_value="/Volumes/XIAOC5BOOT"
+                ):
+                    self.assertEqual(
+                        seeed_zephyr.prepare_stm32c5_bootloader("/dev/cu.usbmodem1201"),
+                        "/Volumes/XIAOC5BOOT",
+                    )
+
+    def test_xiao_stm32c5_flash_timeout_keeps_double_reset_hint(self) -> None:
+        with mock.patch.object(seeed_zephyr, "stm32c5_boot_volume", return_value=None):
+            with mock.patch.object(seeed_zephyr, "usb_device_port", return_value=None):
+                with mock.patch.object(
+                    seeed_zephyr,
+                    "wait_for_stm32c5_boot_volume",
+                    side_effect=seeed_zephyr.CliError(
+                        "Timed out waiting for the XIAO STM32C5 UF2 boot volume."
+                    ),
+                ):
+                    with self.assertRaises(seeed_zephyr.CliError) as context:
+                        seeed_zephyr.prepare_stm32c5_bootloader(None)
 
         message = str(context.exception)
         self.assertIn("Double-tap RESET", message)

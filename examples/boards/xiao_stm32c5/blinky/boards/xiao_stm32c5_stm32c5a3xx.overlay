@@ -1,0 +1,19 @@
+/*
+ * USB device clock and pins for the XIAO STM32C5.
+ * Selects the 48 MHz HSE as the USB clock source and routes PA11/PA12 to USB.
+ * XIAO STM32C5 的 USB 设备时钟与引脚。
+ * 选用 48 MHz HSE 作为 USB 时钟源，并把 PA11/PA12 交给 USB。
+ *
+ * TODO(zephyr-baseline): drop this file once the Zephyr baseline ships the
+ * XIAO STM32C5 clk48 and USB pin settings in the board definition.
+ */
+
+&clk48 {
+	clocks = <&rcc STM32_SRC_HSE CK48_SEL(3)>;
+	status = "okay";
+};
+
+&usb {
+	pinctrl-0 = <&usb_dm_pa11 &usb_dp_pa12>;
+	pinctrl-names = "default";
+};
