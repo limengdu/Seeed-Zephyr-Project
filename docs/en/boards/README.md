@@ -36,3 +36,4 @@ or AI work logs here. Put complete process tutorials in `getting-started.md`.
 - [XIAO RA4M1](xiao-ra4m1.md)
 - [XIAO RP2040](xiao-rp2040.md)
 - [XIAO RP2350](xiao-rp2350.md)
+- [XIAO STM32C5](xiao-stm32c5.md)

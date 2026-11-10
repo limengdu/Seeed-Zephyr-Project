@@ -26,6 +26,8 @@ Usage:
   USB clock/pin overlay and automatic bootloader entry support.
 - The BOOT pad (PH2) is sampled while the board resets. Leave it released
   during power-on and reset.
+- Board-specific clock, pin, USB identity, and bootloader behavior is recorded
+  in the [XIAO STM32C5 board notes](https://github.com/limengdu/Seeed-Zephyr-Project/blob/main/docs/en/boards/xiao-stm32c5.md).
 
 ## 中文
 
@@ -42,3 +44,4 @@ Usage:
 - 手动进入引导程序时，在大约半秒内按两次 RESET。上传会直接使用已经挂载的 TinyUF2 存储盘。
 - 使用 0.5.4 或更新版本重新创建 `blinky` 工程，即可带上 USB 时钟、引脚补丁和自动进入引导程序的支持。
 - BOOT 触点（PH2）在复位时被采样。上电和复位时松开它。
+- 时钟、引脚、USB 标识和引导程序的板级说明见 [XIAO STM32C5 开发板说明](https://github.com/limengdu/Seeed-Zephyr-Project/blob/main/docs/zh/boards/xiao-stm32c5.md)。

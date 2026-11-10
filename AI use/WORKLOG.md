@@ -30,6 +30,46 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-10 - XIAO STM32C5 board notes
+
+Scope:
+- `docs/en/boards/xiao-stm32c5.md` and `docs/zh/boards/xiao-stm32c5.md`, linked
+  from both board-note indexes.
+- `examples/boards/xiao_stm32c5/README.md` usage notes link to those pages.
+
+Reason:
+- The example README listed the everyday upload steps. The v4.5.0 USB clock,
+  pin, USB-identity, and first-upload behavior belongs in the board-notes pages
+  used by the other boards with special bootloaders.
+
+Result:
+- Board notes for XIAO STM32C5:
+  - The factory TinyUF2 bootloader occupies the first 32 KiB. The application
+    starts at `0x08008000` and the UF2 family id is `0x00C5C5C5`.
+  - Zephyr v4.5.0 enables USB and leaves the 48 MHz clock mux disabled and the
+    USB pins unset. Startup clears the bootloader clock setup, so USB does not
+    return after the UF2 copy. The blinky overlay enables the existing `clk48`
+    node from the board's 48 MHz HSE (`STM32_SRC_HSE CK48_SEL(3)`) and assigns
+    PA11/PA12 (`usb_dm_pa11`, `usb_dp_pa12`).
+  - The running application uses USB id `2886:00C5`. Upload finds that id.
+  - The bootloader is mass storage only. A 1200 baud open is handled by the
+    running application: it writes `0xf01669ef` to the last SRAM word and
+    resets. The first upload onto firmware without that handler uses a double
+    RESET tap within about half a second. Later uploads send 1200 baud on their
+    own.
+  - Accepted volumes are `XIAOC5BOOT`, `XIAOSTM32C5`, and an `INFO_UF2.TXT`
+    that names `Seeed XIAO C5` / `STM32C5A3-XIAO-C5`.
+  - The BOOT pad is PH2 and is sampled at reset. Projects created from release
+    0.5.4 or later include the overlay, USB identity, and reset handler.
+
+Verification:
+- The notes match the blinky overlay, `prj.conf`, `src/main.c`, the CLI volume
+  matcher, and the 2026-11-10 hardware PASS entry in
+  `AI use/HARDWARE_VERIFICATION.md`.
+
+Remaining:
+- Drop the overlay notes when the Zephyr baseline ships these board defaults.
+
 ## 2026-11-10 - Imported project list refresh (release 0.5.5)
 
 Scope:
