@@ -95,7 +95,18 @@ function flashMethod(board: Board): string {
     case "microchip":
       return "bossac (SAM-BA bootloader)";
     case "nordic":
-      return board.id === "xiao_nrf52840" ? "UF2 mass storage" : "PyOCD / J-Link";
+      if (board.id === "xiao_nrf52840") {
+        return "UF2 mass storage";
+      }
+      if (board.id === "xiao_nrf54lm20a") {
+        return "On-board CMSIS-DAP debugger (Zephyr runner)";
+      }
+      if (board.id === "xiao_nrf54lm20b") {
+        return "Factory USB firmware loader (nrfutil mcu-manager)";
+      }
+      return "PyOCD / J-Link";
+    case "st":
+      return "TinyUF2 mass storage (double-tap RESET)";
     default:
       return "see board notes";
   }

@@ -1,0 +1,78 @@
+# Authored board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_nrf54lm20b
+display_name: Seeed Studio XIAO nRF54LM20B
+zephyr_target: xiao_nrf54lm20b/nrf54lm20b/cpuapp
+vendor: nordic
+soc: nrf54lm20b
+form_factor: xiao
+also_known_as: []
+version_policy: latest_stable
+# Console is USB CDC ACM, so no connector pin is reserved for it.
+# 控制台为 USB CDC ACM，不占用接口引脚。
+reserved_pins: []
+# ADC channel numbers are configured, but no channel is bound to a connector pin.
+# 已配置 ADC 通道号，但没有通道绑定到接口引脚。
+analog_pins: []
+
+# Provisional baseline derived from the upstream Zephyr connector dtsi.
+# Replace with official Seeed schematic values and update pin_map_source to the Wiki URL.
+# 过渡基线,派生自上游 Zephyr connector dtsi。
+# 请以 Seeed 官方原理图为准替换,并将 pin_map_source 更新为 Wiki 链接。
+pin_map_source: zephyr/boards/seeed/xiao_nrf54lm20b/seeed_xiao_connector.dtsi
+pin_map:
+  - pin: D0
+    chip_pin: gpio1.0
+  - pin: D1
+    chip_pin: gpio1.31
+  - pin: D2
+    chip_pin: gpio1.30
+  - pin: D3
+    chip_pin: gpio1.29
+  - pin: D4
+    chip_pin: gpio1.3
+  - pin: D5
+    chip_pin: gpio1.7
+  - pin: D6
+    chip_pin: gpio1.8
+  - pin: D7
+    chip_pin: gpio1.9
+  - pin: D8
+    chip_pin: gpio1.4
+  - pin: D9
+    chip_pin: gpio1.5
+  - pin: D10
+    chip_pin: gpio1.6
+  - pin: D11
+    chip_pin: gpio3.0
+  - pin: D12
+    chip_pin: gpio3.1
+  - pin: D13
+    chip_pin: gpio3.2
+  - pin: D14
+    chip_pin: gpio3.3
+  - pin: D15
+    chip_pin: gpio3.4
+  - pin: D16
+    chip_pin: gpio3.5
+  - pin: D17
+    chip_pin: gpio3.6
+  - pin: D18
+    chip_pin: gpio3.7
+  - pin: D19
+    chip_pin: gpio0.0
+  - pin: D20
+    chip_pin: gpio0.1
+  - pin: D21
+    chip_pin: gpio0.2
+  - pin: D22
+    chip_pin: gpio0.3
+  - pin: D23
+    chip_pin: gpio0.4
+  - pin: D24
+    chip_pin: gpio0.5
+  - pin: D25
+    chip_pin: gpio3.9
+  - pin: D26
+    chip_pin: gpio3.10
+  - pin: D27
+    chip_pin: gpio3.11

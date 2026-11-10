@@ -1,0 +1,56 @@
+# Authored board metadata (product layer). Derived status lives in metadata/status/.
+id: xiao_stm32c5
+display_name: Seeed Studio XIAO STM32C5
+zephyr_target: xiao_stm32c5/stm32c5a3xx
+vendor: st
+soc: stm32c5a3xx
+form_factor: xiao
+also_known_as: []
+version_policy: latest_stable
+# Console is USB CDC ACM, so D6/D7 stay free for Grove.
+# 控制台为 USB CDC ACM，D6/D7 对 Grove 可用。
+reserved_pins: []
+analog_pins:
+  - D0
+  - D1
+  - D2
+  - D3
+
+# Provisional baseline derived from the upstream Zephyr connector dtsi.
+# Replace with official Seeed schematic values and update pin_map_source to the Wiki URL.
+# 过渡基线,派生自上游 Zephyr connector dtsi。
+# 请以 Seeed 官方原理图为准替换,并将 pin_map_source 更新为 Wiki 链接。
+pin_map_source: zephyr/boards/seeed/xiao_stm32c5/seeed_xiao_connector.dtsi
+pin_map:
+  - pin: D0
+    chip_pin: gpioa.0
+  - pin: D1
+    chip_pin: gpioa.1
+  - pin: D2
+    chip_pin: gpioa.2
+  - pin: D3
+    chip_pin: gpioa.3
+  - pin: D4
+    chip_pin: gpiob.7
+  - pin: D5
+    chip_pin: gpiob.6
+  - pin: D6
+    chip_pin: gpioa.9
+  - pin: D7
+    chip_pin: gpioa.10
+  - pin: D8
+    chip_pin: gpioe.2
+  - pin: D9
+    chip_pin: gpiob.0
+  - pin: D10
+    chip_pin: gpiob.15
+  - pin: D11
+    chip_pin: gpiob.8
+  - pin: D12
+    chip_pin: gpiob.9
+  - pin: D13
+    chip_pin: gpiob.5
+  - pin: D14
+    chip_pin: gpiob.13
+  - pin: D15
+    chip_pin: gpiob.14

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- Install seeed-zephyr 0.5.2 by default, which adds baseline `blinky` examples for XIAO nRF54LM20A, XIAO nRF54LM20B, and XIAO STM32C5.
+- Upload XIAO nRF54LM20B through its factory USB firmware loader (`nrfutil mcu-manager`) and XIAO STM32C5 by copying its UF2 image to the TinyUF2 boot volume.
+- Mark the XIAO ESP32-C5 `blinky` example as hardware-tested.
+
 ## 0.5.1
 
 - Install seeed-zephyr 0.5.1 by default, whose XIAO ESP32-C5 example is `blinky`: it toggles the user LED and prints the LED state.

@@ -36,7 +36,7 @@ interface ManagedCliInstallOptions {
 
 const INSTALL_COMMAND =
   "curl -fsSL https://raw.githubusercontent.com/limengdu/Seeed-Zephyr-Project/main/install.sh | bash";
-const DEFAULT_MANAGED_CLI_VERSION = "0.5.1";
+const DEFAULT_MANAGED_CLI_VERSION = "0.5.2";
 const PYPI_VERSION_RETRIES = 3;
 const PYPI_VERSION_TIMEOUT_MS = 15000;
 const PIP_RETRIES = "5";

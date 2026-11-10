@@ -24,6 +24,12 @@ boards:
   - board_id: xiao_nrf54l15
     status: hardware-tested
     evidence: hardware run with expected distance output (local, 2026-07-07)
+  - board_id: xiao_nrf54lm20a
+    status: pending
+  - board_id: xiao_nrf54lm20b
+    status: pending
+  - board_id: xiao_stm32c5
+    status: pending
   - board_id: xiao_ra4m1
     status: hardware-tested
     evidence: hardware run with expected distance output (local, 2026-07-07)

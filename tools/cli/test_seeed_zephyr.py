@@ -101,6 +101,110 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn("pyocd pack install EFR32MG24B220F1536IM48", message)
         self.assertIn("EFR32MG24B220F1536IM48", message)
 
+    def test_xiao_nrf54lm20b_requires_nrfutil_mcu_manager(self) -> None:
+        board = {"id": "xiao_nrf54lm20b", "vendor": "nordic", "target": "xiao_nrf54lm20b"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "nrfutil_has_mcu_manager", return_value=False):
+                with self.assertRaises(seeed_zephyr.CliError) as context:
+                    seeed_zephyr.require_flash_tools("xiao_nrf54lm20b")
+
+        message = str(context.exception)
+        self.assertIn("nrfutil install mcu-manager", message)
+        self.assertIn("XIAO nRF54LM20B", message)
+
+    def test_xiao_nrf54lm20b_flash_uploads_signed_image(self) -> None:
+        board = {
+            "id": "xiao_nrf54lm20b",
+            "vendor": "nordic",
+            "target": "xiao_nrf54lm20b/nrf54lm20b/cpuapp",
+        }
+        image = seeed_zephyr.Path("/tmp/build/zephyr/zephyr.signed.confirmed.bin")
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr, "zephyr_workspace", return_value=seeed_zephyr.Path("/tmp")):
+                with mock.patch.object(seeed_zephyr.Path, "exists", return_value=True):
+                    with mock.patch.object(
+                        seeed_zephyr, "prepare_nrf54lm20b_loader", return_value="/dev/cu.usbmodem1101"
+                    ):
+                        with mock.patch.object(seeed_zephyr, "run_command") as run_command:
+                            selected_port = seeed_zephyr.run_west_flash("xiao_nrf54lm20b")
+
+        self.assertEqual(selected_port, "/dev/cu.usbmodem1101")
+        self.assertEqual(
+            run_command.call_args_list[0].args[0],
+            [
+                "nrfutil",
+                "mcu-manager",
+                "serial",
+                "image-upload",
+                "--port",
+                "/dev/cu.usbmodem1101",
+                str(image),
+            ],
+        )
+        self.assertEqual(
+            run_command.call_args_list[1].args[0],
+            ["nrfutil", "mcu-manager", "serial", "reset", "--port", "/dev/cu.usbmodem1101"],
+        )
+
+    def test_xiao_nrf54lm20b_requests_loader_before_upload(self) -> None:
+        with mock.patch.object(seeed_zephyr, "usb_device_port", side_effect=[None, None]):
+            with mock.patch.object(
+                seeed_zephyr, "detect_serial_port", return_value="/dev/cu.usbmodem1101"
+            ):
+                with mock.patch.object(seeed_zephyr, "request_nrf54lm20b_loader") as request:
+                    with mock.patch.object(
+                        seeed_zephyr, "wait_for_nrf54lm20b_loader", return_value="/dev/cu.usbmodem1102"
+                    ):
+                        loader_port = seeed_zephyr.prepare_nrf54lm20b_loader(None)
+
+        self.assertEqual(loader_port, "/dev/cu.usbmodem1102")
+        request.assert_called_once_with("/dev/cu.usbmodem1101")
+
+    def test_xiao_stm32c5_flash_copies_uf2_to_boot_volume(self) -> None:
+        board = {"id": "xiao_stm32c5", "vendor": "st", "target": "xiao_stm32c5/stm32c5a3xx"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(
+                seeed_zephyr, "zephyr_workspace", return_value=seeed_zephyr.Path("/tmp")
+            ):
+                with mock.patch.object(seeed_zephyr.Path, "exists", return_value=True):
+                    with mock.patch.object(
+                        seeed_zephyr, "stm32c5_boot_volume", return_value="/Volumes/XIAOC5BOOT"
+                    ):
+                        with mock.patch.object(seeed_zephyr.shutil, "copyfile") as copyfile:
+                            selected_port = seeed_zephyr.run_west_flash("xiao_stm32c5")
+
+        self.assertIsNone(selected_port)
+        copyfile.assert_called_once_with(
+            seeed_zephyr.Path("/tmp/build/zephyr/zephyr.uf2"),
+            seeed_zephyr.Path("/Volumes/XIAOC5BOOT/zephyr.uf2"),
+        )
+
+    def test_xiao_stm32c5_flash_timeout_keeps_double_reset_hint(self) -> None:
+        board = {"id": "xiao_stm32c5", "vendor": "st", "target": "xiao_stm32c5/stm32c5a3xx"}
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(
+                seeed_zephyr, "zephyr_workspace", return_value=seeed_zephyr.Path("/tmp")
+            ):
+                with mock.patch.object(seeed_zephyr.Path, "exists", return_value=True):
+                    with mock.patch.object(seeed_zephyr, "stm32c5_boot_volume", return_value=None):
+                        with mock.patch.object(
+                            seeed_zephyr,
+                            "wait_for_stm32c5_boot_volume",
+                            side_effect=seeed_zephyr.CliError(
+                                "Timed out waiting for the XIAO STM32C5 UF2 boot volume."
+                            ),
+                        ):
+                            with self.assertRaises(seeed_zephyr.CliError) as context:
+                                seeed_zephyr.run_west_flash("xiao_stm32c5")
+
+        message = str(context.exception)
+        self.assertIn("Double-tap RESET", message)
+        self.assertIn("XIAOC5BOOT", message)
+
     def test_xiao_ra4m1_requires_dfu_util(self) -> None:
         board = {"id": "xiao_ra4m1", "vendor": "renesas", "target": "xiao_ra4m1"}
 
@@ -1016,7 +1120,7 @@ class CreateCommandTests(unittest.TestCase):
 
             snapshot = json.loads((out / "snapshot.json").read_text(encoding="utf-8"))
             self.assertEqual(snapshot["board"], "xiao_esp32c5")
-            self.assertEqual(snapshot["validation_status"], "build-only")
+            self.assertEqual(snapshot["validation_status"], "hardware-tested")
 
     def test_create_refuses_nonempty_output_without_force(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

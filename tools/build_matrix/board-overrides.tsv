@@ -1,3 +1,6 @@
 # board_id	support_status	example_path	notes
 xiao_esp32c3	supported	examples/boards/xiao_esp32c3/hello_world	XIAO ESP32-C3 has no on-board LED; hello_world validates the board/toolchain baseline without LED hardware.
 xiao_esp32c5	supported	examples/boards/xiao_esp32c5/blinky	blinky validates the XIAO ESP32-C5 board/toolchain baseline through the user LED and USB serial console.
+xiao_nrf54lm20a	supported	examples/boards/xiao_nrf54lm20a/blinky	blinky validates the XIAO nRF54LM20A board/toolchain baseline through the blue LED and the SAMD11 USB console.
+xiao_nrf54lm20b	supported	examples/boards/xiao_nrf54lm20b/blinky	blinky validates the XIAO nRF54LM20B board/toolchain baseline through the blue LED, signed for the factory MCUboot loader.
+xiao_stm32c5	supported	examples/boards/xiao_stm32c5/blinky	blinky validates the XIAO STM32C5 board/toolchain baseline through the user LED and a TinyUF2 image.

@@ -1,0 +1,22 @@
+# xiao_stm32c5 blinky
+
+## English
+
+This demo toggles the board LED through Zephyr GPIO. It is the baseline demo for
+Seeed Studio XIAO STM32C5 and produces a TinyUF2 image.
+
+Build from the repository root:
+
+```sh
+bash scripts/build-example.sh examples/boards/xiao_stm32c5/blinky
+```
+
+## 中文
+
+这个 demo 通过 Zephyr GPIO 翻转板载 LED，是 Seeed Studio XIAO STM32C5 的基线 demo，并生成 TinyUF2 镜像。
+
+从仓库根目录构建:
+
+```sh
+bash scripts/build-example.sh examples/boards/xiao_stm32c5/blinky
+```

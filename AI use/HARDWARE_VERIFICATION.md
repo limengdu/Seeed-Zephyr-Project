@@ -34,6 +34,14 @@ Entry format:
 - Notes: ...
 ```
 
+## 2026-11-10T00:00:00+08:00 - xiao_esp32c5 - PASS
+
+- Board: `xiao_esp32c5`
+- Example: `examples/boards/xiao_esp32c5/blinky`
+- Result: `PASS`
+- Serial output: `*** Booting Zephyr OS build v4.5.0 ***`; repeated `LED state: OFF` and `LED state: ON`
+- Notes: Upload wrote and verified 135296 bytes on `/dev/cu.usbmodem1201` and finished with an RTS hard reset. The serial console then showed the Zephyr v4.5.0 boot banner followed by repeated LED state lines, and the user LED (GPIO27, active low) blinked. The plugin test of the published release passed afterwards. One serial monitor holding the port blocks the reset, so the extension closes its earlier Upload and Monitor terminals before a new upload or monitor.
+
 ## 2026-06-20T11:23:51+08:00 - xiao_esp32c6 - PASS
 
 - Board: `xiao_esp32c6`

@@ -24,6 +24,12 @@ boards:
   - board_id: xiao_nrf54l15
     status: build-verified
     evidence: seeed-zephyr build (local, 2026-11-09)
+  - board_id: xiao_nrf54lm20a
+    status: pending
+  - board_id: xiao_nrf54lm20b
+    status: pending
+  - board_id: xiao_stm32c5
+    status: pending
   - board_id: xiao_ra4m1
     status: excluded
     reason: xiao_i2c connector label unavailable in the upstream Zephyr board devicetree

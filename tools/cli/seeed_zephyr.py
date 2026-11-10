@@ -110,6 +110,17 @@ RP2_BOOTLOADER_WAIT_SECONDS = 10
 SERIAL_READY_WAIT_SECONDS = 10
 SERIAL_READY_POLL_SECONDS = 0.5
 UF2_RUNNER_BOARD_IDS = {"xiao_nrf52840"}
+# Boards whose UF2 image is copied onto a boot volume by the CLI itself.
+# 由 CLI 自己把 UF2 镜像复制到引导盘的开发板。
+UF2_COPY_BOARD_IDS = {"xiao_stm32c5"}
+STM32C5_BOARD_ID = "xiao_stm32c5"
+STM32C5_BOOT_VOLUME_NAME = "XIAOC5BOOT"
+STM32C5_BOOT_VOLUME_ID = "2886:00C5"
+NRF54LM20B_BOARD_ID = "xiao_nrf54lm20b"
+NRF54LM20B_APP_USB_ID = "2886:8013"
+NRF54LM20B_LOADER_USB_ID = "2886:0013"
+NRF54LM20B_LOADER_REQUEST_BAUDS = (9600, 1200)
+NRF54LM20B_LOADER_WAIT_SECONDS = 15
 # Board file stems of earlier Zephyr targets, copied to the current target stem.
 # 早期 Zephyr target 的板级文件 stem，会复制为当前 target stem。
 PREVIOUS_TARGET_STEMS = {"xiao_rp2350": ("xiao_rp2350_rp2350a_m33",)}
@@ -1593,6 +1604,8 @@ def require_flash_tools(board_id: str, rom_boot: bool = False) -> None:
         require_mg24_pyocd_pack()
     if board["id"] == RA4M1_BOARD_ID and not rom_boot:
         require_ra4m1_dfu_util()
+    if board["id"] == NRF54LM20B_BOARD_ID:
+        require_nrfutil_mcu_manager()
 
 
 def zephyr_objcopy_path() -> Path:
@@ -1811,6 +1824,239 @@ def run_ra4m1_dfu_flash(port: str | None = None) -> str | None:
     raise CliError(f"Command failed with status {result.returncode}: {' '.join(command)}")
 
 
+def nrfutil_mcu_manager_install_hint() -> str:
+    return (
+        "XIAO nRF54LM20B flashing uploads a signed image through the factory "
+        "USB firmware loader. Install the nrfutil command with: "
+        "nrfutil install mcu-manager"
+    )
+
+
+def nrfutil_has_mcu_manager() -> bool:
+    # Checks that the installed nrfutil provides the mcu-manager command.
+    # 检查已安装的 nrfutil 是否提供 mcu-manager 命令。
+    if shutil.which("nrfutil") is None:
+        return False
+
+    result = run_command_capture(["nrfutil", "mcu-manager", "--help"])
+    return result.returncode == 0
+
+
+def require_nrfutil_mcu_manager() -> None:
+    if not nrfutil_has_mcu_manager():
+        raise CliError(nrfutil_mcu_manager_install_hint())
+
+
+def usb_device_port(vid_pid: str) -> str | None:
+    # Returns the serial port of the first USB device with the given id.
+    # 返回第一个匹配给定 USB 标识的串口。
+    vid, pid = vid_pid.split(":")
+    python = zephyr_venv_python()
+    script = (
+        "import sys\n"
+        "import serial.tools.list_ports\n"
+        "target_vid, target_pid = sys.argv[1], sys.argv[2]\n"
+        "for port in serial.tools.list_ports.comports():\n"
+        "    vid = f'{port.vid:04x}' if port.vid is not None else ''\n"
+        "    pid = f'{port.pid:04x}' if port.pid is not None else ''\n"
+        "    if (vid, pid) == (target_vid, target_pid):\n"
+        "        print(port.device)\n"
+        "        break\n"
+    )
+    result = run_command_capture(
+        [str(python), "-c", script, vid, pid], cwd=zephyr_workspace(), env=west_command_env()
+    )
+    if result.returncode != 0:
+        return None
+
+    ports = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return ports[0] if ports else None
+
+
+def nrf54lm20b_loader_hint() -> str:
+    return (
+        "XIAO nRF54LM20B flashing uses the factory USB firmware loader. "
+        "Hold the user button (P0.09) while plugging in USB to enter the "
+        "loader by hand, then rerun the flash command."
+    )
+
+
+def touch_serial_baud(port: str, baud: int) -> None:
+    # Opens a serial port at one baud rate and closes it again.
+    # 以指定波特率打开串口，然后关闭它。
+    python = zephyr_venv_python()
+    script = (
+        "import sys, time;"
+        "import serial;"
+        "port, baud = sys.argv[1], int(sys.argv[2]);"
+        "ser = serial.Serial(port=port, baudrate=baud, timeout=0.1);"
+        "time.sleep(0.2);"
+        "ser.close()"
+    )
+    result = run_command_capture(
+        [str(python), "-c", script, port, str(baud)],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+    if result.returncode != 0:
+        details = result.stdout.strip()
+        message = f"Unable to open {port} at {baud} baud."
+        if details:
+            message = f"{message}\n{details}"
+        raise CliError(message)
+
+
+def request_nrf54lm20b_loader(port: str) -> None:
+    # Requests the firmware loader by opening the app port at 9600 then 1200 baud.
+    # 先后以 9600 和 1200 波特率打开应用串口，请求固件加载器。
+    for baud in NRF54LM20B_LOADER_REQUEST_BAUDS:
+        print(f"Requesting nRF54LM20B firmware loader via {port} at {baud} baud...", flush=True)
+        touch_serial_baud(port, baud)
+
+
+def wait_for_nrf54lm20b_loader(
+    timeout_seconds: int = NRF54LM20B_LOADER_WAIT_SECONDS,
+) -> str:
+    # Waits for the factory firmware loader to enumerate over USB.
+    # 等待出厂固件加载器完成 USB 枚举。
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        loader_port = usb_device_port(NRF54LM20B_LOADER_USB_ID)
+        if loader_port is not None:
+            return loader_port
+        time.sleep(0.5)
+
+    raise CliError("Timed out waiting for the nRF54LM20B firmware loader.")
+
+
+def prepare_nrf54lm20b_loader(port: str | None) -> str:
+    # Returns the loader serial port, requesting loader mode when the app is running.
+    # 返回加载器串口；当应用程序正在运行时，先请求进入加载器。
+    loader_port = usb_device_port(NRF54LM20B_LOADER_USB_ID)
+    if loader_port is not None:
+        return loader_port
+
+    app_port = port or usb_device_port(NRF54LM20B_APP_USB_ID)
+    if app_port is None:
+        try:
+            app_port = detect_serial_port()
+        except CliError as error:
+            raise CliError(f"{error}\nHint: {nrf54lm20b_loader_hint()}") from error
+
+    request_nrf54lm20b_loader(app_port)
+
+    try:
+        loader_port = wait_for_nrf54lm20b_loader()
+    except CliError as error:
+        raise CliError(f"{error}\nHint: {nrf54lm20b_loader_hint()}") from error
+
+    print(f"nRF54LM20B firmware loader detected: {loader_port}", flush=True)
+    return loader_port
+
+
+def run_nrf54lm20b_flash(port: str | None) -> str:
+    # Uploads the signed, confirmed image and resets the board through the loader.
+    # 通过加载器上传已签名并确认的镜像，然后复位开发板。
+    image = zephyr_workspace() / "build" / "zephyr" / "zephyr.signed.confirmed.bin"
+    if not image.exists():
+        raise CliError(
+            f"Signed image was not found: {image}. "
+            "Build the XIAO nRF54LM20B example before flashing."
+        )
+
+    loader_port = prepare_nrf54lm20b_loader(port)
+    upload = [
+        "nrfutil",
+        "mcu-manager",
+        "serial",
+        "image-upload",
+        "--port",
+        loader_port,
+        str(image),
+    ]
+    run_command(upload, cwd=zephyr_workspace(), env=west_command_env())
+    run_command(
+        ["nrfutil", "mcu-manager", "serial", "reset", "--port", loader_port],
+        cwd=zephyr_workspace(),
+        env=west_command_env(),
+    )
+    print("nRF54LM20B signed image uploaded; the board is resetting.", flush=True)
+    return loader_port
+
+
+def stm32c5_bootloader_hint() -> str:
+    return (
+        "XIAO STM32C5 flashing copies a UF2 image to the TinyUF2 boot volume "
+        f"{STM32C5_BOOT_VOLUME_NAME} (USB id {STM32C5_BOOT_VOLUME_ID}). "
+        "Double-tap RESET (twice within about half a second) to enter the "
+        "bootloader, then rerun the flash command."
+    )
+
+
+def volume_info_text(mount: str) -> str:
+    info = Path(mount) / "INFO_UF2.TXT"
+    if not info.is_file():
+        return ""
+    try:
+        return info.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def stm32c5_boot_volume() -> str | None:
+    # Returns the mounted TinyUF2 volume that belongs to this board.
+    # 返回属于该开发板的已挂载 TinyUF2 引导盘。
+    for mount in uf2_mounts():
+        info = volume_info_text(mount)
+        if STM32C5_BOOT_VOLUME_NAME in info or STM32C5_BOOT_VOLUME_ID in info:
+            return mount
+        if Path(mount).name == STM32C5_BOOT_VOLUME_NAME:
+            return mount
+    return None
+
+
+def wait_for_stm32c5_boot_volume(timeout_seconds: int = RP2_BOOTLOADER_WAIT_SECONDS) -> str:
+    # Waits for the TinyUF2 boot volume to appear after a manual double reset.
+    # 等待手动双击复位后出现 TinyUF2 引导盘。
+    deadline = time.monotonic() + timeout_seconds
+
+    while time.monotonic() < deadline:
+        mount = stm32c5_boot_volume()
+        if mount is not None:
+            return mount
+        time.sleep(0.5)
+
+    raise CliError("Timed out waiting for the XIAO STM32C5 UF2 boot volume.")
+
+
+def run_stm32c5_flash(port: str | None) -> str | None:
+    # Copies the UF2 image onto the TinyUF2 boot volume.
+    # 把 UF2 镜像复制到 TinyUF2 引导盘。
+    image = zephyr_workspace() / "build" / "zephyr" / "zephyr.uf2"
+    if not image.exists():
+        raise CliError(
+            f"UF2 image was not found: {image}. Build the XIAO STM32C5 example before flashing."
+        )
+
+    mount = stm32c5_boot_volume()
+    if mount is None:
+        print(
+            "Waiting for the XIAO STM32C5 boot volume. Double-tap RESET to enter the bootloader...",
+            flush=True,
+        )
+        try:
+            mount = wait_for_stm32c5_boot_volume()
+        except CliError as error:
+            raise CliError(f"{error}\nHint: {stm32c5_bootloader_hint()}") from error
+
+    destination = Path(mount) / image.name
+    print(f"Copying {image.name} to {mount}...", flush=True)
+    shutil.copyfile(image, destination)
+    print(f"UF2 image copied: {destination}", flush=True)
+    return port
+
+
 def uses_uf2_runner(board: dict[str, str]) -> bool:
     # Identifies boards whose normal repository flash path is UF2 mass storage.
     # 识别仓库默认通过 UF2 存储盘烧录的开发板。
@@ -1976,6 +2222,10 @@ def run_west_flash(board_id: str, port: str | None = None) -> str | None:
     port = resolve_flash_port(board, port)
     if board["id"] == RA4M1_BOARD_ID:
         return run_ra4m1_dfu_flash(port)
+    if board["id"] == NRF54LM20B_BOARD_ID:
+        return run_nrf54lm20b_flash(port)
+    if board["id"] in UF2_COPY_BOARD_IDS:
+        return run_stm32c5_flash(port)
 
     if uses_uf2_runner(board):
         port = prepare_uf2_bootloader(board_id, port)

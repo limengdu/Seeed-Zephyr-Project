@@ -30,6 +30,47 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-10 - XIAO nRF54LM20A, nRF54LM20B, and STM32C5 (release 0.5.2)
+
+Scope:
+- Board metadata, connector pin maps, and baseline `blinky` examples for
+  `xiao_nrf54lm20a`, `xiao_nrf54lm20b`, and `xiao_stm32c5`.
+- `tools/cli/seeed_zephyr.py`: nRF54LM20B upload through the factory USB loader
+  with `nrfutil mcu-manager`; STM32C5 upload by copying the UF2 image to the
+  TinyUF2 boot volume.
+- `examples/boards/xiao_esp32c5/blinky` is recorded as hardware-tested, with the
+  2026-11-10 observation in `AI use/HARDWARE_VERIFICATION.md`.
+- Release pair 0.5.2 / Zephyr v4.5.0 / SDK 1.0.1; CLI, extension, and
+  `DEFAULT_MANAGED_CLI_VERSION` are 0.5.2.
+
+Reason:
+- These three boards are the remaining XIAO targets in the pinned Zephyr tree.
+  Each one boots through a different factory path: an on-board CMSIS-DAP
+  debugger, a signed MCUboot USB loader, and a TinyUF2 mass-storage bootloader.
+
+Result:
+- The catalog lists the three boards with a `blinky` example each. Upload for
+  nRF54LM20B signs the image with the workspace MCUboot development key and
+  sends it to the loader; upload for STM32C5 copies `zephyr.uf2` to the
+  `XIAOC5BOOT` volume after a double RESET tap. Grove status rows for the three
+  boards are `pending`.
+
+Verification:
+- `python tools/cli/test_seeed_zephyr.py` -> 122 tests OK.
+- `python tools/validate_metadata/validate.py` -> 43 passed.
+- `bash scripts/build-example.sh` for the three new blinky examples -> PASS.
+  nRF54LM20B produced `zephyr.signed.confirmed.bin` (1826816 bytes, slot size
+  1784 KB) and `imgtool verify` validated it. STM32C5 produced `zephyr.uf2`
+  (93184 bytes) starting at `0x08008000`.
+- `cd tools/vscode-extension && npm run check-types && npm run test && npm run build`
+  -> passed.
+
+Remaining:
+- Hardware runs for the three new boards, then their blinky status and Grove
+  rows move off `build-only` / `pending`.
+- The nRF54LM20B upload needs `nrfutil install mcu-manager`; the local nrfutil
+  has only the `sdk-manager` command.
+
 ## 2026-11-10 - XIAO ESP32-C5 blinky and post-flash reset (release 0.5.1)
 
 Scope:
