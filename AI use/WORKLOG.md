@@ -30,6 +30,25 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-11 - repository READMEs match per-project ports
+
+Scope:
+- `README.md` and `README.zh-CN.md` editor-extension sections.
+
+Reason:
+- The extension README described the saved-port rule. The repository READMEs
+  still said a newly detected port replaces an unselected one.
+
+Result:
+- English and Chinese repository READMEs say each open project keeps its own
+  port, and automatic detection fills only a project with no saved port.
+
+Verification:
+- Wording checked against `tools/vscode-extension/README.md`.
+
+Remaining:
+- None.
+
 ## 2026-11-11 - per-project serial port stickiness (extension 0.5.8)
 
 Scope:
