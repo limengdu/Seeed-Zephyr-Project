@@ -32,6 +32,7 @@ or AI work logs here. Put complete process tutorials in `getting-started.md`.
 
 - [XIAO SAMD21](xiao-samd21.md)
 - [XIAO nRF52840](xiao-nrf52840.md)
+- [XIAO nRF54LM20B](xiao-nrf54lm20b.md)
 - [XIAO MG24](xiao-mg24.md)
 - [XIAO RA4M1](xiao-ra4m1.md)
 - [XIAO RP2040](xiao-rp2040.md)

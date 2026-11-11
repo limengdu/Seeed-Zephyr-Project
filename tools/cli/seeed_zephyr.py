@@ -120,8 +120,8 @@ STM32C5_BOOTLOADER_WAIT_SECONDS = 30
 NRF54LM20B_BOARD_ID = "xiao_nrf54lm20b"
 NRF54LM20B_APP_USB_ID = "2886:8013"
 NRF54LM20B_LOADER_USB_ID = "2886:0013"
-NRF54LM20B_LOADER_REQUEST_BAUDS = (9600, 1200)
 NRF54LM20B_LOADER_WAIT_SECONDS = 15
+NRF54LM20B_SMP_UPLOAD_SCRIPT = Path(__file__).resolve().parent / "nrf54lm20b_smp_upload.py"
 # Board file stems of earlier Zephyr targets, copied to the current target stem.
 # 早期 Zephyr target 的板级文件 stem，会复制为当前 target stem。
 PREVIOUS_TARGET_STEMS = {"xiao_rp2350": ("xiao_rp2350_rp2350a_m33",)}
@@ -1605,8 +1605,6 @@ def require_flash_tools(board_id: str, rom_boot: bool = False) -> None:
         require_mg24_pyocd_pack()
     if board["id"] == RA4M1_BOARD_ID and not rom_boot:
         require_ra4m1_dfu_util()
-    if board["id"] == NRF54LM20B_BOARD_ID:
-        require_nrfutil_mcu_manager()
 
 
 def zephyr_objcopy_path() -> Path:
@@ -1825,43 +1823,6 @@ def run_ra4m1_dfu_flash(port: str | None = None) -> str | None:
     raise CliError(f"Command failed with status {result.returncode}: {' '.join(command)}")
 
 
-def nrfutil_mcu_manager_install_hint() -> str:
-    return (
-        "XIAO nRF54LM20B flashing uploads a signed image through the factory "
-        "USB firmware loader. Install nrfutil from "
-        "https://www.nordicsemi.com/Products/Development-tools/nRF-Util, "
-        "then rerun the flash command."
-    )
-
-
-def nrfutil_has_mcu_manager() -> bool:
-    # Checks that the installed nrfutil provides the mcu-manager command.
-    # 检查已安装的 nrfutil 是否提供 mcu-manager 命令。
-    if shutil.which("nrfutil") is None:
-        return False
-
-    result = run_command_capture(["nrfutil", "mcu-manager", "--help"])
-    return result.returncode == 0
-
-
-def require_nrfutil_mcu_manager() -> None:
-    # Installs the mcu-manager command when nrfutil itself is already present.
-    # nrfutil 已安装时，补上 mcu-manager 命令。
-    if shutil.which("nrfutil") is None:
-        raise CliError(nrfutil_mcu_manager_install_hint())
-    if nrfutil_has_mcu_manager():
-        return
-
-    print("Installing the nrfutil mcu-manager command...", flush=True)
-    result = run_command_capture(["nrfutil", "install", "mcu-manager"])
-    print_captured_output(result.stdout)
-    if result.returncode != 0 or not nrfutil_has_mcu_manager():
-        raise CliError(
-            "The nrfutil mcu-manager command is still unavailable. "
-            "Install it with: nrfutil install mcu-manager"
-        )
-
-
 def usb_device_port(vid_pid: str) -> str | None:
     # Returns the serial port of the first USB device with the given id.
     # 返回第一个匹配给定 USB 标识的串口。
@@ -1891,25 +1852,26 @@ def usb_device_port(vid_pid: str) -> str | None:
 def nrf54lm20b_loader_hint() -> str:
     return (
         "XIAO nRF54LM20B flashing uses the factory USB firmware loader. "
-        "Hold the user button (P0.09) while plugging in USB to enter the "
-        "loader by hand, then rerun the flash command."
+        "Hold the user button (P0.09) while pressing RESET or plugging in USB "
+        "to enter the loader by hand, then rerun the flash command."
     )
 
 
-def touch_serial_baud(port: str, baud: int) -> None:
-    # Opens a serial port at one baud rate and closes it again.
-    # 以指定波特率打开串口，然后关闭它。
+def touch_serial_baud(port: str, baud: int, hold_seconds: float = 0.2) -> None:
+    # Opens a serial port at one baud rate, drops DTR, and closes it again.
+    # 以指定波特率打开串口，拉低 DTR，然后关闭它。
     python = zephyr_venv_python()
     script = (
         "import sys, time;"
         "import serial;"
-        "port, baud = sys.argv[1], int(sys.argv[2]);"
+        "port, baud, hold = sys.argv[1], int(sys.argv[2]), float(sys.argv[3]);"
         "ser = serial.Serial(port=port, baudrate=baud, timeout=0.1);"
-        "time.sleep(0.2);"
+        "ser.dtr = False;"
+        "time.sleep(hold);"
         "ser.close()"
     )
     result = run_command_capture(
-        [str(python), "-c", script, port, str(baud)],
+        [str(python), "-c", script, port, str(baud), str(hold_seconds)],
         cwd=zephyr_workspace(),
         env=west_command_env(),
     )
@@ -1924,9 +1886,13 @@ def touch_serial_baud(port: str, baud: int) -> None:
 def request_nrf54lm20b_loader(port: str) -> None:
     # Requests the firmware loader by opening the app port at 9600 then 1200 baud.
     # 先后以 9600 和 1200 波特率打开应用串口，请求固件加载器。
-    for baud in NRF54LM20B_LOADER_REQUEST_BAUDS:
-        print(f"Requesting nRF54LM20B firmware loader via {port} at {baud} baud...", flush=True)
-        touch_serial_baud(port, baud)
+    print(f"Requesting nRF54LM20B firmware loader via {port} at 9600 baud...", flush=True)
+    touch_serial_baud(port, 9600)
+    print(f"Requesting nRF54LM20B firmware loader via {port} at 1200 baud...", flush=True)
+    try:
+        touch_serial_baud(port, 1200, hold_seconds=1.0)
+    except CliError as error:
+        print(f"nRF54LM20B serial loader request: {error}", flush=True)
 
 
 def wait_for_nrf54lm20b_loader(
@@ -1970,9 +1936,21 @@ def prepare_nrf54lm20b_loader(port: str | None) -> str:
     return loader_port
 
 
+def wait_for_nrf54lm20b_application() -> str:
+    # Returns the application's USB serial port after the loader resets the board.
+    # 加载器复位开发板后，返回应用程序的 USB 串口。
+    deadline = time.monotonic() + SERIAL_READY_WAIT_SECONDS
+    while time.monotonic() < deadline:
+        app_port = usb_device_port(NRF54LM20B_APP_USB_ID)
+        if app_port is not None:
+            return app_port
+        time.sleep(SERIAL_READY_POLL_SECONDS)
+    raise CliError("Timed out waiting for the nRF54LM20B application USB serial port after upload.")
+
+
 def run_nrf54lm20b_flash(port: str | None) -> str:
-    # Uploads the signed, confirmed image and resets the board through the loader.
-    # 通过加载器上传已签名并确认的镜像，然后复位开发板。
+    # Uploads the signed, confirmed image and waits for the application USB port.
+    # 上传已签名并确认的镜像，然后等待应用程序 USB 串口。
     image = zephyr_workspace() / "build" / "zephyr" / "zephyr.signed.confirmed.bin"
     if not image.exists():
         raise CliError(
@@ -1981,24 +1959,12 @@ def run_nrf54lm20b_flash(port: str | None) -> str:
         )
 
     loader_port = prepare_nrf54lm20b_loader(port)
-    upload = [
-        "nrfutil",
-        "mcu-manager",
-        "serial",
-        "image-upload",
-        "--serial-port",
-        loader_port,
-        "--firmware",
-        str(image),
-    ]
-    run_command(upload, cwd=zephyr_workspace(), env=west_command_env())
     run_command(
-        ["nrfutil", "mcu-manager", "serial", "reset", "--serial-port", loader_port],
+        [str(zephyr_venv_python()), str(NRF54LM20B_SMP_UPLOAD_SCRIPT), loader_port, str(image)],
         cwd=zephyr_workspace(),
         env=west_command_env(),
     )
-    print("nRF54LM20B signed image uploaded; the board is resetting.", flush=True)
-    return loader_port
+    return wait_for_nrf54lm20b_application()
 
 
 def stm32c5_bootloader_hint() -> str:

@@ -34,6 +34,14 @@ Entry format:
 - Notes: ...
 ```
 
+## 2026-11-11 - xiao_nrf54lm20b - PASS
+
+- Board: `xiao_nrf54lm20b`
+- Example: `examples/boards/xiao_nrf54lm20b/blinky`
+- Result: `PASS`
+- Serial output: `*** Booting Zephyr OS build v4.5.0 ***`; `*** Seeed XIAO Zephyr Base | board: xiao_nrf54lm20b | demo: blinky ***`; repeated `LED state: OFF` and `LED state: ON` after all three successful uploads.
+- Notes: Built with Zephyr v4.5.0 / SDK 1.0.1. Manual Button 0 (P0.09) plus RESET entered the factory loader (`2886:0013`, `CDC ACM serial backend`). A 32-byte SHA-256 transfer digest and 64-byte chunks uploaded the compact signed image (78465 bytes), which booted as application USB id `2886:8013`, product `XIAO nRF54LM20B`, on `/dev/cu.usbmodem1201`. Consecutive 9600/1200-baud requests entered the loader automatically. A full `zephyr.signed.confirmed.bin` upload (1826816 bytes) then booted successfully. The final run used the production CLI command `python3 tools/cli/seeed_zephyr.py flash xiao_nrf54lm20b --port /dev/cu.usbmodem1201`, rebuilt the example, uploaded the full confirmed image with the bundled SMP helper, and detected the application serial port after reset. The serial capture after that run contains the Zephyr boot banner and alternating LED state lines.
+
 ## 2026-11-10 - xiao_stm32c5 - PASS
 
 - Board: `xiao_stm32c5`

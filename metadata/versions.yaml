@@ -6,6 +6,9 @@
 # sdk:     Zephyr SDK version used to build them.
 # The first entry is the newest release and matches the current repository.
 releases:
+  - version: 0.5.7
+    zephyr: v4.5.0
+    sdk: 1.0.1
   - version: 0.5.6
     zephyr: v4.5.0
     sdk: 1.0.1

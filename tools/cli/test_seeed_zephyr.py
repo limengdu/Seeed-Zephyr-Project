@@ -102,37 +102,12 @@ class FlashHintTests(unittest.TestCase):
         self.assertIn("pyocd pack install EFR32MG24B220F1536IM48", message)
         self.assertIn("EFR32MG24B220F1536IM48", message)
 
-    def test_xiao_nrf54lm20b_requires_nrfutil_mcu_manager(self) -> None:
+    def test_xiao_nrf54lm20b_uses_existing_python_serial_environment(self) -> None:
         board = {"id": "xiao_nrf54lm20b", "vendor": "nordic", "target": "xiao_nrf54lm20b"}
 
         with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
             with mock.patch.object(seeed_zephyr.shutil, "which", return_value=None):
-                with self.assertRaises(seeed_zephyr.CliError) as context:
-                    seeed_zephyr.require_flash_tools("xiao_nrf54lm20b")
-
-        message = str(context.exception)
-        self.assertIn("nRF-Util", message)
-        self.assertIn("XIAO nRF54LM20B", message)
-
-    def test_xiao_nrf54lm20b_installs_mcu_manager_when_nrfutil_exists(self) -> None:
-        board = {"id": "xiao_nrf54lm20b", "vendor": "nordic", "target": "xiao_nrf54lm20b"}
-        installed = {"ready": False}
-
-        def has_manager() -> bool:
-            return installed["ready"]
-
-        def install(command: list[str]) -> subprocess.CompletedProcess[str]:
-            self.assertEqual(command, ["nrfutil", "install", "mcu-manager"])
-            installed["ready"] = True
-            return subprocess.CompletedProcess(command, 0, stdout="installed\n", stderr="")
-
-        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
-            with mock.patch.object(seeed_zephyr.shutil, "which", return_value="/usr/bin/nrfutil"):
-                with mock.patch.object(seeed_zephyr, "nrfutil_has_mcu_manager", side_effect=has_manager):
-                    with mock.patch.object(seeed_zephyr, "run_command_capture", side_effect=install):
-                        seeed_zephyr.require_flash_tools("xiao_nrf54lm20b")
-
-        self.assertTrue(installed["ready"])
+                seeed_zephyr.require_flash_tools("xiao_nrf54lm20b")
 
     def test_xiao_nrf54lm20b_flash_uploads_signed_image(self) -> None:
         board = {
@@ -140,41 +115,49 @@ class FlashHintTests(unittest.TestCase):
             "vendor": "nordic",
             "target": "xiao_nrf54lm20b/nrf54lm20b/cpuapp",
         }
-        image = seeed_zephyr.Path("/tmp/build/zephyr/zephyr.signed.confirmed.bin")
+        image = Path("/tmp/build/zephyr/zephyr.signed.confirmed.bin")
+        python = Path("/tmp/.venv/bin/python")
 
-        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
-            with mock.patch.object(seeed_zephyr, "zephyr_workspace", return_value=seeed_zephyr.Path("/tmp")):
-                with mock.patch.object(seeed_zephyr.Path, "exists", return_value=True):
-                    with mock.patch.object(
-                        seeed_zephyr, "prepare_nrf54lm20b_loader", return_value="/dev/cu.usbmodem1101"
-                    ):
-                        with mock.patch.object(seeed_zephyr, "run_command") as run_command:
-                            selected_port = seeed_zephyr.run_west_flash("xiao_nrf54lm20b")
+        with (
+            mock.patch.object(seeed_zephyr, "require_board", return_value=board),
+            mock.patch.object(seeed_zephyr, "zephyr_workspace", return_value=Path("/tmp")),
+            mock.patch.object(seeed_zephyr, "zephyr_venv_python", return_value=python),
+            mock.patch.object(seeed_zephyr.Path, "exists", return_value=True),
+            mock.patch.object(seeed_zephyr, "west_command_env", return_value={}),
+            mock.patch.object(
+                seeed_zephyr, "prepare_nrf54lm20b_loader", return_value="/dev/cu.usbmodem1101"
+            ),
+            mock.patch.object(
+                seeed_zephyr, "wait_for_nrf54lm20b_application", return_value="/dev/cu.usbmodem1102"
+            ),
+            mock.patch.object(seeed_zephyr, "run_command") as run_command,
+        ):
+            selected_port = seeed_zephyr.run_west_flash("xiao_nrf54lm20b")
 
-        self.assertEqual(selected_port, "/dev/cu.usbmodem1101")
-        self.assertEqual(
-            run_command.call_args_list[0].args[0],
+        self.assertEqual(selected_port, "/dev/cu.usbmodem1102")
+        run_command.assert_called_once_with(
             [
-                "nrfutil",
-                "mcu-manager",
-                "serial",
-                "image-upload",
-                "--serial-port",
+                str(python),
+                str(seeed_zephyr.NRF54LM20B_SMP_UPLOAD_SCRIPT),
                 "/dev/cu.usbmodem1101",
-                "--firmware",
                 str(image),
             ],
+            cwd=Path("/tmp"),
+            env={},
         )
+
+    def test_xiao_nrf54lm20b_waits_for_application_usb_identity(self) -> None:
+        with mock.patch.object(seeed_zephyr, "usb_device_port", side_effect=[None, "/dev/new-app"]) as detect:
+            with mock.patch.object(seeed_zephyr.time, "sleep"):
+                self.assertEqual(seeed_zephyr.wait_for_nrf54lm20b_application(), "/dev/new-app")
+        self.assertEqual(detect.call_args_list, [mock.call("2886:8013"), mock.call("2886:8013")])
+
+    def test_xiao_nrf54lm20b_loader_touch_holds_1200_baud(self) -> None:
+        with mock.patch.object(seeed_zephyr, "touch_serial_baud") as touch:
+            seeed_zephyr.request_nrf54lm20b_loader("/dev/app")
         self.assertEqual(
-            run_command.call_args_list[1].args[0],
-            [
-                "nrfutil",
-                "mcu-manager",
-                "serial",
-                "reset",
-                "--serial-port",
-                "/dev/cu.usbmodem1101",
-            ],
+            touch.call_args_list,
+            [mock.call("/dev/app", 9600), mock.call("/dev/app", 1200, hold_seconds=1.0)],
         )
 
     def test_xiao_nrf54lm20b_requests_loader_before_upload(self) -> None:

@@ -102,7 +102,7 @@ function flashMethod(board: Board): string {
         return "On-board CMSIS-DAP debugger (Zephyr runner)";
       }
       if (board.id === "xiao_nrf54lm20b") {
-        return "Factory USB firmware loader (nrfutil mcu-manager)";
+        return "Factory USB firmware loader (built-in SMP uploader)";
       }
       return "PyOCD / J-Link";
     case "st":

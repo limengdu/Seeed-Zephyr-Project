@@ -30,6 +30,51 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-11 - nRF54LM20B factory loader compatibility (release 0.5.7)
+
+Scope:
+- `tools/cli/nrf54lm20b_smp_upload.py`, the CLI flash path, package force-includes,
+  and upload protocol regression tests.
+- LM20B blinky USB identity and automatic loader entry, English/Chinese board
+  notes, hardware verification, and the build matrix.
+- CLI and extension release pair 0.5.7 / Zephyr v4.5.0 / SDK 1.0.1.
+
+Reason:
+- The factory Thread Co-Processor application requires Button 0 plus RESET for
+  first loader entry. The loader uses USB id `2886:0013`; the application uses
+  `2886:8013`.
+- `nrfutil mcu-manager` 0.12.3 copies the pure Ed25519 image's 64-byte SHA-512
+  digest into the transfer `sha` field. The loader accepts up to 32 bytes there:
+  SMP v2 reports image-group error 24 (`INVALID_HASH`).
+
+Result:
+- The built-in uploader uses the existing pyserial environment and Python
+  standard library, sends SHA-256 for file transfer, and preserves the signed
+  image. It uses 64-byte chunks, acknowledged offsets, CRC checks, and bounded
+  retries, then requests reset only after the complete image is acknowledged.
+- The example polls the CDC baud rate every 50 ms and requests the factory
+  loader through retained boot mode at 1200 baud. The CLI opens 9600 then 1200
+  baud with DTR low and detects the application USB port after upload.
+- Board notes describe the flash layout, first entry, automatic entry, signing,
+  USB identities, and the distinction between transfer and image digests.
+
+Verification:
+- Three hardware uploads and boots passed: compact signed image (78465 bytes),
+  full confirmed image (1826816 bytes), and a full confirmed image rebuilt and
+  flashed through the production CLI. Both consecutive uploads entered the
+  loader automatically. Each boot produced the Zephyr banner and alternating
+  LED state lines.
+- 135 CLI tests and 13 SMP protocol tests passed. Protocol tests cover the
+  SHA-256 field, wire encoding, CRC, retries, loader errors, resumed offsets,
+  and reset ordering.
+- Extension type checks, 18 tests, and build passed; metadata validation passed
+  all 43 records.
+- A built 0.5.7 wheel contains the bundled SMP upload helper.
+
+Remaining:
+- Create a fresh LM20B blinky project with 0.5.7 or later to include the USB
+  identity and automatic loader-entry handler.
+
 ## 2026-11-11 - nRF54LM20B nrfutil mcu-manager upload (release 0.5.6)
 
 Scope:

@@ -40,6 +40,7 @@ packages = ["src/seeed_zephyr"]
 [tool.hatch.build.force-include]
 "../../tools/cli/seeed_zephyr.py" = "src/seeed_zephyr/cli.py"
 "../../tools/cli/ra4m1_rom_flash.py" = "src/seeed_zephyr/ra4m1_rom_flash.py"
+"../../tools/cli/nrf54lm20b_smp_upload.py" = "src/seeed_zephyr/nrf54lm20b_smp_upload.py"
 "../../tools/cli/serial_monitor.py" = "src/seeed_zephyr/serial_monitor.py"
 "../../tools/cli/bootloaders" = "src/seeed_zephyr/bootloaders"
 "../../metadata/boards" = "src/seeed_zephyr/data/boards"

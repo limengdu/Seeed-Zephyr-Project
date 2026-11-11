@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.7
+
+- Upload XIAO nRF54LM20B signed images with a built-in SMP uploader, using a SHA-256 transfer digest and acknowledged 64-byte chunks with the factory USB loader.
+- Add automatic 1200-baud loader entry and the application USB identity to the LM20B blinky example, and reconnect to its application serial port after upload.
+- Document factory loader entry, signing, USB behavior, and hardware verification in the LM20B board notes. Create a fresh LM20B blinky project to include the updated firmware.
+- Install seeed-zephyr 0.5.7 by default, paired with Zephyr v4.5.0 and SDK 1.0.1.
+
 ## 0.5.6
 
 - Upload XIAO nRF54LM20B with the current `nrfutil mcu-manager` command names, and install that command on the first upload when `nrfutil` is already present.
