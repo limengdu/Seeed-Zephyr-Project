@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -105,13 +106,33 @@ class FlashHintTests(unittest.TestCase):
         board = {"id": "xiao_nrf54lm20b", "vendor": "nordic", "target": "xiao_nrf54lm20b"}
 
         with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
-            with mock.patch.object(seeed_zephyr, "nrfutil_has_mcu_manager", return_value=False):
+            with mock.patch.object(seeed_zephyr.shutil, "which", return_value=None):
                 with self.assertRaises(seeed_zephyr.CliError) as context:
                     seeed_zephyr.require_flash_tools("xiao_nrf54lm20b")
 
         message = str(context.exception)
-        self.assertIn("nrfutil install mcu-manager", message)
+        self.assertIn("nRF-Util", message)
         self.assertIn("XIAO nRF54LM20B", message)
+
+    def test_xiao_nrf54lm20b_installs_mcu_manager_when_nrfutil_exists(self) -> None:
+        board = {"id": "xiao_nrf54lm20b", "vendor": "nordic", "target": "xiao_nrf54lm20b"}
+        installed = {"ready": False}
+
+        def has_manager() -> bool:
+            return installed["ready"]
+
+        def install(command: list[str]) -> subprocess.CompletedProcess[str]:
+            self.assertEqual(command, ["nrfutil", "install", "mcu-manager"])
+            installed["ready"] = True
+            return subprocess.CompletedProcess(command, 0, stdout="installed\n", stderr="")
+
+        with mock.patch.object(seeed_zephyr, "require_board", return_value=board):
+            with mock.patch.object(seeed_zephyr.shutil, "which", return_value="/usr/bin/nrfutil"):
+                with mock.patch.object(seeed_zephyr, "nrfutil_has_mcu_manager", side_effect=has_manager):
+                    with mock.patch.object(seeed_zephyr, "run_command_capture", side_effect=install):
+                        seeed_zephyr.require_flash_tools("xiao_nrf54lm20b")
+
+        self.assertTrue(installed["ready"])
 
     def test_xiao_nrf54lm20b_flash_uploads_signed_image(self) -> None:
         board = {
@@ -138,14 +159,22 @@ class FlashHintTests(unittest.TestCase):
                 "mcu-manager",
                 "serial",
                 "image-upload",
-                "--port",
+                "--serial-port",
                 "/dev/cu.usbmodem1101",
+                "--firmware",
                 str(image),
             ],
         )
         self.assertEqual(
             run_command.call_args_list[1].args[0],
-            ["nrfutil", "mcu-manager", "serial", "reset", "--port", "/dev/cu.usbmodem1101"],
+            [
+                "nrfutil",
+                "mcu-manager",
+                "serial",
+                "reset",
+                "--serial-port",
+                "/dev/cu.usbmodem1101",
+            ],
         )
 
     def test_xiao_nrf54lm20b_requests_loader_before_upload(self) -> None:

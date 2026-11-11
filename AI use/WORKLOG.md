@@ -30,6 +30,36 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-11 - nRF54LM20B nrfutil mcu-manager upload (release 0.5.6)
+
+Scope:
+- `tools/cli/seeed_zephyr.py`: nRF54LM20B image upload and reset arguments, plus
+  first-run installation of the `mcu-manager` command.
+- CLI regression tests, LM20B board usage notes, and release pair 0.5.6 /
+  Zephyr v4.5.0 / SDK 1.0.1.
+
+Reason:
+- `nrfutil` 8.x reports `mcu-manager` missing until `nrfutil install mcu-manager`
+  runs. The installed command (0.12.3) takes `--serial-port` and `--firmware`;
+  the previous command line used `--port` and a positional image path.
+
+Result:
+- Upload runs `nrfutil mcu-manager serial image-upload --serial-port <loader>
+  --firmware <zephyr.signed.confirmed.bin>`, then `serial reset --serial-port`.
+- When `nrfutil` is present and `mcu-manager` is absent, flash installs the
+  command before uploading. A missing `nrfutil` still points to the Nordic
+  nRF-Util download.
+
+Verification:
+- `nrfutil install mcu-manager` installed version 0.12.3 beside the existing
+  `sdk-manager` 1.12.0 command. `nrfutil mcu-manager serial image-upload --help`
+  documents `--firmware` and `--serial-port`.
+- CLI regression tests cover the new arguments and the install-on-demand path.
+
+Remaining:
+- A physical XIAO nRF54LM20B upload still needs to confirm the 9600-then-1200
+  loader request and the signed image boot.
+
 ## 2026-11-10 - XIAO STM32C5 board notes
 
 Scope:

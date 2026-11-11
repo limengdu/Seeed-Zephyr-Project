@@ -1828,8 +1828,9 @@ def run_ra4m1_dfu_flash(port: str | None = None) -> str | None:
 def nrfutil_mcu_manager_install_hint() -> str:
     return (
         "XIAO nRF54LM20B flashing uploads a signed image through the factory "
-        "USB firmware loader. Install the nrfutil command with: "
-        "nrfutil install mcu-manager"
+        "USB firmware loader. Install nrfutil from "
+        "https://www.nordicsemi.com/Products/Development-tools/nRF-Util, "
+        "then rerun the flash command."
     )
 
 
@@ -1844,8 +1845,21 @@ def nrfutil_has_mcu_manager() -> bool:
 
 
 def require_nrfutil_mcu_manager() -> None:
-    if not nrfutil_has_mcu_manager():
+    # Installs the mcu-manager command when nrfutil itself is already present.
+    # nrfutil 已安装时，补上 mcu-manager 命令。
+    if shutil.which("nrfutil") is None:
         raise CliError(nrfutil_mcu_manager_install_hint())
+    if nrfutil_has_mcu_manager():
+        return
+
+    print("Installing the nrfutil mcu-manager command...", flush=True)
+    result = run_command_capture(["nrfutil", "install", "mcu-manager"])
+    print_captured_output(result.stdout)
+    if result.returncode != 0 or not nrfutil_has_mcu_manager():
+        raise CliError(
+            "The nrfutil mcu-manager command is still unavailable. "
+            "Install it with: nrfutil install mcu-manager"
+        )
 
 
 def usb_device_port(vid_pid: str) -> str | None:
@@ -1972,13 +1986,14 @@ def run_nrf54lm20b_flash(port: str | None) -> str:
         "mcu-manager",
         "serial",
         "image-upload",
-        "--port",
+        "--serial-port",
         loader_port,
+        "--firmware",
         str(image),
     ]
     run_command(upload, cwd=zephyr_workspace(), env=west_command_env())
     run_command(
-        ["nrfutil", "mcu-manager", "serial", "reset", "--port", loader_port],
+        ["nrfutil", "mcu-manager", "serial", "reset", "--serial-port", loader_port],
         cwd=zephyr_workspace(),
         env=west_command_env(),
     )

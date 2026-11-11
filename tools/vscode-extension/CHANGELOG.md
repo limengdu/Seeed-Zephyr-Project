@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.6
+
+- Upload XIAO nRF54LM20B with the current `nrfutil mcu-manager` command names, and install that command on the first upload when `nrfutil` is already present.
+- Install seeed-zephyr 0.5.6 by default, paired with Zephyr v4.5.0 and SDK 1.0.1.
+
 ## 0.5.5
 
 - Rescan Projects after Open Project, including folders already in the workspace.

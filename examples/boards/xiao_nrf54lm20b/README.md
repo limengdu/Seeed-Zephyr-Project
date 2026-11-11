@@ -23,8 +23,8 @@ Usage:
   baud and then at 1200 baud, which makes the board reboot into the loader.
   Holding the user button (P0.09) while plugging in USB enters the loader by
   hand.
-- `nrfutil` needs its `mcu-manager` command installed:
-  `nrfutil install mcu-manager`.
+- Upload uses Nordic `nrfutil`. The first upload installs its `mcu-manager`
+  command when `nrfutil` is already present.
 - The red and green LEDs are `led1` and `led2`.
 
 ## 中文
@@ -39,5 +39,5 @@ Usage:
 
 - 通过板上的 USB-C 口连接电脑。应用程序运行后，控制台显示为一个 USB 串口。
 - 上传会自行进入加载器：它先后以 9600 和 1200 波特率打开应用串口，开发板随即重启进入加载器。按住用户按键（P0.09）再插上 USB 可以手动进入加载器。
-- `nrfutil` 需要先安装 `mcu-manager` 命令：`nrfutil install mcu-manager`。
+- 上传使用 Nordic 的 `nrfutil`。电脑上已经有 `nrfutil` 时，第一次上传会补上它的 `mcu-manager` 命令。
 - 红色和绿色 LED 分别是 `led1` 和 `led2`。
