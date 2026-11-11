@@ -10,7 +10,7 @@
 
 [![Metadata Validation](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml/badge.svg)](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml)
 [![Zephyr](https://img.shields.io/badge/Zephyr-v4.5.0-7929d3)](https://docs.zephyrproject.org/4.5.0/)
-[![Boards](https://img.shields.io/badge/XIAO%20boards-11%20tracked-00979d)](#支持的开发板)
+[![Boards](https://img.shields.io/badge/XIAO%20boards-14%20tracked-00979d)](#支持的开发板)
 [![Platform](https://img.shields.io/badge/host-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#快速开始)
 
 [快速开始](#快速开始) · [支持的开发板](#支持的开发板) · [命令行](#命令行工作流) · [文档](#文档) · [路线图](#路线图)
@@ -53,6 +53,8 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 | XIAO SAMD21 | Microchip | `seeeduino_xiao` | `blinky` | 🔵 真机验证 |
 | XIAO nRF52840 | Nordic | `xiao_ble` | `blinky` | 🔵 真机验证 |
 | XIAO nRF54L15 | Nordic | `xiao_nrf54l15/nrf54l15/cpuapp` | `blinky` | 🔵 真机验证 |
+| XIAO nRF54LM20A | Nordic | `xiao_nrf54lm20a/nrf54lm20a/cpuapp` | `blinky` | 🔵 真机验证 |
+| XIAO nRF54LM20B | Nordic | `xiao_nrf54lm20b/nrf54lm20b/cpuapp` | `blinky` | 🔵 真机验证 · 出厂 USB 加载器 |
 | XIAO MG24 | Silabs | `xiao_mg24` | `blinky` | 🔵 真机验证 |
 | XIAO RP2040 | Raspberry Pi | `xiao_rp2040` | `blinky` | 🔵 真机验证 |
 | XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33_0` | `blinky` | 🔵 真机验证 |
@@ -60,7 +62,8 @@ XIAO 是一个多芯片生态。不同的 XIAO 开发板使用不同的芯片厂
 | XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 真机验证 |
 | XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 真机验证 · 板载无 LED |
 | XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 真机验证 · USB DFU |
-| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `blinky` | 🟢 构建验证 |
+| XIAO STM32C5 | ST | `xiao_stm32c5/stm32c5a3xx` | `blinky` | 🔵 真机验证 · TinyUF2 |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `blinky` | 🔵 真机验证 |
 
 **图例** —— 🔵 真实硬件验证通过 · 🟢 在当前基线下可干净构建，待真机验证。
 

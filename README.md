@@ -10,7 +10,7 @@ Discover what a Seeed Studio XIAO board can build on Zephyr, see which examples 
 
 [![Metadata Validation](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml/badge.svg)](https://github.com/limengdu/Seeed-Zephyr-Project/actions/workflows/metadata.yml)
 [![Zephyr](https://img.shields.io/badge/Zephyr-v4.5.0-7929d3)](https://docs.zephyrproject.org/4.5.0/)
-[![Boards](https://img.shields.io/badge/XIAO%20boards-11%20tracked-00979d)](#supported-boards)
+[![Boards](https://img.shields.io/badge/XIAO%20boards-14%20tracked-00979d)](#supported-boards)
 [![Platform](https://img.shields.io/badge/host-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#quick-start)
 
 [Quick Start](#quick-start) · [Supported Boards](#supported-boards) · [CLI](#command-line-workflow) · [Documentation](#documentation) · [Roadmap](#roadmap)
@@ -53,6 +53,8 @@ Status is taken from the [board build matrix](tools/build_matrix/results.md) aga
 | XIAO SAMD21 | Microchip | `seeeduino_xiao` | `blinky` | 🔵 Hardware-tested |
 | XIAO nRF52840 | Nordic | `xiao_ble` | `blinky` | 🔵 Hardware-tested |
 | XIAO nRF54L15 | Nordic | `xiao_nrf54l15/nrf54l15/cpuapp` | `blinky` | 🔵 Hardware-tested |
+| XIAO nRF54LM20A | Nordic | `xiao_nrf54lm20a/nrf54lm20a/cpuapp` | `blinky` | 🔵 Hardware-tested |
+| XIAO nRF54LM20B | Nordic | `xiao_nrf54lm20b/nrf54lm20b/cpuapp` | `blinky` | 🔵 Hardware-tested · factory USB loader |
 | XIAO MG24 | Silabs | `xiao_mg24` | `blinky` | 🔵 Hardware-tested |
 | XIAO RP2040 | Raspberry Pi | `xiao_rp2040` | `blinky` | 🔵 Hardware-tested |
 | XIAO RP2350 | Raspberry Pi | `xiao_rp2350/rp2350a/m33_0` | `blinky` | 🔵 Hardware-tested |
@@ -60,7 +62,8 @@ Status is taken from the [board build matrix](tools/build_matrix/results.md) aga
 | XIAO ESP32-S3 | Espressif | `xiao_esp32s3/esp32s3/procpu` | `blinky` | 🔵 Hardware-tested |
 | XIAO ESP32-C3 | Espressif | `xiao_esp32c3` | `hello_world` | 🔵 Hardware-tested · no on-board LED |
 | XIAO RA4M1 | Renesas | `xiao_ra4m1` | `blinky` | 🔵 Hardware-tested · USB DFU |
-| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `blinky` | 🟢 Build-verified |
+| XIAO STM32C5 | ST | `xiao_stm32c5/stm32c5a3xx` | `blinky` | 🔵 Hardware-tested · TinyUF2 |
+| XIAO ESP32-C5 | Espressif | `xiao_esp32c5/esp32c5/hpcore` | `blinky` | 🔵 Hardware-tested |
 
 **Legend** — 🔵 verified on real hardware · 🟢 builds cleanly against the baseline, hardware run pending.
 

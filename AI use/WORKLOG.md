@@ -30,6 +30,26 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-11 - supported board tables list every tracked board
+
+Scope:
+- `README.md` and `README.zh-CN.md` Supported Boards tables and board-count badges.
+
+Reason:
+- The tables listed 11 boards. Metadata tracks 14, including XIAO nRF54LM20A,
+  XIAO nRF54LM20B, and XIAO STM32C5. XIAO ESP32-C5 was still marked build-verified
+  after its example became hardware-tested.
+
+Result:
+- Both language tables list 14 boards. ESP32-C5, nRF54LM20A, nRF54LM20B, and
+  STM32C5 are marked hardware-tested, matching their example records.
+
+Verification:
+- Rows checked against `metadata/boards/*.yaml` and `examples/boards/*/blinky/example.yaml`.
+
+Remaining:
+- Board-note indexes only link pages that exist. Several tracked boards still have no dedicated note page.
+
 ## 2026-11-11 - repository READMEs match per-project ports
 
 Scope:
