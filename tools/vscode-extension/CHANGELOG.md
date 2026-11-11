@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.8
+
+- Keep each project's selected serial port. A port chosen for one project stays with that project when another board is plugged in.
+- Use automatic port detection only for a project that has no saved port.
+
 ## 0.5.7
 
 - Upload XIAO nRF54LM20B signed images with a built-in SMP uploader, using a SHA-256 transfer digest and acknowledged 64-byte chunks with the factory USB loader.

@@ -44,10 +44,12 @@ installs a specific published version. Managed CLI installation uses Python 3.12
 or newer and searches for a suitable Python before creating its venv. Install
 and reinstall actions verify `info --json`, `list ports --json`, and
 `create --help` before saving the managed CLI version. Serial port detection is
-provided by the selected CLI; **Auto Port** uses the detected serial port when
-no port has been selected yet, and **Select Port** opens the detected-port
-picker. In that picker, **Auto Detector** keeps automatic detection enabled, and
-a concrete port saves the user's selection for later upload and monitor actions.
+provided by the selected CLI. Each project keeps its own port. **Auto Port**
+uses the one detected serial port only when that project has no saved port. A
+saved port stays with that project when another board is plugged in. **Select
+Port** opens the detected-port picker for that project. In that picker, **Auto
+Detector** clears the saved port and returns to automatic detection, and a
+concrete port saves the user's selection for later upload and monitor actions.
 **Upload & Monitor** flashes the project and opens the serial monitor after upload.
 When testing from a source checkout, select the checkout's `scripts/seeed-zephyr`
 command. **Switch Version** moves the examples, the Zephyr
@@ -75,9 +77,9 @@ Expansion Boards collapsed until opened.
 基础命令；**Choose CLI Version** 用于指定发布版本。插件托管 CLI 使用 Python 3.12 或更新
 版本，并会先查找可用 Python 再创建 venv。安装和重新安装会先验证 `info --json`、
 `list ports --json` 和 `create --help`，通过后才保存托管 CLI 版本。串口检测由当前选择的
-CLI 提供；没有手动选择串口时，**Auto Port** 会使用检测到的串口；点击 **Select Port**
-会打开检测结果选择框，其中 **Auto Detector** 会保持自动检测，选择具体端口则会保存给后续
-Upload 和 Monitor 使用。**Upload & Monitor** 会先上传项目，上传后直接打开串口监视器。
+CLI 提供。每个项目各自记住自己的端口。某个项目还没有保存端口时，**Auto Port**
+才会使用当前唯一检测到的串口；已经保存的端口不会因为又插上一块板子而被换掉。点击
+**Select Port** 会打开这个项目的检测结果选择框，其中 **Auto Detector** 会清掉已保存端口并回到自动检测，选择具体端口则会保存给后续 Upload 和 Monitor 使用。**Upload & Monitor** 会先上传项目，上传后直接打开串口监视器。
 从源码测试时，选择当前仓库里的 `scripts/seeed-zephyr`。
 **Switch Version** 会按 `metadata/versions.yaml` 里的版本列表，把示例、Zephyr 工作区和
 插件托管的 CLI 一起切换到同一个发布版本：最新版本跟随 `main`，较早的版本签出对应的

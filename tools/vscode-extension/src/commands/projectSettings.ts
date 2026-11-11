@@ -17,6 +17,32 @@ interface SerialPortInfo {
   description: string;
 }
 
+export type ProjectPortDecision =
+  | { kind: "keep"; port: string }
+  | { kind: "assign"; port: SerialPortInfo }
+  | { kind: "missing" }
+  | { kind: "choose" };
+
+// Returns how a project gets its serial port from a saved value and the detected list.
+// 返回项目如何从已保存值和检测列表取得串口。
+export function decideProjectPort(
+  savedPort: string | undefined,
+  detected: readonly SerialPortInfo[],
+  forcePick: boolean,
+): ProjectPortDecision {
+  const saved = savedPort?.trim() || undefined;
+  if (saved && !forcePick) {
+    return { kind: "keep", port: saved };
+  }
+  if (!forcePick && detected.length === 0) {
+    return { kind: "missing" };
+  }
+  if (!forcePick && detected.length === 1) {
+    return { kind: "assign", port: detected[0] };
+  }
+  return { kind: "choose" };
+}
+
 interface PortPick extends vscode.QuickPickItem {
   autoDetect?: boolean;
   port?: string;
@@ -89,35 +115,39 @@ export async function resolveProjectPort(
   repoRoot: string | undefined,
   options: { forcePick?: boolean } = {},
 ): Promise<string | undefined> {
+  const current = getEffectivePort(context, project);
+  const forcePick = options.forcePick === true;
+  // Returns the saved port without scanning when the picker was not requested.
+  // 未要求打开选择框时，直接返回已保存端口，不再扫描。
+  const saved = decideProjectPort(current, [], forcePick);
+  if (saved.kind === "keep") {
+    return saved.port;
+  }
+
   const ports = await listSerialPorts(context, repoRoot);
   if (!ports) {
     return undefined;
   }
-  const current = getEffectivePort(context, project);
 
-  if (ports.length === 0 && !options.forcePick) {
-    await updateProjectSettings(context, project, {
-      port: undefined,
-      portDescription: undefined,
-    });
+  const decision = decideProjectPort(current, ports, forcePick);
+  if (decision.kind === "missing") {
     void vscode.window.showWarningMessage(
       "No serial port detected. Connect a board and try again.",
     );
     return undefined;
   }
-
-  const currentPort = ports.find((port) => port.device === current);
-  if (currentPort && !options.forcePick) {
-    return currentPort.device;
-  }
-
-  if (ports.length === 1 && !options.forcePick) {
+  if (decision.kind === "assign") {
     await updateProjectSettings(context, project, {
-      port: ports[0].device,
-      portDescription: ports[0].description,
+      port: decision.port.device,
+      portDescription: decision.port.description,
     });
-    void vscode.window.showInformationMessage(`Serial port detected: ${ports[0].device}`);
-    return ports[0].device;
+    void vscode.window.showInformationMessage(
+      `Serial port detected: ${decision.port.device}`,
+    );
+    return decision.port.device;
+  }
+  if (decision.kind === "keep") {
+    return decision.port;
   }
 
   const choices: PortPick[] = [

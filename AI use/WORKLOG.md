@@ -30,6 +30,30 @@ Remaining:
 - Follow-up work, known limits, or open questions.
 ```
 
+## 2026-11-11 - per-project serial port stickiness (extension 0.5.8)
+
+Scope:
+- `tools/vscode-extension/src/commands/projectSettings.ts` port resolution.
+- Extension regression test, README, and changelog. Extension release 0.5.8.
+  CLI remains 0.5.7.
+
+Reason:
+- Project settings were already stored per project directory. Monitor still
+  replaced a saved port when detection was empty, or when exactly one different
+  device was present.
+
+Result:
+- A saved port stays with that project until Select Port changes it. Automatic
+  detection assigns the single detected port only when that project has no saved
+  port. Auto Detector in the picker still clears the saved port.
+
+Verification:
+- Extension tests and type check, recorded with the release commit.
+
+Remaining:
+- A remembered port that is not currently connected is still passed to Upload and
+  Monitor. The CLI waits for that port instead of switching to another board.
+
 ## 2026-11-11 - nRF54LM20B factory loader compatibility (release 0.5.7)
 
 Scope:
